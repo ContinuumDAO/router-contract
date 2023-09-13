@@ -31,9 +31,10 @@ library Structs {
     struct FeeConfig {
         uint256 FromChainID;
         uint256 ToChainID;
-        uint256 MaximumSwapFee;
+        uint256 MaximumSwapFee; // FixFee if MaximumSwapFee == MinimumSwapFee
         uint256 MinimumSwapFee;
         uint256 SwapFeeRatePerMillion;
+        uint256 PayFromOrTo; // 1:fromChainPay 2:toChainPay
     }
 
     struct MultichainToken {
@@ -400,7 +401,8 @@ contract RouterConfig {
         uint256 bigSwap,
         uint256 maxFee,
         uint256 minFee,
-        uint256 feeRate
+        uint256 feeRate,
+        uint256 payFrom // 1:from 2:to 0:free
     ) external returns (bool) {
         return
             _setSwapConfig(
@@ -420,7 +422,8 @@ contract RouterConfig {
                     dstChainID,
                     maxFee,
                     minFee,
-                    feeRate
+                    feeRate,
+                    payFrom
                 )
             );
     }
@@ -471,7 +474,8 @@ contract RouterConfig {
         uint256 dstChainID,
         uint256 maxFee,
         uint256 minFee,
-        uint256 feeRate
+        uint256 feeRate,
+        uint256 payFrom // 1:from 2:to 0:free
     ) external returns (bool) {
         return
             _setFeeConfig(
@@ -481,7 +485,8 @@ contract RouterConfig {
                     dstChainID,
                     maxFee,
                     minFee,
-                    feeRate
+                    feeRate,
+                    payFrom
                 )
             );
     }

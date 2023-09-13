@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.8.10;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./access/PausableControl.sol";
+import "../access/PausableControl.sol";
 
-contract CtmDaoERC20 is
+contract CtmDaoV2ERC20 is
     ERC20Capped,
     ERC20Burnable,
     AccessControlEnumerable,
@@ -190,7 +190,7 @@ contract CtmDaoERC20 is
     }
 }
 
-contract CtmDaoERC20WithUnderlying is CtmDaoERC20 {
+contract CtmDaoV2ERC20WithUnderlying is CtmDaoV2ERC20 {
     using SafeERC20 for IERC20;
 
     address public immutable override underlying;
@@ -205,7 +205,7 @@ contract CtmDaoERC20WithUnderlying is CtmDaoERC20 {
         uint256 _cap,
         address _admin,
         address _underlying
-    ) CtmDaoERC20(_name, _symbol, _decimals, _cap, _admin) {
+    ) CtmDaoV2ERC20(_name, _symbol, _decimals, _cap, _admin) {
         require(_underlying != address(0), "underlying is the zero address");
         require(
             _underlying != address(this),
