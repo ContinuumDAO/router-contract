@@ -4,13 +4,11 @@ let web3 = new Web3(Web3.givenProvider);
 const BN = require('bn.js');
 
 describe("CtmDaoV1", function () {
-    let routerConfig
     let routerV1
     let erc20Token
     let weth
     let owner
     let otherAccount
-    let oneEth = web3.utils.toNumber("100000000000000000")
     let chainID
 
 
