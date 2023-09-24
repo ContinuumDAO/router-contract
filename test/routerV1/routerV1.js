@@ -45,6 +45,19 @@ describe("CtmDaoV1", function () {
             expect(await erc20Token.owner()).to.equal(routerV1.target)
 
             expect(await routerV1.mpc()).to.equal(owner.address)
+
+            const DeployRouterV1 = await ethers.getContractFactory("DeployRouterV1");
+            let aDeployRouterV1 = await DeployRouterV1.connect(owner).deploy();
+
+            await expect(aDeployRouterV1.connect(owner).newRouter(weth.target, owner.address, "router1")).to.emit(aDeployRouterV1, "NewRouter")
+            // .withArgs("0x73f6cDee996871978D9f54753bC1586C777Fbe34")
+
+            const DeployTokenFactoryV1 = await ethers.getContractFactory("DeployTokenFactoryV1");
+            let aDeployTokenFactoryV1 = await DeployTokenFactoryV1.deploy();
+
+            await expect(aDeployTokenFactoryV1.connect(owner).newToken("ctmETHOD", "ctmETH", 18, weth.target, routerV1.target)).to.emit(aDeployTokenFactoryV1, "NewToken")
+            // .withArgs("0xdF9ACEb66b8dC2B68cf130e203DF70272af2E204")
+
         });
         it("FeeConfig", async function () {
             let testcases = [{

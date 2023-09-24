@@ -43,8 +43,11 @@ library Structs {
     }
 }
 
-contract RouterConfig {
+import "@openzeppelin/contracts/access/AccessControl.sol";
+
+contract RouterConfig is AccessControl {
     uint256 public constant CONFIG_VERSION = 1;
+    bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
     // chain configuration
     uint256[] private _allChainIDs;
@@ -75,6 +78,11 @@ contract RouterConfig {
 
     // mpc configuration
     mapping(string => string) private _mpcPubkey; // key is mpc address
+
+    constructor() {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(CONFIG_ROLE, msg.sender);
+    }
 
     function getAllChainIDs() external view returns (uint256[] memory) {
         return _allChainIDs;
@@ -325,6 +333,10 @@ contract RouterConfig {
         uint64 initialHeight,
         string memory extra
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         return
             _setChainConfig(
                 chainID,
@@ -343,6 +355,10 @@ contract RouterConfig {
         uint256 chainID,
         string memory extra
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         require(chainID > 0);
         _chainConfig[chainID].Extra = extra;
         return true;
@@ -357,6 +373,10 @@ contract RouterConfig {
         string memory routerContract,
         string memory extra
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         return
             _setTokenConfig(
                 tokenID,
@@ -377,6 +397,10 @@ contract RouterConfig {
         uint256 chainID,
         string memory routerContract
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         require(chainID > 0 && bytes(tokenID).length > 0);
         _tokenConfig[tokenID][chainID].RouterContract = routerContract;
         return true;
@@ -387,6 +411,10 @@ contract RouterConfig {
         uint256 chainID,
         string memory extra
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         require(chainID > 0 && bytes(tokenID).length > 0);
         _tokenConfig[tokenID][chainID].Extra = extra;
         return true;
@@ -404,6 +432,10 @@ contract RouterConfig {
         uint256 feeRate,
         uint256 payFrom // 1:from 2:to 0:free
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         return
             _setSwapConfig(
                 tokenID,
@@ -436,6 +468,10 @@ contract RouterConfig {
         uint256 minSwap,
         uint256 bigSwap
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         return
             _setSwapConfig(
                 tokenID,
@@ -453,6 +489,10 @@ contract RouterConfig {
         string memory tokenID,
         Structs.SwapConfig[] calldata configs
     ) external {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         for (uint256 i = 0; i < configs.length; i++) {
             _setSwapConfig(tokenID, configs[i]);
         }
@@ -477,6 +517,10 @@ contract RouterConfig {
         uint256 feeRate,
         uint256 payFrom // 1:from 2:to 0:free
     ) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         return
             _setFeeConfig(
                 tokenID,
@@ -495,6 +539,10 @@ contract RouterConfig {
         string memory tokenID,
         Structs.FeeConfig[] calldata configs
     ) external {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         for (uint256 i = 0; i < configs.length; i++) {
             _setFeeConfig(tokenID, configs[i]);
         }
@@ -505,18 +553,34 @@ contract RouterConfig {
         string memory key,
         string memory data
     ) external {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         _customConfig[chainID][key] = data;
     }
 
     function setExtraConfig(string memory key, string memory data) external {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         _extraConfig[key] = data;
     }
 
     function setMPCPubkey(string memory addr, string memory pubkey) external {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         _mpcPubkey[addr] = pubkey;
     }
 
     function addChainID(uint256 chainID) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         require(!isChainIDExist(chainID));
         _allChainIDs.push(chainID);
         _allChainIDsMap[chainID] = true;
@@ -524,6 +588,10 @@ contract RouterConfig {
     }
 
     function addTokenID(string memory tokenID) external returns (bool) {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         require(!isTokenIDExist(tokenID));
         _allTokenIDs.push(tokenID);
         _allTokenIDsMap[tokenID] = true;
@@ -535,6 +603,10 @@ contract RouterConfig {
         uint256 chainID,
         string memory token
     ) public {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender),
+            "RouterConfig: no config role"
+        );
         _setMultichainToken(tokenID, chainID, token);
     }
 

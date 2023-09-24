@@ -9,3 +9,10 @@ REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat run scripts/deploy.js
 ```
+
+## deployment
+```
+npx hardhat run scripts/deployV1.js --network bsc_test
+
+npx hardhat verify --network bsc_test <address>
+```
