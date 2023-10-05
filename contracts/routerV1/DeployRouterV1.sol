@@ -18,6 +18,7 @@ contract DeployRouterV1 {
     function newRouter(
         address _wNATIVE,
         address _mpc,
+        address _swapIDKeeper,
         string memory _name
     ) external returns (address) {
         require(owner == msg.sender, "DeployRouterV1: no permission");
@@ -25,7 +26,11 @@ contract DeployRouterV1 {
             return routers[_name];
         }
         bytes32 salt = keccak256(abi.encodePacked(_wNATIVE, _mpc, _name));
-        CtmDaoV1Router cr = new CtmDaoV1Router{salt: salt}(_wNATIVE, _mpc);
+        CtmDaoV1Router cr = new CtmDaoV1Router{salt: salt}(
+            _wNATIVE,
+            _mpc,
+            _swapIDKeeper
+        );
         routers[_name] = address(cr);
         emit NewRouter(address(cr));
         return address(cr);

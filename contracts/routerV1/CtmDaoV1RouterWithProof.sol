@@ -10,16 +10,6 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
 
     address[] public proofSigners;
 
-    bool public disableCheckCompletion;
-    mapping(string => bool) public completedSwapin;
-    modifier checkCompletion(string memory swapID) {
-        require(
-            !completedSwapin[swapID] || disableCheckCompletion,
-            "swap is completed"
-        );
-        _;
-    }
-
     event AddProofSigner(address signer);
     event RemoveProofSigner(address signer);
 
@@ -33,7 +23,11 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
         bytes32 proofID
     );
 
-    constructor(address _wNATIVE, address _mpc) CtmDaoV1Router(_wNATIVE, _mpc) {
+    constructor(
+        address _wNATIVE,
+        address _mpc,
+        address _swapIDKeeper
+    ) CtmDaoV1Router(_wNATIVE, _mpc, _swapIDKeeper) {
         _addProofSigners(_mpc);
     }
 
@@ -45,8 +39,7 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
         uint amount,
         uint fromChainID,
         bytes calldata _proof
-    ) internal checkCompletion(swapID) returns (uint256) {
-        completedSwapin[swapID] = true;
+    ) internal returns (uint256) {
         bytes32 proofID = keccak256(
             abi.encode(swapID, token, to, amount, fromChainID)
         );
@@ -152,11 +145,6 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
     /// @notice get all proof signers
     function getAllProofSigners() external view returns (address[] memory) {
         return proofSigners;
-    }
-
-    /// @notice set check completion flag
-    function setCheckCompletion(bool enable) external onlyMPC {
-        disableCheckCompletion = !enable;
     }
 
     /// @notice add proof signers
