@@ -16,12 +16,14 @@ async function main() {
 
   const deployRouterV1 = await hre.ethers.deployContract("DeployRouterV1");
   await deployRouterV1.waitForDeployment();
-
   console.log("deployRouterV1 address:", deployRouterV1.target);
 
-  await deployRouterV1.newRouter(evn[networkName.toUpperCase()].wNATIVE, signer.address, "testRouter")
-  console.log("Router:", await deployRouterV1.routers("testRouter"));
+  const deployCtmSwapIDKeeper = await hre.ethers.deployContract("CtmSwapIDKeeper", [signer.address]);
+  await deployCtmSwapIDKeeper.waitForDeployment();
+  console.log("deployCtmSwapIDKeeper address:", deployCtmSwapIDKeeper.target);
 
+  await deployRouterV1.newRouter(evn[networkName.toUpperCase()].wNATIVE, signer.address, deployCtmSwapIDKeeper.target, "testRouter")
+  console.log("Router:", await deployRouterV1.routers("testRouter"));
 }
 
 main().catch((error) => {

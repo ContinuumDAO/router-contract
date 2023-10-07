@@ -157,7 +157,6 @@ describe("CtmDaoV1", function () {
             await expect(routerV1.connect(otherAccount)["anySwapOut(address,address,uint256,uint256)"](erc20Token.target, otherAccount.address, amount.toString(), 250)).to.emit(routerV1, "LogAnySwapOut")
                 .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID)
 
-
         });
         it("AnySwapOutNonEvm", async function () {
             expect(await erc20Token.isMinter(routerV1.target)).to.equal(true)
@@ -478,6 +477,36 @@ describe("CtmDaoV1", function () {
 
             expect(await erc20Token.balanceOf(owner.address)).to.equal(0)
             expect(await ethers.provider.getBalance(to)).to.equal(amount)
+        });
+
+        it("Operator SwapIn", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+            let swapInMsg = {
+                txs: "0x1234567890123456789012345678901234567890123456789012345678901234",
+                token: erc20Token.target,
+                to: otherAccount.address,
+                fromChainID: 1,
+                amount,
+            }
+            let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
+            await expect(routerV1.connect(otherAccount)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
+                .to.be.revertedWith("CtmDaoV1ERC20: AUTH FORBIDDEN")
+
+            await routerV1.connect(owner).addOperator(otherAccount.address)
+            let ops = await routerV1.getAllOperators()
+            expect(ops[0]).to.equal(owner.address)
+            expect(ops[1]).to.equal(otherAccount.address)
+
+            await expect(routerV1.connect(otherAccount)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogAnySwapIn")
+                .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
+
+
+            await routerV1.connect(owner).revokeOperator(otherAccount.address)
+            ops = await routerV1.getAllOperators()
+            expect(ops.length).to.equal(1)
+
+            await expect(routerV1.connect(otherAccount)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
+                .to.be.revertedWith("CtmDaoV1ERC20: AUTH FORBIDDEN")
         });
     });
 

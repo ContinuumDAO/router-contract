@@ -190,6 +190,7 @@ contract CtmDaoV1Router {
     uint public constant DELAY = 2 days;
 
     mapping(address => bool) public isOperator;
+    address[] public operators;
 
     address public swapIDKeeper;
 
@@ -197,8 +198,8 @@ contract CtmDaoV1Router {
         _newMPC = _mpc;
         _newMPCEffectiveTime = block.timestamp;
         wNATIVE = _wNATIVE;
-        isOperator[_mpc] = true;
         swapIDKeeper = _swapIDKeeper;
+        _addOperator(_mpc);
     }
 
     receive() external payable {
@@ -266,6 +267,10 @@ contract CtmDaoV1Router {
         return block.chainid;
     }
 
+    function version() public pure returns (uint) {
+        return 1;
+    }
+
     function changeMPC(address newMPC) external onlyMPC returns (bool) {
         require(newMPC != address(0), "CtmDaoV1Router: address(0)");
         _oldMPC = mpc();
@@ -275,13 +280,32 @@ contract CtmDaoV1Router {
         return true;
     }
 
+    function _addOperator(address op) internal {
+        require(op != address(0), "CtmDaoV1Router: Operator is address(0)");
+        require(!isOperator[op], "CtmDaoV1Router: Operator already exists");
+        isOperator[op] = true;
+        operators.push(op);
+    }
+
     function addOperator(address _auth) external onlyMPC {
-        require(_auth != address(0), "CtmDaoV1Router: address(0)");
-        isOperator[_auth] = true;
+        _addOperator(_auth);
+    }
+
+    function getAllOperators() external view returns (address[] memory) {
+        return operators;
     }
 
     function revokeOperator(address _auth) external onlyMPC {
+        require(isOperator[_auth], "CtmDaoV1Router: Operator not found");
         isOperator[_auth] = false;
+        uint256 length = operators.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (operators[i] == _auth) {
+                operators[i] = operators[length - 1];
+                operators.pop();
+                return;
+            }
+        }
     }
 
     function changeVault(
