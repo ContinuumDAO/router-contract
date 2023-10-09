@@ -8,15 +8,17 @@ async function main() {
     console.log("Deploy Network name=", networkName);
     console.log("Network chain id=", chainId);
 
+    console.log("wNATIVE", evn[networkName.toUpperCase()].wNATIVE);
+
     const [signer] = await ethers.getSigners()
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.getContractAt("RouterConfig", evn[networkName.toUpperCase()].RouterConfig);
-    console.log("RouterConfig address:", aRouterConfig.target);
+    const routerV1 = await hre.ethers.getContractAt("CtmDaoV1Router", evn[networkName.toUpperCase()].testRouter);
+    console.log("CtmDaoV1Router address:", routerV1.target);
 
-    let tx = await aRouterConfig.connect(signer).setChainConfig(chainId, networkName, evn[networkName.toUpperCase()].testRouter + ":v1;", 2, 33587883, "{}")
-    console.log("Tx:", tx.hash);
+    let aops = await routerV1.getAllOperators()
+    console.log("aops:", aops);
 }
 
 main().catch((error) => {
