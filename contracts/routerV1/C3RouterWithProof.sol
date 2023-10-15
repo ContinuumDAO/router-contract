@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.19;
 
-import "./CtmDaoV1Router.sol";
+import "./C3Router.sol";
 
-contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
+contract C3RouterWithProof is C3Router {
     mapping(address => bool) public isProofSigner;
     mapping(bytes32 => bool) public proofConsumed;
 
@@ -13,7 +13,7 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
     event AddProofSigner(address signer);
     event RemoveProofSigner(address signer);
 
-    event LogAnySwapInWithProof(
+    event LogSwapInWithProof(
         string swapID,
         address indexed token,
         address indexed to,
@@ -27,12 +27,12 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
         address _wNATIVE,
         address _mpc,
         address _swapIDKeeper
-    ) CtmDaoV1Router(_wNATIVE, _mpc, _swapIDKeeper) {
+    ) C3Router(_wNATIVE, _mpc, _swapIDKeeper) {
         _addProofSigners(_mpc);
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID
-    function _anySwapInWithProof(
+    function _swapInWithProof(
         string memory swapID,
         address token,
         address to,
@@ -59,10 +59,10 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
 
         uint256 swapFee = calcSwapFee(fromChainID, 0, token, amount);
         if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
+            IC3ERC20(token).mint(address(this), swapFee);
         }
-        ICtmDaoV1ERC20(token).mint(to, amount - swapFee);
-        emit LogAnySwapInWithProof(
+        IC3ERC20(token).mint(to, amount - swapFee);
+        emit LogSwapInWithProof(
             swapID,
             token,
             to,
@@ -75,8 +75,8 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID
-    // triggered by `anySwapOut`
-    function anySwapInWithProof(
+    // triggered by `swapOut`
+    function swapInWithProof(
         string memory swapID,
         address token,
         address to,
@@ -84,11 +84,11 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
         uint fromChainID,
         bytes calldata _proof
     ) external {
-        _anySwapInWithProof(swapID, token, to, amount, fromChainID, _proof);
+        _swapInWithProof(swapID, token, to, amount, fromChainID, _proof);
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying`
-    function anySwapInUnderlyingWithProof(
+    function swapInUnderlyingWithProof(
         string memory swapID,
         address token,
         address to,
@@ -96,9 +96,9 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
         uint fromChainID,
         bytes calldata _proof
     ) external {
-        address _underlying = ICtmDaoV1ERC20(token).underlying();
-        require(_underlying != address(0), "AnyswapV6Router: no underlying");
-        uint256 recvAmount = _anySwapInWithProof(
+        address _underlying = IC3ERC20(token).underlying();
+        require(_underlying != address(0), "C3Router: no underlying");
+        uint256 recvAmount = _swapInWithProof(
             swapID,
             token,
             to,
@@ -106,11 +106,11 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
             fromChainID,
             _proof
         );
-        ICtmDaoV1ERC20(token).withdrawVault(to, recvAmount, to);
+        IC3ERC20(token).withdrawVault(to, recvAmount, to);
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying` if possible
-    function anySwapInAutoWithProof(
+    function swapInAutoWithProof(
         string memory swapID,
         address token,
         address to,
@@ -118,7 +118,7 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
         uint fromChainID,
         bytes calldata _proof
     ) external {
-        uint256 recvAmount = _anySwapInWithProof(
+        uint256 recvAmount = _swapInWithProof(
             swapID,
             token,
             to,
@@ -126,7 +126,7 @@ contract CtmDaoV1RouterWithProof is CtmDaoV1Router {
             fromChainID,
             _proof
         );
-        ICtmDaoV1ERC20 _anyToken = ICtmDaoV1ERC20(token);
+        IC3ERC20 _anyToken = IC3ERC20(token);
         address _underlying = _anyToken.underlying();
         if (
             _underlying != address(0) &&

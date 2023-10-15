@@ -18,11 +18,11 @@ async function main() {
   await deployRouterV1.waitForDeployment();
   console.log("deployRouterV1 address:", deployRouterV1.target);
 
-  const deployCtmSwapIDKeeper = await hre.ethers.deployContract("CtmSwapIDKeeper", [signer.address]);
-  await deployCtmSwapIDKeeper.waitForDeployment();
-  console.log("deployCtmSwapIDKeeper address:", deployCtmSwapIDKeeper.target);
+  const deployC3SwapIDKeeper = await hre.ethers.deployContract("C3SwapIDKeeper", [signer.address]);
+  await deployC3SwapIDKeeper.waitForDeployment();
+  console.log("deployC3SwapIDKeeper address:", deployC3SwapIDKeeper.target);
 
-  await deployRouterV1.newRouter(evn[networkName.toUpperCase()].wNATIVE, signer.address, deployCtmSwapIDKeeper.target, "testRouter")
+  await deployRouterV1.newRouter(evn[networkName.toUpperCase()].wNATIVE, signer.address, deployC3SwapIDKeeper.target, "testRouter")
   console.log("Router:", await deployRouterV1.routers("testRouter"));
 }
 

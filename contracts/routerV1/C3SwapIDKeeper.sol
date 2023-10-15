@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.10;
 
-contract CtmSwapIDKeeper {
+contract C3SwapIDKeeper {
     address public admin;
     mapping(address => bool) public isSupportedCaller; // routers address
     address[] public supportedCallers;
@@ -37,7 +37,7 @@ contract CtmSwapIDKeeper {
     }
 
     function changeMPC(address newMPC) external onlyAdmin returns (bool) {
-        require(newMPC != address(0), "CtmDaoV1Router: address(0)");
+        require(newMPC != address(0), "C3Router: address(0)");
         address oldAdmin = admin;
         isSupportedCaller[oldAdmin] = false;
         admin = newMPC;
@@ -85,7 +85,7 @@ contract CtmSwapIDKeeper {
     function registerSwapout(
         address token,
         address from,
-        address to,
+        string calldata to,
         uint256 amount,
         uint256 toChainID
     ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
@@ -132,34 +132,7 @@ contract CtmSwapIDKeeper {
         return swapID;
     }
 
-    // for testing
     function calcSwapID(
-        address token,
-        address from,
-        address to,
-        uint256 amount,
-        uint256 toChainID,
-        address sender
-    ) public view returns (bytes32) {
-        uint256 nonce = currentSwapoutNonce + 1;
-        return
-            keccak256(
-                abi.encode(
-                    address(this),
-                    sender,
-                    block.chainid,
-                    token,
-                    from,
-                    to,
-                    amount,
-                    nonce,
-                    toChainID
-                )
-            );
-    }
-
-    // for testing
-    function calcNonEvmSwapID(
         address token,
         address from,
         string calldata to,

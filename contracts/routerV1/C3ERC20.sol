@@ -107,7 +107,7 @@ library SafeERC20 {
 
 import "../config/CtmERC20FeeConfig.sol";
 
-contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
+contract C3ERC20 is IERC20, CtmERC20FeeConfig {
     using SafeERC20 for IERC20;
     string public name;
     string public symbol;
@@ -116,7 +116,6 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
     address public immutable underlying;
     bool public constant underlyingIsMinted = false;
 
-    /// @dev Records amount of AnyswapV6ERC20 token owned by account.
     mapping(address => uint256) public override balanceOf;
     uint256 private _totalSupply;
 
@@ -143,12 +142,12 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
     uint public delayVault;
 
     modifier onlyAuth() {
-        require(isMinter[msg.sender], "CtmDaoV1ERC20: FORBIDDEN");
+        require(isMinter[msg.sender], "C3ERC20: FORBIDDEN");
         _;
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, "CtmDaoV1ERC20: FORBIDDEN");
+        require(msg.sender == vault, "C3ERC20: FORBIDDEN");
         _;
     }
 
@@ -174,7 +173,7 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
     }
 
     function setVault(address _vault) external onlyVault {
-        require(_vault != address(0), "CtmDaoV1ERC20: address(0)");
+        require(_vault != address(0), "C3ERC20: address(0)");
         pendingVault = _vault;
         delayVault = block.timestamp + DELAY;
     }
@@ -188,7 +187,7 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
     }
 
     function setMinter(address _auth) external onlyVault {
-        require(_auth != address(0), "CtmDaoV1ERC20: address(0)");
+        require(_auth != address(0), "C3ERC20: address(0)");
         pendingMinter = _auth;
         delayMinter = block.timestamp + DELAY;
     }
@@ -212,7 +211,7 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
     }
 
     function changeVault(address newVault) external onlyVault returns (bool) {
-        require(newVault != address(0), "CtmDaoV1ERC20: address(0)");
+        require(newVault != address(0), "C3ERC20: address(0)");
         emit LogChangeVault(vault, newVault, block.timestamp);
         vault = newVault;
         pendingVault = address(0);
@@ -251,8 +250,8 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
     }
 
     function Swapout(uint256 amount, address bindaddr) external returns (bool) {
-        require(!_vaultOnly, "CtmDaoV1ERC20: vaultOnly");
-        require(bindaddr != address(0), "CtmDaoV1ERC20: address(0)");
+        require(!_vaultOnly, "C3ERC20: vaultOnly");
+        require(bindaddr != address(0), "C3ERC20: address(0)");
         if (underlying != address(0) && balanceOf[msg.sender] < amount) {
             IERC20(underlying).safeTransferFrom(
                 msg.sender,
@@ -266,7 +265,6 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         return true;
     }
 
-    /// @dev Records number of AnyswapV6ERC20 token that account (second) will be allowed to spend on behalf of another account (first) through {transferFrom}.
     mapping(address => mapping(address => uint256)) public override allowance;
 
     event LogChangeVault(
@@ -311,7 +309,6 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         minters.push(_vault);
     }
 
-    /// @dev Returns the total supply of AnyswapV6ERC20 token as the ETH held in this contract.
     function totalSupply() external view override returns (uint256) {
         return _totalSupply;
     }
@@ -417,9 +414,6 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         emit Transfer(account, address(0), amount);
     }
 
-    /// @dev Sets `value` as allowance of `spender` account over caller account's AnyswapV6ERC20 token.
-    /// Emits {Approval} event.
-    /// Returns boolean value indicating whether operation succeeded.
     function approve(
         address spender,
         uint256 value
@@ -430,21 +424,13 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         return true;
     }
 
-    /// @dev Moves `value` AnyswapV6ERC20 token from caller's account to account (`to`).
-    /// Emits {Transfer} event.
-    /// Returns boolean value indicating whether operation succeeded.
-    /// Requirements:
-    ///   - caller account must have at least `value` AnyswapV6ERC20 token.
     function transfer(
         address to,
         uint256 value
     ) external override returns (bool) {
         require(to != address(0) && to != address(this));
         uint256 balance = balanceOf[msg.sender];
-        require(
-            balance >= value,
-            "CtmDaoV1ERC20: transfer amount exceeds balance"
-        );
+        require(balance >= value, "C3ERC20: transfer amount exceeds balance");
 
         balanceOf[msg.sender] = balance - value;
         balanceOf[to] += value;
@@ -453,15 +439,6 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         return true;
     }
 
-    /// @dev Moves `value` AnyswapV6ERC20 token from account (`from`) to account (`to`) using allowance mechanism.
-    /// `value` is then deducted from caller account's allowance, unless set to `type(uint256).max`.
-    /// Emits {Approval} event to reflect reduced allowance `value` for caller account to spend from account (`from`),
-    /// unless allowance is set to `type(uint256).max`
-    /// Emits {Transfer} event.
-    /// Returns boolean value indicating whether operation succeeded.
-    /// Requirements:
-    ///   - `from` account must have at least `value` balance of AnyswapV6ERC20 token.
-    ///   - `from` account must have approved caller to spend at least `value` of AnyswapV6ERC20 token, unless `from` and caller are the same account.
     function transferFrom(
         address from,
         address to,
@@ -471,10 +448,7 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         if (from != msg.sender) {
             uint256 allowed = allowance[from][msg.sender];
             if (allowed != type(uint256).max) {
-                require(
-                    allowed >= value,
-                    "CtmDaoV1ERC20: request exceeds allowance"
-                );
+                require(allowed >= value, "C3ERC20: request exceeds allowance");
                 uint256 reduced = allowed - value;
                 allowance[from][msg.sender] = reduced;
                 emit Approval(from, msg.sender, reduced);
@@ -482,10 +456,7 @@ contract CtmDaoV1ERC20 is IERC20, CtmERC20FeeConfig {
         }
 
         uint256 balance = balanceOf[from];
-        require(
-            balance >= value,
-            "CtmDaoV1ERC20: transfer amount exceeds balance"
-        );
+        require(balance >= value, "C3ERC20: transfer amount exceeds balance");
 
         balanceOf[from] = balance - value;
         balanceOf[to] += value;

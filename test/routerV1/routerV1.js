@@ -3,7 +3,7 @@ const { Web3 } = require('web3');
 let web3 = new Web3(Web3.givenProvider);
 const BN = require('bn.js');
 
-describe("CtmDaoV1", function () {
+describe("C3", function () {
     let routerV1
     let erc20Token
     let weth
@@ -19,11 +19,11 @@ describe("CtmDaoV1", function () {
         const WETH = await ethers.getContractFactory("WETH");
         weth = await WETH.deploy();
 
-        const CtmSwapIDKeeper = await ethers.getContractFactory("CtmSwapIDKeeper");
-        ctmSwapIDKeeper = await CtmSwapIDKeeper.deploy(_owner);
+        const C3SwapIDKeeper = await ethers.getContractFactory("C3SwapIDKeeper");
+        ctmSwapIDKeeper = await C3SwapIDKeeper.deploy(_owner);
 
-        const CtmDaoV1Router = await ethers.getContractFactory("CtmDaoV1Router");
-        routerV1 = await CtmDaoV1Router.deploy(weth, _owner, ctmSwapIDKeeper.target);
+        const C3Router = await ethers.getContractFactory("C3Router");
+        routerV1 = await C3Router.deploy(weth, _owner, ctmSwapIDKeeper.target);
 
         await ctmSwapIDKeeper.addSupportedCaller(routerV1.target)
 
@@ -32,21 +32,21 @@ describe("CtmDaoV1", function () {
         chainID = await routerV1.cID();
     }
 
-    async function deployCtmDaoV1ERC20(name, symbol, decimals, underlying, vault) {
+    async function deployC3ERC20(name, symbol, decimals, underlying, vault) {
         // Contracts are deployed using the first signer/account by default
         const [_owner, _otherAccount] = await ethers.getSigners();
-        const CtmDaoV1ERC20 = await ethers.getContractFactory("CtmDaoV1ERC20");
-        erc20Token = await CtmDaoV1ERC20.deploy(name, symbol, decimals, underlying, vault);
+        const C3ERC20 = await ethers.getContractFactory("C3ERC20");
+        erc20Token = await C3ERC20.deploy(name, symbol, decimals, underlying, vault);
     }
 
 
     beforeEach(async () => {
         await deployRouterV1()
-        await deployCtmDaoV1ERC20("ctmETHOD", "ctmETH", 18, weth.target, routerV1.target)
+        await deployC3ERC20("ctmETHOD", "ctmETH", 18, weth.target, routerV1.target)
     })
 
 
-    describe("CtmDaoV1ERC20", function () {
+    describe("C3ERC20", function () {
         it("Deploy", async function () {
             expect(await erc20Token.owner()).to.equal(routerV1.target)
 
@@ -138,8 +138,8 @@ describe("CtmDaoV1", function () {
 
     });
 
-    describe("CtmDaoV1Router", function () {
-        it("AnySwapOut", async function () {
+    describe("C3Router", function () {
+        it("SwapOut", async function () {
             expect(await erc20Token.isMinter(routerV1.target)).to.equal(true)
             let amount = web3.utils.toNumber("1000000000000000000")
             await otherAccount.sendTransaction({
@@ -154,11 +154,11 @@ describe("CtmDaoV1", function () {
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
 
-            await expect(routerV1.connect(otherAccount)["anySwapOut(address,address,uint256,uint256)"](erc20Token.target, otherAccount.address, amount.toString(), 250)).to.emit(routerV1, "LogAnySwapOut")
+            await expect(routerV1.connect(otherAccount)["swapOut(address,string,uint256,uint256)"](erc20Token.target, otherAccount.address.toString(), amount.toString(), 250)).to.emit(routerV1, "LogSwapOut")
                 .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID)
 
         });
-        it("AnySwapOutNonEvm", async function () {
+        it("SwapOutNonEvm", async function () {
             expect(await erc20Token.isMinter(routerV1.target)).to.equal(true)
             let amount = web3.utils.toNumber("1000000000000000000")
             await otherAccount.sendTransaction({
@@ -171,13 +171,13 @@ describe("CtmDaoV1", function () {
             await erc20Token.connect(otherAccount).deposit()
             expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(amount)
 
-            let swapID = await ctmSwapIDKeeper.calcNonEvmSwapID(erc20Token.target, otherAccount.address, "otherAccount.address", amount.toString(), 250, routerV1.target)
+            let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, "otherAccount.address", amount.toString(), 250, routerV1.target)
 
-            await expect(routerV1.connect(otherAccount)["anySwapOut(address,string,uint256,uint256)"](erc20Token.target, "otherAccount.address", amount.toString(), 250)).to.emit(routerV1, "LogAnySwapOutNonEvm")
+            await expect(routerV1.connect(otherAccount)["swapOut(address,string,uint256,uint256)"](erc20Token.target, "otherAccount.address", amount.toString(), 250)).to.emit(routerV1, "LogSwapOut")
                 .withArgs(erc20Token.target, otherAccount.address, "otherAccount.address", amount.toString(), chainID, 250, 0, swapID)
         });
 
-        it("AnySwapOut WithFee", async function () {
+        it("SwapOut WithFee", async function () {
             let rules = {
                 from: chainID,
                 to: 250,
@@ -207,11 +207,11 @@ describe("CtmDaoV1", function () {
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
 
-            await expect(routerV1.connect(otherAccount)["anySwapOut(address,address,uint256,uint256)"](erc20Token.target, otherAccount.address, amount.toString(), 250)).to.emit(routerV1, "LogAnySwapOut")
+            await expect(routerV1.connect(otherAccount)["swapOut(address,string,uint256,uint256)"](erc20Token.target, otherAccount.address, amount.toString(), 250)).to.emit(routerV1, "LogSwapOut")
                 .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, re.toString(), swapID)
 
         });
-        it("AnySwapOut Underlying", async function () {
+        it("SwapOut Underlying", async function () {
             expect(await erc20Token.isMinter(routerV1.target)).to.equal(true)
             let amount = web3.utils.toNumber("1000000000000000000")
             await otherAccount.sendTransaction({
@@ -226,11 +226,11 @@ describe("CtmDaoV1", function () {
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
 
-            await expect(routerV1.connect(otherAccount)["anySwapOutUnderlying(address,address,uint256,uint256)"](erc20Token.target, otherAccount.address, amount.toString(), 250)).to.emit(routerV1, "LogAnySwapOut")
+            await expect(routerV1.connect(otherAccount)["swapOutUnderlying(address,string,uint256,uint256)"](erc20Token.target, otherAccount.address, amount.toString(), 250)).to.emit(routerV1, "LogSwapOut")
                 .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID)
 
         });
-        it("AnySwapOut Native", async function () {
+        it("SwapOut Native", async function () {
             expect(await erc20Token.isMinter(routerV1.target)).to.equal(true)
             let amount = web3.utils.toNumber("1000000000000000000")
             let ABI = [{
@@ -241,9 +241,9 @@ describe("CtmDaoV1", function () {
                         "type": "address"
                     },
                     {
-                        "internalType": "address",
+                        "internalType": "string",
                         "name": "to",
-                        "type": "address"
+                        "type": "string"
                     },
                     {
                         "internalType": "uint256",
@@ -251,23 +251,23 @@ describe("CtmDaoV1", function () {
                         "type": "uint256"
                     }
                 ],
-                "name": "anySwapOutNative",
+                "name": "swapOutNative",
                 "outputs": [],
                 "stateMutability": "payable",
                 "type": "function"
             }]
             let contract = new web3.eth.Contract(ABI);
-            let calldata = contract.methods.anySwapOutNative(erc20Token.target, otherAccount.address, 250).encodeABI()
+            let calldata = contract.methods.swapOutNative(erc20Token.target, otherAccount.address, 250).encodeABI()
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
             await expect(otherAccount.sendTransaction({
                 to: routerV1.target,
                 value: amount,
                 data: calldata
-            })).to.emit(routerV1, "LogAnySwapOut").withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID);
+            })).to.emit(routerV1, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID);
         });
 
-        it("AnySwapIn", async function () {
+        it("SwapIn", async function () {
             let amount = web3.utils.toNumber("1000000000000000000")
             let swapInMsg = {
                 txs: "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -277,17 +277,17 @@ describe("CtmDaoV1", function () {
                 amount,
             }
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
-            await expect(routerV1.connect(owner)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogAnySwapIn")
+            await expect(routerV1.connect(owner)['swapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogSwapIn")
                 .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
 
-            await expect(routerV1.connect(owner)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
+            await expect(routerV1.connect(owner)['swapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
                 .to.be.revertedWith("swapID is completed")
 
 
             expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(amount)
         });
 
-        it("AnySwapIn Underlying", async function () {
+        it("SwapIn Underlying", async function () {
             let amount = web3.utils.toNumber("1000000000000000000")
             let swapInMsg = {
                 txs: "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -307,13 +307,13 @@ describe("CtmDaoV1", function () {
             expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(amount)
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
-            await expect(routerV1.connect(owner)['anySwapInUnderlying(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogAnySwapIn")
+            await expect(routerV1.connect(owner)['swapInUnderlying(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogSwapIn")
                 .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
 
             expect(await weth.balanceOf(owner.address)).to.equal(amount)
         });
 
-        it("AnySwapIn Auto", async function () {
+        it("SwapIn Auto", async function () {
             let amount = web3.utils.toNumber("1000000000000000000")
             let swapInMsg = {
                 txs: "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -324,12 +324,12 @@ describe("CtmDaoV1", function () {
             }
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
-            await expect(routerV1.connect(owner).anySwapInAuto(swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogAnySwapIn")
+            await expect(routerV1.connect(owner).swapInAuto(swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogSwapIn")
                 .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
 
             expect(await erc20Token.balanceOf(owner.address)).to.equal(amount)
         });
-        it("AnySwapIn Auto(Native)", async function () {
+        it("SwapIn Auto(Native)", async function () {
             let amount = web3.utils.toNumber("10000000000000000000")
             let swapInMsg = {
                 txs: "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -351,7 +351,7 @@ describe("CtmDaoV1", function () {
 
 
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
-            await expect(routerV1.connect(owner).anySwapInAuto(swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogAnySwapIn")
+            await expect(routerV1.connect(owner).swapInAuto(swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogSwapIn")
                 .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
 
             expect(await erc20Token.totalSupply()).to.equal(amount)
@@ -489,15 +489,15 @@ describe("CtmDaoV1", function () {
                 amount,
             }
             let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), "250", routerV1.target)
-            await expect(routerV1.connect(otherAccount)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
-                .to.be.revertedWith("CtmDaoV1ERC20: AUTH FORBIDDEN")
+            await expect(routerV1.connect(otherAccount)['swapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
+                .to.be.revertedWith("C3ERC20: AUTH FORBIDDEN")
 
             await routerV1.connect(owner).addOperator(otherAccount.address)
             let ops = await routerV1.getAllOperators()
             expect(ops[0]).to.equal(owner.address)
             expect(ops[1]).to.equal(otherAccount.address)
 
-            await expect(routerV1.connect(otherAccount)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogAnySwapIn")
+            await expect(routerV1.connect(otherAccount)['swapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs)).to.emit(routerV1, "LogSwapIn")
                 .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
 
 
@@ -505,8 +505,8 @@ describe("CtmDaoV1", function () {
             ops = await routerV1.getAllOperators()
             expect(ops.length).to.equal(1)
 
-            await expect(routerV1.connect(otherAccount)['anySwapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
-                .to.be.revertedWith("CtmDaoV1ERC20: AUTH FORBIDDEN")
+            await expect(routerV1.connect(otherAccount)['swapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
+                .to.be.revertedWith("C3ERC20: AUTH FORBIDDEN")
         });
     });
 

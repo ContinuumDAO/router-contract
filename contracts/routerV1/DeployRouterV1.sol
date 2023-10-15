@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import "./CtmDaoV1Router.sol";
+import "./C3Router.sol";
 
 contract DeployRouterV1 {
     address public owner;
@@ -26,7 +26,7 @@ contract DeployRouterV1 {
             return routers[_name];
         }
         bytes32 salt = keccak256(abi.encodePacked(_wNATIVE, _mpc, _name));
-        CtmDaoV1Router cr = new CtmDaoV1Router{salt: salt}(
+        C3Router cr = new C3Router{salt: salt}(
             _wNATIVE,
             _mpc,
             _swapIDKeeper

@@ -14,8 +14,8 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const routerV1 = await hre.ethers.getContractAt("CtmDaoV1Router", evn[networkName.toUpperCase()].testRouter);
-    console.log("CtmDaoV1Router address:", routerV1.target);
+    const routerV1 = await hre.ethers.getContractAt("C3Router", evn[networkName.toUpperCase()].testRouter);
+    console.log("C3Router address:", routerV1.target);
 
     let aops = await routerV1.getAllOperators()
     console.log("aops:", aops);

@@ -24,14 +24,6 @@ interface ISwapIDKeeper {
     function registerSwapout(
         address token,
         address from,
-        address to,
-        uint256 amount,
-        uint256 toChainID
-    ) external returns (bytes32 swapID);
-
-    function registerNonEvmSwapout(
-        address token,
-        address from,
         string calldata to,
         uint256 amount,
         uint256 toChainID
@@ -40,7 +32,7 @@ interface ISwapIDKeeper {
     function isSwapCompleted(bytes32 swapID) external view returns (bool);
 }
 
-interface ICtmDaoV1ERC20 {
+interface IC3ERC20 {
     function mint(address to, uint256 amount) external returns (bool);
 
     function burn(address from, uint256 amount) external returns (bool);
@@ -180,7 +172,7 @@ library SafeERC20 {
     }
 }
 
-contract CtmDaoV1Router {
+contract C3Router {
     using SafeERC20 for IERC20;
 
     address public constant factory = address(0);
@@ -216,7 +208,7 @@ contract CtmDaoV1Router {
         uint indexed effectiveTime,
         uint256 chainID
     );
-    event LogAnySwapIn(
+    event LogSwapIn(
         address indexed token,
         address indexed to,
         bytes32 indexed swapoutID,
@@ -225,17 +217,7 @@ contract CtmDaoV1Router {
         uint256 toChainID,
         string sourceTx
     );
-    event LogAnySwapOut(
-        address indexed token,
-        address indexed from,
-        address to,
-        uint256 amount,
-        uint256 fromChainID,
-        uint256 toChainID,
-        uint256 fee,
-        bytes32 swapoutID
-    );
-    event LogAnySwapOutNonEvm(
+    event LogSwapOut(
         address indexed token,
         address indexed from,
         string to,
@@ -247,12 +229,12 @@ contract CtmDaoV1Router {
     );
 
     modifier onlyMPC() {
-        require(msg.sender == mpc(), "CtmDaoV1Router: MPC FORBIDDEN");
+        require(msg.sender == mpc(), "C3Router: MPC FORBIDDEN");
         _;
     }
 
     modifier onlyAuth() {
-        require(isOperator[msg.sender], "CtmDaoV1ERC20: AUTH FORBIDDEN");
+        require(isOperator[msg.sender], "C3ERC20: AUTH FORBIDDEN");
         _;
     }
 
@@ -272,7 +254,7 @@ contract CtmDaoV1Router {
     }
 
     function changeMPC(address newMPC) external onlyMPC returns (bool) {
-        require(newMPC != address(0), "CtmDaoV1Router: address(0)");
+        require(newMPC != address(0), "C3Router: address(0)");
         _oldMPC = mpc();
         _newMPC = newMPC;
         _newMPCEffectiveTime = block.timestamp + DELAY;
@@ -281,8 +263,8 @@ contract CtmDaoV1Router {
     }
 
     function _addOperator(address op) internal {
-        require(op != address(0), "CtmDaoV1Router: Operator is address(0)");
-        require(!isOperator[op], "CtmDaoV1Router: Operator already exists");
+        require(op != address(0), "C3Router: Operator is address(0)");
+        require(!isOperator[op], "C3Router: Operator already exists");
         isOperator[op] = true;
         operators.push(op);
     }
@@ -296,7 +278,7 @@ contract CtmDaoV1Router {
     }
 
     function revokeOperator(address _auth) external onlyMPC {
-        require(isOperator[_auth], "CtmDaoV1Router: Operator not found");
+        require(isOperator[_auth], "C3Router: Operator not found");
         isOperator[_auth] = false;
         uint256 length = operators.length;
         for (uint256 i = 0; i < length; i++) {
@@ -312,7 +294,7 @@ contract CtmDaoV1Router {
         address token,
         address newVault
     ) external onlyMPC returns (bool) {
-        return ICtmDaoV1ERC20(token).changeVault(newVault);
+        return IC3ERC20(token).changeVault(newVault);
     }
 
     function changeSwapIDKeeper(address _swapIDKeeper) external onlyMPC {
@@ -329,7 +311,7 @@ contract CtmDaoV1Router {
         uint256 payFrom
     ) external onlyMPC returns (bool) {
         return
-            ICtmDaoV1ERC20(token).setFeeConfig(
+            IC3ERC20(token).setFeeConfig(
                 srcChainID,
                 dstChainID,
                 maxFee,
@@ -340,21 +322,21 @@ contract CtmDaoV1Router {
     }
 
     function setMinter(address token, address _auth) external onlyMPC {
-        return ICtmDaoV1ERC20(token).setMinter(_auth);
+        return IC3ERC20(token).setMinter(_auth);
     }
 
     function applyMinter(address token) external onlyMPC {
-        return ICtmDaoV1ERC20(token).applyMinter();
+        return IC3ERC20(token).applyMinter();
     }
 
     function revokeMinter(address token, address _auth) external onlyMPC {
-        return ICtmDaoV1ERC20(token).revokeMinter(_auth);
+        return IC3ERC20(token).revokeMinter(_auth);
     }
 
-    function _anySwapOut(
+    function _swapOut(
         address from,
         address token,
-        address to,
+        string calldata to,
         uint256 amount,
         uint256 toChainID
     ) internal {
@@ -365,13 +347,13 @@ contract CtmDaoV1Router {
             amount,
             toChainID
         );
-        ICtmDaoV1ERC20(token).burn(from, amount);
+        IC3ERC20(token).burn(from, amount);
         uint256 swapFee = calcSwapFee(0, toChainID, token, amount);
         if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
+            IC3ERC20(token).mint(address(this), swapFee);
         }
 
-        emit LogAnySwapOut(
+        emit LogSwapOut(
             token,
             from,
             to,
@@ -383,23 +365,13 @@ contract CtmDaoV1Router {
         );
     }
 
-    // Swaps `amount` `token` from this chain to `toChainID` chain with recipient `to`
-    function anySwapOut(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 toChainID
-    ) external {
-        _anySwapOut(msg.sender, token, to, amount, toChainID);
-    }
-
     // need approve to router first
-    function _anySwapOutUnderlying(
+    function _swapOutUnderlying(
         address token,
         uint256 amount
     ) internal returns (uint256) {
-        address _underlying = ICtmDaoV1ERC20(token).underlying();
-        require(_underlying != address(0), "CtmDaoV1Router: no underlying");
+        address _underlying = IC3ERC20(token).underlying();
+        require(_underlying != address(0), "C3Router: no underlying");
         uint256 old_balance = IERC20(_underlying).balanceOf(token);
         IERC20(_underlying).safeTransferFrom(msg.sender, token, amount);
         uint256 new_balance = IERC20(_underlying).balanceOf(token);
@@ -409,42 +381,11 @@ contract CtmDaoV1Router {
         return new_balance - old_balance;
     }
 
-    // Swaps `amount` `token` from this chain to `toChainID` chain with recipient `to` by minting with `underlying`
-    function anySwapOutUnderlying(
-        address token,
-        address to,
-        uint256 amount,
-        uint256 toChainID
-    ) external {
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-            token,
-            msg.sender,
-            to,
-            amount,
-            toChainID
-        );
-        uint256 recvAmount = _anySwapOutUnderlying(token, amount);
-        uint256 swapFee = calcSwapFee(0, toChainID, token, amount);
-        if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
-        }
-        emit LogAnySwapOut(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            swapFee,
-            swapID
-        );
-    }
-
-    function _anySwapOutNative(address token) internal returns (uint256) {
-        require(wNATIVE != address(0), "CtmDaoV1Router: zero wNATIVE");
+    function _swapOutNative(address token) internal returns (uint256) {
+        require(wNATIVE != address(0), "C3Router: zero wNATIVE");
         require(
-            ICtmDaoV1ERC20(token).underlying() == wNATIVE,
-            "CtmDaoV1Router: underlying is not wNATIVE"
+            IC3ERC20(token).underlying() == wNATIVE,
+            "C3Router: underlying is not wNATIVE"
         );
         uint256 old_balance = IERC20(wNATIVE).balanceOf(token);
         IwNATIVE(wNATIVE).deposit{value: msg.value}();
@@ -456,12 +397,62 @@ contract CtmDaoV1Router {
         return new_balance - old_balance;
     }
 
-    function anySwapOutNative(
+    function multiSwapOut(
+        address[] calldata tokens,
+        string[] calldata to,
+        uint256[] calldata amounts,
+        uint256[] calldata toChainIDs
+    ) external {
+        for (uint i = 0; i < tokens.length; i++) {
+            _swapOut(msg.sender, tokens[i], to[i], amounts[i], toChainIDs[i]);
+        }
+    }
+
+    function swapOut(
         address token,
-        address to,
+        string calldata to,
+        uint256 amount,
+        uint256 toChainID
+    ) external {
+        _swapOut(msg.sender, token, to, amount, toChainID);
+    }
+
+    function swapOutUnderlying(
+        address token,
+        string memory to,
+        uint256 amount,
+        uint256 toChainID
+    ) external {
+        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
+            token,
+            msg.sender,
+            to,
+            amount,
+            toChainID
+        );
+        uint256 recvAmount = _swapOutUnderlying(token, amount);
+        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
+        if (swapFee > 0) {
+            IC3ERC20(token).mint(address(this), swapFee);
+        }
+        emit LogSwapOut(
+            token,
+            msg.sender,
+            to,
+            recvAmount,
+            cID(),
+            toChainID,
+            swapFee,
+            swapID
+        );
+    }
+
+    function swapOutNative(
+        address token,
+        string memory to,
         uint256 toChainID
     ) external payable {
-        uint256 recvAmount = _anySwapOutNative(token);
+        uint256 recvAmount = _swapOutNative(token);
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
             token,
             msg.sender,
@@ -471,115 +462,9 @@ contract CtmDaoV1Router {
         );
         uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
         if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
+            IC3ERC20(token).mint(address(this), swapFee);
         }
-        emit LogAnySwapOut(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            swapFee,
-            swapID
-        );
-    }
-
-    function anySwapOut(
-        address[] calldata tokens,
-        address[] calldata to,
-        uint256[] calldata amounts,
-        uint256[] calldata toChainIDs
-    ) external {
-        for (uint i = 0; i < tokens.length; i++) {
-            _anySwapOut(
-                msg.sender,
-                tokens[i],
-                to[i],
-                amounts[i],
-                toChainIDs[i]
-            );
-        }
-    }
-
-    function anySwapOut(
-        address token,
-        string memory to,
-        uint256 amount,
-        uint256 toChainID
-    ) external {
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerNonEvmSwapout(
-            token,
-            msg.sender,
-            to,
-            amount,
-            toChainID
-        );
-        ICtmDaoV1ERC20(token).burn(msg.sender, amount);
-        uint256 swapFee = calcSwapFee(0, toChainID, token, amount);
-        if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
-        }
-        emit LogAnySwapOutNonEvm(
-            token,
-            msg.sender,
-            to,
-            amount,
-            cID(),
-            toChainID,
-            swapFee,
-            swapID
-        );
-    }
-
-    function anySwapOutUnderlying(
-        address token,
-        string memory to,
-        uint256 amount,
-        uint256 toChainID
-    ) external {
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerNonEvmSwapout(
-            token,
-            msg.sender,
-            to,
-            amount,
-            toChainID
-        );
-        uint256 recvAmount = _anySwapOutUnderlying(token, amount);
-        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
-        if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
-        }
-        emit LogAnySwapOutNonEvm(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            swapFee,
-            swapID
-        );
-    }
-
-    function anySwapOutNative(
-        address token,
-        string memory to,
-        uint256 toChainID
-    ) external payable {
-        uint256 recvAmount = _anySwapOutNative(token);
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerNonEvmSwapout(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            toChainID
-        );
-        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
-        if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
-        }
-        emit LogAnySwapOutNonEvm(
+        emit LogSwapOut(
             token,
             msg.sender,
             to,
@@ -592,7 +477,7 @@ contract CtmDaoV1Router {
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID
-    function _anySwapIn(
+    function _swapIn(
         bytes32 swapID,
         address token,
         address to,
@@ -603,10 +488,10 @@ contract CtmDaoV1Router {
         ISwapIDKeeper(swapIDKeeper).registerSwapin(swapID);
         uint256 swapFee = calcSwapFee(fromChainID, 0, token, amount);
         if (swapFee > 0) {
-            ICtmDaoV1ERC20(token).mint(address(this), swapFee);
+            IC3ERC20(token).mint(address(this), swapFee);
         }
-        ICtmDaoV1ERC20(token).mint(to, amount - swapFee);
-        emit LogAnySwapIn(
+        IC3ERC20(token).mint(to, amount - swapFee);
+        emit LogSwapIn(
             token,
             to,
             swapID,
@@ -619,8 +504,7 @@ contract CtmDaoV1Router {
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID
-    // triggered by `anySwapOut`
-    function anySwapIn(
+    function swapIn(
         bytes32 swapID,
         address token,
         address to,
@@ -628,11 +512,11 @@ contract CtmDaoV1Router {
         uint256 fromChainID,
         string calldata sourceTx
     ) external onlyAuth {
-        _anySwapIn(swapID, token, to, amount, fromChainID, sourceTx);
+        _swapIn(swapID, token, to, amount, fromChainID, sourceTx);
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying`
-    function anySwapInUnderlying(
+    function swapInUnderlying(
         bytes32 swapID,
         address token,
         address to,
@@ -640,7 +524,7 @@ contract CtmDaoV1Router {
         uint256 fromChainID,
         string calldata sourceTx
     ) external onlyAuth {
-        uint256 recvAmount = _anySwapIn(
+        uint256 recvAmount = _swapIn(
             swapID,
             token,
             to,
@@ -648,11 +532,11 @@ contract CtmDaoV1Router {
             fromChainID,
             sourceTx
         );
-        ICtmDaoV1ERC20(token).withdrawVault(to, recvAmount, to);
+        IC3ERC20(token).withdrawVault(to, recvAmount, to);
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying` if possible
-    function anySwapInAuto(
+    function swapInAuto(
         bytes32 swapID,
         address token,
         address to,
@@ -660,7 +544,7 @@ contract CtmDaoV1Router {
         uint256 fromChainID,
         string calldata sourceTx
     ) external onlyAuth {
-        uint256 recvAmount = _anySwapIn(
+        uint256 recvAmount = _swapIn(
             swapID,
             token,
             to,
@@ -668,7 +552,7 @@ contract CtmDaoV1Router {
             fromChainID,
             sourceTx
         );
-        ICtmDaoV1ERC20 _anyToken = ICtmDaoV1ERC20(token);
+        IC3ERC20 _anyToken = IC3ERC20(token);
         address _underlying = _anyToken.underlying();
         if (
             _underlying != address(0) &&
@@ -688,14 +572,14 @@ contract CtmDaoV1Router {
         address token,
         address to
     ) external payable returns (uint256) {
-        require(wNATIVE != address(0), "CtmDaoV1Router: zero wNATIVE");
+        require(wNATIVE != address(0), "C3Router: zero wNATIVE");
         require(
-            ICtmDaoV1ERC20(token).underlying() == wNATIVE,
-            "CtmDaoV1Router: underlying is not wNATIVE"
+            IC3ERC20(token).underlying() == wNATIVE,
+            "C3Router: underlying is not wNATIVE"
         );
         IwNATIVE(wNATIVE).deposit{value: msg.value}();
         assert(IwNATIVE(wNATIVE).transfer(token, msg.value));
-        ICtmDaoV1ERC20(token).depositVault(msg.value, to);
+        IC3ERC20(token).depositVault(msg.value, to);
         return msg.value;
     }
 
@@ -704,14 +588,14 @@ contract CtmDaoV1Router {
         uint256 amount,
         address to
     ) external returns (uint256) {
-        require(wNATIVE != address(0), "CtmDaoV1Router: zero wNATIVE");
+        require(wNATIVE != address(0), "C3Router: zero wNATIVE");
         require(
-            ICtmDaoV1ERC20(token).underlying() == wNATIVE,
-            "CtmDaoV1Router: underlying is not wNATIVE"
+            IC3ERC20(token).underlying() == wNATIVE,
+            "C3Router: underlying is not wNATIVE"
         );
 
         uint256 old_balance = IERC20(wNATIVE).balanceOf(address(this));
-        ICtmDaoV1ERC20(token).withdrawVault(msg.sender, amount, address(this));
+        IC3ERC20(token).withdrawVault(msg.sender, amount, address(this));
         uint256 new_balance = IERC20(wNATIVE).balanceOf(address(this));
         assert(new_balance == old_balance + amount);
 
@@ -721,22 +605,18 @@ contract CtmDaoV1Router {
     }
 
     //  extracts mpc fee from bridge fees
-    function anySwapFeeTo(address[] calldata tokens) external onlyMPC {
+    function swapFeeTo(address[] calldata tokens) external onlyMPC {
         address _mpc = mpc();
         for (uint index = 0; index < tokens.length; index++) {
             address _token = tokens[index];
             uint256 amount = IERC20(_token).balanceOf(address(this));
             if (amount > 0) {
-                ICtmDaoV1ERC20(_token).withdrawVault(
-                    address(this),
-                    amount,
-                    _mpc
-                );
+                IC3ERC20(_token).withdrawVault(address(this), amount, _mpc);
             }
         }
     }
 
-    function anySwapIn(
+    function swapIn(
         bytes32[] calldata swapIDs,
         address[] calldata tokens,
         address[] calldata to,
@@ -745,7 +625,7 @@ contract CtmDaoV1Router {
         string[] calldata sourceTxs
     ) external onlyAuth {
         for (uint i = 0; i < tokens.length; i++) {
-            _anySwapIn(
+            _swapIn(
                 swapIDs[i],
                 tokens[i],
                 to[i],
@@ -767,12 +647,12 @@ contract CtmDaoV1Router {
             uint256 maximumSwapFee,
             uint256 minimumSwapFee,
             uint256 swapFeeRatePerMillion
-        ) = ICtmDaoV1ERC20(token).getFeeConfig(fromChainID, toChainID);
+        ) = IC3ERC20(token).getFeeConfig(fromChainID, toChainID);
         if (swapFeeRatePerMillion == 0) return 0;
         if (maximumSwapFee > 0 && maximumSwapFee == minimumSwapFee)
             return maximumSwapFee;
         uint256 _fee = (amount * swapFeeRatePerMillion) / 1000000;
-        require(_fee < amount, "CtmDaoV1Router: Invalid FeeConfig");
+        require(_fee < amount, "C3Router: Invalid FeeConfig");
         _fee = maximumSwapFee < _fee ? maximumSwapFee : _fee;
         _fee = minimumSwapFee > _fee ? minimumSwapFee : _fee;
         return _fee;

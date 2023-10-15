@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.19;
 
-import "./CtmDaoV1ERC20.sol";
+import "./C3ERC20.sol";
 
 contract DeployTokenFactoryV1 {
     address public owner;
@@ -24,7 +24,7 @@ contract DeployTokenFactoryV1 {
         bytes32 salt = keccak256(
             abi.encodePacked(_name, _symbol, _decimals, _underlying, _vault)
         );
-        CtmDaoV1ERC20 t = new CtmDaoV1ERC20{salt: salt}(
+        C3ERC20 t = new C3ERC20{salt: salt}(
             _name,
             _symbol,
             _decimals,
