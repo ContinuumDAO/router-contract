@@ -87,7 +87,9 @@ contract C3SwapIDKeeper {
         address from,
         string calldata to,
         uint256 amount,
-        uint256 toChainID
+        uint256 toChainID,
+        string calldata dapp,
+        bytes calldata data
     ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
         swapID = keccak256(
             abi.encode(
@@ -99,32 +101,9 @@ contract C3SwapIDKeeper {
                 to,
                 amount,
                 currentSwapoutNonce,
-                toChainID
-            )
-        );
-        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
-        swapoutNonce[swapID] = currentSwapoutNonce;
-        return swapID;
-    }
-
-    function registerNonEvmSwapout(
-        address token,
-        address from,
-        string calldata to,
-        uint256 amount,
-        uint256 toChainID
-    ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
-        swapID = keccak256(
-            abi.encode(
-                address(this),
-                msg.sender,
-                block.chainid,
-                token,
-                from,
-                to,
-                amount,
-                currentSwapoutNonce,
-                toChainID
+                toChainID,
+                dapp,
+                data
             )
         );
         require(!this.isSwapoutIDExist(swapID), "swapID already exist");
@@ -138,7 +117,9 @@ contract C3SwapIDKeeper {
         string calldata to,
         uint256 amount,
         uint256 toChainID,
-        address sender
+        address sender,
+        string calldata dapp,
+        bytes calldata data
     ) public view returns (bytes32) {
         uint256 nonce = currentSwapoutNonce + 1;
         return
@@ -152,7 +133,9 @@ contract C3SwapIDKeeper {
                     to,
                     amount,
                     nonce,
-                    toChainID
+                    toChainID,
+                    dapp,
+                    data
                 )
             );
     }

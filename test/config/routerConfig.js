@@ -12,7 +12,7 @@ describe("CtmConfig", function () {
         // Contracts are deployed using the first signer/account by default
         const [_owner, _otherAccount] = await ethers.getSigners();
 
-        const RouterConfig = await ethers.getContractFactory("RouterConfig");
+        const RouterConfig = await ethers.getContractFactory("C3RouterConfig");
         routerConfig = await RouterConfig.deploy();
 
         owner = _owner

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-contract CtmERC20FeeConfig {
+contract C3ERC20FeeConfig {
     struct FeeConfig {
         uint256 MaximumSwapFee; // FixFee if MaximumSwapFee == MinimumSwapFee
         uint256 MinimumSwapFee;

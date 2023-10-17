@@ -46,7 +46,7 @@ library Structs {
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 
-contract RouterConfig is AccessControl, Multicall {
+contract C3RouterConfig is AccessControl, Multicall {
     uint256 public constant CONFIG_VERSION = 1;
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 

@@ -12,7 +12,7 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.deployContract("RouterConfig");
+    const aRouterConfig = await hre.ethers.deployContract("C3RouterConfig");
     await aRouterConfig.waitForDeployment();
 
     console.log("RouterConfig address:", aRouterConfig.target);

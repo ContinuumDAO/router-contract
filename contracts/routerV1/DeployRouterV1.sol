@@ -19,6 +19,7 @@ contract DeployRouterV1 {
         address _wNATIVE,
         address _mpc,
         address _swapIDKeeper,
+        address _c3caller,
         string memory _name
     ) external returns (address) {
         require(owner == msg.sender, "DeployRouterV1: no permission");
@@ -29,7 +30,8 @@ contract DeployRouterV1 {
         C3Router cr = new C3Router{salt: salt}(
             _wNATIVE,
             _mpc,
-            _swapIDKeeper
+            _swapIDKeeper,
+            _c3caller
         );
         routers[_name] = address(cr);
         emit NewRouter(address(cr));

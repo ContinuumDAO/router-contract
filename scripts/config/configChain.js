@@ -12,8 +12,8 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.getContractAt("RouterConfig", evn[networkName.toUpperCase()].RouterConfig);
-    console.log("RouterConfig address:", aRouterConfig.target);
+    const aRouterConfig = await hre.ethers.getContractAt("C3RouterConfig", evn[networkName.toUpperCase()].C3RouterConfig);
+    console.log("C3RouterConfig address:", aRouterConfig.target);
 
     let tx = await aRouterConfig.connect(signer).setChainConfig(chainId, networkName, evn[networkName.toUpperCase()].testRouter + ":v1;", 2, 33587883, "{}")
     console.log("Tx:", tx.hash);

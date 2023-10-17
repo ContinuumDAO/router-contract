@@ -105,9 +105,9 @@ library SafeERC20 {
     }
 }
 
-import "../config/CtmERC20FeeConfig.sol";
+import "../config/C3ERC20FeeConfig.sol";
 
-contract C3ERC20 is IERC20, CtmERC20FeeConfig {
+contract C3ERC20 is IERC20, C3ERC20FeeConfig {
     using SafeERC20 for IERC20;
     string public name;
     string public symbol;
