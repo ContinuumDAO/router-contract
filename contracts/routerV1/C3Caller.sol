@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-contract C3Caller {
+import "./IC3DApp.sol";
+import "./IC3Executor.sol";
+
+contract C3Caller is IC3Executor {
     // App config
     struct AppConfig {
         address app; // the application contract address
@@ -14,6 +17,15 @@ contract C3Caller {
         uint256 baseFees;
         uint256 feesPerByte;
     }
+
+    struct Context {
+        address user;
+        uint256 fromChainID;
+        bytes32 swapID;
+        string sourceTx;
+    }
+
+    Context public override context;
 
     uint256 public constant APP_FEE_SRC = 1; // src chain pay the fee
     uint256 public constant APP_FEE_DEST = 2; // dest chain pay the fee
@@ -85,31 +97,6 @@ contract C3Caller {
 
     fallback() external payable {}
 
-    function checkCall(
-        address _sender,
-        uint256 _datalength,
-        uint256 _toChainID
-    ) external view returns (string memory _appID, uint256 _srcFees) {
-        _appID = appIdentifier[_sender];
-        require(appConfig[_appID].appFlags > 0, "C3Call: app not exist");
-        require(!appBlacklist[_appID], "C3Call: in blacklist");
-        if (appConfig[_appID].appFlags == APP_FEE_SRC) {
-            _srcFees = _calcSrcFees(_appID, _toChainID, _datalength);
-        } else {
-            _srcFees = 0;
-        }
-    }
-
-    function checkExec(address _to) external view {
-        string memory _appID = appExecWhitelist[_to];
-        require(appConfig[_appID].appFlags > 0, "C3Call: app not exist");
-        require(!appBlacklist[_appID], "C3Call: in blacklist");
-        require(
-            executionBudget[_appID] >= minReserveBudget,
-            "less than min budget"
-        );
-    }
-
     function changeMPC(address _mpc) external onlyMPC {
         pendingMPC = _mpc;
         emit ChangeMPC(mpc, _mpc, block.timestamp);
@@ -152,6 +139,71 @@ contract C3Caller {
 
     function setDestFeeRate(uint256 _destFeeRate) external onlyMPC {
         destFeeRate = _destFeeRate;
+    }
+
+    function checkCall(
+        address _sender,
+        uint256 _datalength,
+        uint256 _toChainID
+    ) external view returns (string memory _appID, uint256 _srcFees) {
+        _appID = appIdentifier[_sender];
+        require(appConfig[_appID].appFlags > 0, "C3Call: app not exist");
+        require(!appBlacklist[_appID], "C3Call: in blacklist");
+        if (appConfig[_appID].appFlags == APP_FEE_SRC) {
+            _srcFees = _calcSrcFees(_appID, _toChainID, _datalength);
+        } else {
+            _srcFees = 0;
+        }
+    }
+
+    function checkExec(address _to) external view {
+        string memory _appID = appExecWhitelist[_to];
+        require(appConfig[_appID].appFlags > 0, "C3Call: app not exist");
+        require(!appBlacklist[_appID], "C3Call: in blacklist");
+        require(
+            executionBudget[_appID] >= minReserveBudget,
+            "less than min budget"
+        );
+    }
+
+    function execute(
+        bytes32 _swapID,
+        address _dapp,
+        address _user,
+        uint256 _fromChainID,
+        string calldata _sourceTx,
+        bytes calldata _data
+    )
+        external
+        virtual
+        override
+        onlyC3Router
+        returns (bool success, bytes memory result)
+    {
+        context = Context({
+            user: _user,
+            fromChainID: _fromChainID,
+            swapID: _swapID,
+            sourceTx: _sourceTx
+        });
+
+        try IC3DApp(_dapp).c3Execute(_data) returns (
+            bool succ,
+            bytes memory res
+        ) {
+            (success, result) = (succ, res);
+        } catch Error(string memory reason) {
+            result = bytes(reason);
+        } catch (bytes memory reason) {
+            result = reason;
+        }
+
+        context = Context({
+            user: address(0),
+            fromChainID: 0,
+            swapID: "",
+            sourceTx: ""
+        });
     }
 
     function deposit(string calldata _appID) external payable {

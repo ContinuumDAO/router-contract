@@ -188,6 +188,8 @@ interface IC3Caller {
     function payDestFees(address _to, uint256 _prevGasLeft) external;
 }
 
+import "./IC3Executor.sol";
+
 contract C3Router {
     using SafeERC20 for IERC20;
 
@@ -252,6 +254,17 @@ contract C3Router {
         string callDapp,
         bytes data
     );
+    event LogAnySwapInAndExec(
+        address indexed dapp,
+        address indexed receiver,
+        bytes32 swapID,
+        address token,
+        uint256 amount,
+        uint256 fromChainID,
+        string sourceTx,
+        bool success,
+        bytes result
+    );
 
     modifier onlyMPC() {
         require(msg.sender == mpc(), "C3Router: MPC FORBIDDEN");
@@ -261,6 +274,12 @@ contract C3Router {
     modifier onlyAuth() {
         require(isOperator[msg.sender], "C3ERC20: AUTH FORBIDDEN");
         _;
+    }
+
+    modifier chargeDestFee(address _dapp) {
+        uint256 _prevGasLeft = gasleft();
+        _;
+        IC3Caller(c3caller).payDestFees(_dapp, _prevGasLeft);
     }
 
     function mpc() public view returns (address) {
@@ -788,6 +807,81 @@ contract C3Router {
                 _anyToken.withdrawVault(to, recvAmount, to);
             }
         }
+    }
+
+    function swapInAndExec(
+        bytes32 swapID,
+        address token,
+        address to,
+        uint256 amount,
+        uint256 fromChainID,
+        string calldata sourceTx,
+        address dapp,
+        bytes calldata data
+    ) external onlyAuth chargeDestFee(dapp) {
+        require(to != address(0), "C3Call: empty dapp address");
+        require(dapp != address(0), "C3Call: empty dapp address");
+        require(data.length > 0, "C3Call: empty c3 calldata");
+        ISwapIDKeeper(swapIDKeeper).registerSwapin(swapID);
+
+        IC3Caller(c3caller).checkExec(dapp);
+
+        uint256 recvAmount = 0;
+        if (token != address(0) && amount > 0) {
+            uint256 swapFee = calcSwapFee(fromChainID, 0, token, amount);
+            IC3ERC20 _c3Token = IC3ERC20(token);
+            if (swapFee > 0) {
+                _c3Token.mint(address(this), swapFee);
+            }
+            _c3Token.mint(dapp, amount - swapFee);
+            recvAmount = amount - swapFee;
+            address _underlying = _c3Token.underlying();
+            if (
+                _underlying != address(0) &&
+                IERC20(_underlying).balanceOf(token) >= recvAmount
+            ) {
+                if (_underlying == wNATIVE) {
+                    _c3Token.withdrawVault(dapp, recvAmount, address(this));
+                    IwNATIVE(wNATIVE).withdraw(recvAmount);
+                    TransferHelper.safeTransferNative(dapp, recvAmount);
+                } else {
+                    _c3Token.withdrawVault(dapp, recvAmount, dapp);
+                }
+            }
+        }
+
+        IC3Caller(c3caller).checkExec(dapp);
+
+        bool success;
+        bytes memory result;
+        try
+            IC3Executor(c3caller).execute(
+                swapID,
+                dapp,
+                to,
+                fromChainID,
+                sourceTx,
+                data
+            )
+        returns (bool succ, bytes memory res) {
+            (success, result) = (succ, res);
+        } catch Error(string memory reason) {
+            result = bytes(reason);
+        } catch (bytes memory reason) {
+            result = reason;
+        }
+
+        emit LogAnySwapInAndExec(
+            dapp,
+            to,
+            swapID,
+            token,
+            recvAmount,
+            fromChainID,
+            sourceTx,
+            success,
+            result
+        );
     }
 
     function depositNative(

@@ -584,6 +584,15 @@ describe("C3Router", function () {
                 .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID, "otherDapp", callData)
                 .to.emit(c3Caller, "IncrFee").withArgs(appID, fee, fee)
 
+            let noTokenCalldata = contract.methods.swapOutAndCall("0x0000000000000000000000000000000000000000", otherAccount.address.toString(), 0, 250, "otherDapp", callData).encodeABI()
+            let noTokenSwapID = await ctmSwapIDKeeper.calcSwapID("0x0000000000000000000000000000000000000000", otherAccount.address, otherAccount.address, 0, 250, routerV1.target, "otherDapp", callData)
+            await expect(otherAccount.sendTransaction({
+                to: routerV1.target,
+                value: fee,
+                data: noTokenCalldata
+            })).to.emit(routerV1, "LogSwapOut")
+                .withArgs("0x0000000000000000000000000000000000000000", otherAccount.address, otherAccount.address, 0, chainID, 250, 0, noTokenSwapID, "otherDapp", callData)
+                .to.emit(c3Caller, "IncrFee").withArgs(appID, fee, fee)
         });
 
         it("swapOutUnderlyingAndCall", async function () {

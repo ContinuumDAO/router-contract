@@ -37,9 +37,9 @@ describe("CtmConfig", function () {
             await routerConfig.setChainConfig(97, "bsc_test", "0x7C6997Ae35cE2F440E65e35a80e595B17E3E2418", 2, 33587883, "{}")
 
 
-            console.log('getAllChainIDs', await routerConfig.getAllChainIDs())
+            // console.log('getAllChainIDs', await routerConfig.getAllChainIDs())
 
-            console.log('getAllChainConfig', await routerConfig.getAllChainConfig())
+            // console.log('getAllChainConfig', await routerConfig.getAllChainConfig())
         });
 
 
