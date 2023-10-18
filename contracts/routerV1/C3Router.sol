@@ -562,7 +562,7 @@ contract C3Router {
         );
 
         if (_srcFees > 0) {
-            _paySrcFees(_srcFees);
+            _paySrcFees(_srcFees, 0);
         }
 
         emit LogSwapOut(
@@ -610,7 +610,7 @@ contract C3Router {
         );
 
         if (_srcFees > 0) {
-            _paySrcFees(_srcFees);
+            _paySrcFees(_srcFees, 0);
         }
 
         emit LogSwapOut(
@@ -649,7 +649,7 @@ contract C3Router {
             dapp,
             data
         );
-
+        uint256 fee = 0;
         {
             (, uint256 _srcFees) = IC3Caller(c3caller).checkCall(
                 msg.sender,
@@ -660,13 +660,14 @@ contract C3Router {
                 if (recvAmount > 0) {
                     IC3ERC20(token).mint(address(this), _srcFees);
                     IC3ERC20(token).withdrawVault(
-                        msg.sender,
+                        address(this),
                         _srcFees,
                         address(this)
                     );
                     IwNATIVE(wNATIVE).withdraw(_srcFees);
                 }
-                _paySrcFees(_srcFees);
+                _paySrcFees(_srcFees, recvAmount);
+                fee = _srcFees;
             }
         }
 
@@ -677,23 +678,23 @@ contract C3Router {
             recvAmount,
             cID(),
             toChainID,
-            0,
+            fee,
             swapID,
             dapp,
             data
         );
     }
 
-    function _paySrcFees(uint256 fees) internal {
+    function _paySrcFees(uint256 fees, uint256 recvAmount) internal {
         require(msg.value >= fees, "C3Router: not enough src fee");
         if (fees > 0) {
             // pay fees
             IC3Caller(c3caller).paySrcFees{value: fees}(msg.sender, fees);
         }
-        if (msg.value > fees) {
+        if (msg.value - recvAmount > fees) {
             // return remaining amount
             (bool success, ) = msg.sender.call{value: msg.value - fees}("");
-            require(success);
+            require(success, "C3Router: failed to return remaining amount");
         }
     }
 

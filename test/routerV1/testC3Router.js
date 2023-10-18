@@ -585,6 +585,137 @@ describe("C3Router", function () {
                 .to.emit(c3Caller, "IncrFee").withArgs(appID, fee, fee)
 
         });
+
+        it("swapOutUnderlyingAndCall", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+            await otherAccount.sendTransaction({
+                to: weth.target,
+                value: amount,
+            });
+
+            expect(await weth.balanceOf(otherAccount.address)).to.equal(amount)
+
+            await weth.connect(otherAccount).approve(routerV1.target, amount.toString())
+            expect(await weth.allowance(otherAccount.address, routerV1.target)).to.equal(amount.toString())
+
+            let appID = web3.utils.randomHex(12)
+            await c3Caller.connect(owner).initAppConfig(appID, otherAccount.address, owner.address, 1, [owner.address])
+            await c3Caller.connect(owner).setDefaultSrcFees([250], [100000000], [10000000])
+
+            let callData = web3.utils.randomHex(256)
+            let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), 250, routerV1.target, "otherDapp", callData)
+
+            let ABI = [{
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "token",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "to",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "toChainID",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "dapp",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "data",
+                        "type": "bytes"
+                    }
+                ],
+                "name": "swapOutUnderlyingAndCall",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            }]
+            let contract = new web3.eth.Contract(ABI);
+            let calldata = contract.methods.swapOutUnderlyingAndCall(erc20Token.target, otherAccount.address.toString(), amount.toString(), 250, "otherDapp", callData).encodeABI()
+
+            let fee = 100000000 + 256 * 10000000
+            await expect(otherAccount.sendTransaction({
+                to: routerV1.target,
+                value: fee,
+                data: calldata
+            })).to.emit(routerV1, "LogSwapOut")
+                .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, amount.toString(), chainID, 250, 0, swapID, "otherDapp", callData)
+                .to.emit(c3Caller, "IncrFee").withArgs(appID, fee, fee)
+
+        });
+
+
+        it("swapOutNativeAndCall", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+
+            let appID = web3.utils.randomHex(12)
+            await c3Caller.connect(owner).initAppConfig(appID, otherAccount.address, owner.address, 1, [owner.address])
+            await c3Caller.connect(owner).setDefaultSrcFees([250], [100000000], [10000000])
+
+            let callData = web3.utils.randomHex(256)
+
+            let ABI = [{
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "token",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "to",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "toChainID",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "string",
+                        "name": "dapp",
+                        "type": "string"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "data",
+                        "type": "bytes"
+                    }
+                ],
+                "name": "swapOutNativeAndCall",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            }]
+            let contract = new web3.eth.Contract(ABI);
+            let calldata = contract.methods.swapOutNativeAndCall(erc20Token.target, otherAccount.address.toString(), 250, "otherDapp", callData).encodeABI()
+
+            let fee = new BN("100000000").add(new BN(256 * 10000000))
+            let value = fee.add(new BN("1000000000000000000"))
+
+            let swapID = await ctmSwapIDKeeper.calcSwapID(erc20Token.target, otherAccount.address, otherAccount.address, value.toString(), 250, routerV1.target, "otherDapp", callData)
+            await expect(otherAccount.sendTransaction({
+                to: routerV1.target,
+                value: value.toString(),
+                data: calldata
+            })).to.emit(routerV1, "LogSwapOut")
+                .withArgs(erc20Token.target, otherAccount.address, otherAccount.address, value.toString(), chainID, 250, fee.toString(), swapID, "otherDapp", callData)
+                .to.emit(c3Caller, "IncrFee").withArgs(appID, fee.toString(), fee.toString())
+
+        });
     });
 
 });
