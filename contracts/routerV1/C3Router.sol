@@ -850,8 +850,6 @@ contract C3Router {
             }
         }
 
-        IC3Caller(c3caller).checkExec(dapp);
-
         bool success;
         bytes memory result;
         try

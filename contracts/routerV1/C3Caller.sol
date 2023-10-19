@@ -180,6 +180,8 @@ contract C3Caller is IC3Executor {
         onlyC3Router
         returns (bool success, bytes memory result)
     {
+        string memory _appID = appExecWhitelist[_dapp];
+        require(appConfig[_appID].appFlags > 0, "C3Call: app not exist");
         context = Context({
             user: _user,
             fromChainID: _fromChainID,
@@ -412,7 +414,9 @@ contract C3Caller is IC3Executor {
     ) external onlyC3Router {
         string memory _appID = appExecWhitelist[_to];
         AppConfig memory config = appConfig[_appID];
-        require(config.appFlags == APP_FEE_DEST, "C3Call: app not exist");
+        if (config.appFlags != APP_FEE_DEST) {
+            return;
+        } 
         uint256 gasUsed = _prevGasLeft - gasleft();
         uint256 totalCost = ((gasUsed + EXECUTION_OVERHEAD) *
             tx.gasprice *

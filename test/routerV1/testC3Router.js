@@ -725,6 +725,57 @@ describe("C3Router", function () {
                 .to.emit(c3Caller, "IncrFee").withArgs(appID, fee.toString(), fee.toString())
 
         });
+
+        it("swapInAndExec", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+
+            const DAppDemo = await ethers.getContractFactory("DAppDemo");
+            let dAppDemo = await DAppDemo.deploy();
+            let appID = web3.utils.randomHex(12)
+            await c3Caller.connect(owner).initAppConfig(appID, otherAccount.address, owner.address, 2, [dAppDemo.target])
+
+            let ABI = [{
+                "inputs": [
+                    {
+                        "internalType": "string",
+                        "name": "_appID",
+                        "type": "string"
+                    }
+                ],
+                "name": "deposit",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },]
+            let contract = new web3.eth.Contract(ABI);
+            let depositcalldata = contract.methods.deposit(appID).encodeABI()
+            await otherAccount.sendTransaction({
+                to: c3Caller.target,
+                value: amount.toString(),
+                data: depositcalldata
+            })
+            expect(await c3Caller.executionBudget(appID)).to.equal(amount)
+
+            let swapInMsg = {
+                txs: "0x1234567890123456789012345678901234567890123456789012345678901234",
+                token: erc20Token.target,
+                to: owner.address,
+                fromChainID: 1,
+                amount,
+            }
+
+            let swapID = web3.utils.randomHex(32)
+            let callData = web3.utils.randomHex(256)
+
+            await expect(routerV1.connect(owner).swapInAndExec(swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs, dAppDemo.target, callData)).to.emit(routerV1, "LogAnySwapInAndExec")
+                .withArgs(dAppDemo.target, swapInMsg.to, swapID, swapInMsg.token, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs, true, "0x")
+                .to.emit(dAppDemo, "LogC3Execute").withArgs(swapInMsg.to, swapInMsg.fromChainID, swapID, swapInMsg.txs, callData)
+
+            let cost = await c3Caller.executionBudget(appID)
+            console.log(amount - cost)
+
+            expect(await erc20Token.balanceOf(dAppDemo.target)).to.equal(amount)
+        });
     });
 
 });
