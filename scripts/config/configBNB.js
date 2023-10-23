@@ -16,7 +16,7 @@ async function main() {
     console.log("C3RouterConfig address:", aRouterConfig.target);
 
     let tx = await aRouterConfig.connect(signer).setTokenConfig("bnb", chainId, evn[networkName.toUpperCase()].ctmBNB, 18, 1,
-        evn[networkName.toUpperCase()].testRouter, "")
+        evn[networkName.toUpperCase()].testRouter, "{\"underlying\":\"0x094616F0BdFB0b526bD735Bf66Eca0Ad254ca81F\"}")
     console.log("Tx:", tx.hash);
 }
 

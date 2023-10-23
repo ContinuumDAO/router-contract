@@ -17,7 +17,7 @@ library Structs {
         string ContractAddress;
         uint256 ContractVersion;
         string RouterContract;
-        string Extra;
+        string Extra;//{underlying:}
     }
 
     struct SwapConfig {
