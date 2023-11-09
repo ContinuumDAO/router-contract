@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.10;
 
-contract C3SwapIDKeeper {
+import "./ISwapIDKeeper.sol";
+
+contract C3SwapIDKeeper is ISwapIDKeeper {
     address public admin;
     mapping(address => bool) public isSupportedCaller; // routers address
     address[] public supportedCallers;
@@ -105,6 +107,30 @@ contract C3SwapIDKeeper {
                 from,
                 to,
                 amount,
+                currentSwapoutNonce,
+                toChainID,
+                data
+            )
+        );
+        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
+        swapoutNonce[swapID] = currentSwapoutNonce;
+        return swapID;
+    }
+
+    function genSwapID(
+        uint256 dappID,
+        string calldata to,
+        string calldata toChainID,
+        bytes calldata data
+    ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
+        swapID = keccak256(
+            abi.encode(
+                address(this),
+                msg.sender,
+                block.chainid,
+                dappID,
+                to,
+                toChainID,
                 currentSwapoutNonce,
                 toChainID,
                 data

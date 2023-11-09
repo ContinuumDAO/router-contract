@@ -37,14 +37,35 @@ contract C3Caller is IC3Caller {
         address indexed newMPC,
         uint256 timestamp
     );
+
     event ApplyMPC(
         address indexed oldMPC,
         address indexed newMPC,
         uint256 timestamp
     );
-    event LogCall(
+
+    event LogC3Call(
+        uint256 indexed dappID,
         bytes32 indexed swapoutID,
+        address from,
+        string indexed toChainID,
+        string to,
+        bytes data
+    );
+
+    event LogFallbackCall(
+        uint256 indexed dappID,
+        bytes32 indexed swapoutID,
+        string indexed to,
+        bytes data,
+        bytes reason
+    );
+
+    event LogExecCall(
+        uint256 indexed dappID,
         address indexed to,
+        bool indexed success,
+        bytes32 swapoutID,
         string fromChainID,
         string sourceTx,
         bytes data
@@ -57,10 +78,6 @@ contract C3Caller is IC3Caller {
         _addOperator(_mpc);
         emit ApplyMPC(address(0), _mpc, block.timestamp);
     }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 
     function changeMPC(address _mpc) external onlyMPC {
         pendingMPC = _mpc;
@@ -102,11 +119,32 @@ contract C3Caller is IC3Caller {
         }
     }
 
+    function c3call(
+        uint256 _dappID,
+        string calldata _to,
+        string calldata _toChainID,
+        bytes calldata _data
+    ) external override {
+        require(_dappID > 0, "C3Caller: empty dappID");
+        require(bytes(_to).length > 0, "C3Caller: empty _to");
+        require(bytes(_toChainID).length > 0, "C3Caller: empty toChainID");
+        require(_data.length > 0, "C3Caller: empty calldata");
+        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).genSwapID(
+            _dappID,
+            _to,
+            _toChainID,
+            _data
+        );
+        emit LogC3Call(_dappID, _swapID, msg.sender, _toChainID, _to, _data);
+    }
+
     function execute(
+        uint256 _dappID,
         bytes32 _swapID,
         address _to,
         string calldata _fromChainID,
         string calldata _sourceTx,
+        string calldata _fallback,
         bytes calldata _data
     ) external virtual override onlyAuth {
         require(_data.length > 0, "C3Caller: empty calldata");
@@ -119,21 +157,43 @@ contract C3Caller is IC3Caller {
         });
 
         bool success;
-        string memory result;
+        bytes memory result;
 
-        try IC3CallExecutor(_to).call(_swapID, _data) returns (
+        try IC3CallExecutor(_to).execCall(_swapID, _data) returns (
             bool succ,
             bytes memory res
         ) {
-            (success, result) = (succ, string(res));
+            (success, result) = (succ, res);
         } catch Error(string memory reason) {
-            result = reason;
+            result = bytes(reason);
         } catch (bytes memory reason) {
-            result = string(reason);
+            result = reason;
         }
-
         context = Context({swapID: "", fromChainID: "", sourceTx: ""});
 
-        emit LogCall(_swapID, _to, _fromChainID, _sourceTx, _data);
+        emit LogExecCall(
+            _dappID,
+            _to,
+            success,
+            _swapID,
+            _fromChainID,
+            _sourceTx,
+            _data
+        );
+        if (!success && bytes(_fallback).length > 0) {
+            emit LogFallbackCall(
+                _dappID,
+                _swapID,
+                _fallback,
+                abi.encodeWithSelector(
+                    IC3Dapp.c3Fallback.selector,
+                    _dappID,
+                    _swapID,
+                    _data,
+                    result
+                ),
+                result
+            );
+        }
     }
 }
