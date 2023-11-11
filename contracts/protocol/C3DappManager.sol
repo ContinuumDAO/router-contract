@@ -47,7 +47,7 @@ contract C3DappManager is Pausable, Ownable {
         uint256 indexed dappID,
         address indexed appAdmin,
         address indexed feeToken,
-        string appID,
+        string appDomain,
         string email
     );
     event SetBlacklists(uint256 dappID, bool flag);
@@ -97,10 +97,6 @@ contract C3DappManager is Pausable, Ownable {
     function unpause() public onlyOwner {
         _unpause();
     }
-
-    receive() external payable {}
-
-    fallback() external payable {}
 
     function changeMPC(address _mpc) external onlyMPC {
         pendingMPC = _mpc;
@@ -155,7 +151,7 @@ contract C3DappManager is Pausable, Ownable {
 
     function initDappConfig(
         address _feeToken,
-        string calldata _appID,
+        string calldata _appDomain,
         string calldata _email,
         string[] calldata _whitelist
     ) external {
@@ -172,7 +168,7 @@ contract C3DappManager is Pausable, Ownable {
 
         _setDappAddrlist(dappID, _whitelist);
 
-        emit SetDAppConfig(dappID, msg.sender, _feeToken, _appID, _email);
+        emit SetDAppConfig(dappID, msg.sender, _feeToken, _appDomain, _email);
     }
 
     function _setDappAddrlist(
@@ -213,7 +209,14 @@ contract C3DappManager is Pausable, Ownable {
             "C3Dapp: forbid"
         );
 
-        _setDappAddrlist(0, _whitelist);
+        for (uint256 i = 0; i < _whitelist.length; i++) {
+            require(
+                c3DappAddr[_whitelist[i]] == _dappID,
+                "C3Dapp: addr not exist"
+            );
+            c3DappAddr[_whitelist[i]] = 0;
+        }
+        emit SetDAppAddr(0, _whitelist);
     }
 
     function updateDAppConfig(
@@ -239,35 +242,44 @@ contract C3DappManager is Pausable, Ownable {
         emit SetDAppConfig(dappID, msg.sender, _feeToken, _appID, _email);
     }
 
+    function resetAdmin(uint256 _dappID, address _newAdmin) external {
+        DappConfig storage config = dappConfig[_dappID];
+
+        require(config.appAdmin != address(0), "C3Dapp: app not exist");
+        require(
+            msg.sender == mpc || msg.sender == config.appAdmin,
+            "C3Dapp: forbid"
+        );
+        config.appAdmin = _newAdmin;
+    }
+
     function updateDappByMPC(
         uint256 _dappID,
         address _feeToken,
-        address _newAddress,
         uint256 _discount
     ) external onlyMPC {
-        DappConfig memory config = dappConfig[_dappID];
+        DappConfig storage config = dappConfig[_dappID];
 
         require(config.appAdmin != address(0), "C3Dapp: app not exist");
-        require(_newAddress != address(0), "C3Dapp: address");
         require(
             feeCurrencies[_feeToken].swapFee > 0,
             "C3Dapp: fee token not supported"
         );
 
         config.feeToken = _feeToken;
-        config.appAdmin = _newAddress;
         config.discount = _discount;
 
-        emit SetDAppConfig(dappID, _newAddress, _feeToken, "", "");
+        emit SetDAppConfig(dappID, config.appAdmin, _feeToken, "", "");
     }
 
     function deposit(
         uint256 _dappID,
         address _token,
         uint256 _amount
-    ) external payable {
+    ) external {
         DappConfig memory config = dappConfig[_dappID];
         require(config.id > 0, "C3Dapp: dapp not exist");
+        require(config.appAdmin == msg.sender, "C3Dapp: forbidden");
         require(
             feeCurrencies[_token].swapFee > 0,
             "C3Dapp: fee token not supported"

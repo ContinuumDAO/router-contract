@@ -20,13 +20,13 @@ describe("C3Router", function () {
         const WETH = await ethers.getContractFactory("WETH");
         weth = await WETH.deploy();
 
-        const C3SwapIDKeeper = await ethers.getContractFactory("C3SwapIDKeeper");
+        const C3SwapIDKeeper = await ethers.getContractFactory("contracts/routerV1/C3SwapIDKeeper.sol:C3SwapIDKeeper");
         ctmSwapIDKeeper = await C3SwapIDKeeper.deploy(_owner);
 
-        const C3Caller = await ethers.getContractFactory("C3Caller");
+        const C3Caller = await ethers.getContractFactory("contracts/routerV1/C3Caller.sol:C3Caller");
         c3Caller = await C3Caller.deploy(_owner);
 
-        const C3Router = await ethers.getContractFactory("C3Router");
+        const C3Router = await ethers.getContractFactory("contracts/routerV1/C3Router.sol:C3Router");
         routerV1 = await C3Router.deploy(weth, _owner, ctmSwapIDKeeper.target, c3Caller.target);
 
         await ctmSwapIDKeeper.addSupportedCaller(routerV1.target)
@@ -771,8 +771,8 @@ describe("C3Router", function () {
                 .withArgs(dAppDemo.target, swapInMsg.to, swapID, swapInMsg.token, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs, true, "0x")
                 .to.emit(dAppDemo, "LogC3Execute").withArgs(swapInMsg.to, swapInMsg.fromChainID, swapID, swapInMsg.txs, callData)
 
-            let cost = await c3Caller.executionBudget(appID)
-            console.log(amount - cost)
+            // let cost = await c3Caller.executionBudget(appID)
+            // console.log(amount - cost)
 
             expect(await erc20Token.balanceOf(dAppDemo.target)).to.equal(amount)
         });

@@ -13,7 +13,7 @@ describe("C3Caller", function () {
         // Contracts are deployed using the first signer/account by default
         const [_owner, _otherAccount] = await ethers.getSigners();
 
-        const C3Caller = await ethers.getContractFactory("C3Caller");
+        const C3Caller = await ethers.getContractFactory("contracts/routerV1/C3Caller.sol:C3Caller");
         c3Caller = await C3Caller.deploy(_owner);
 
         await c3Caller.addRouter(_owner)
