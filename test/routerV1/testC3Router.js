@@ -286,7 +286,7 @@ describe("C3Router", function () {
                 .withArgs(swapInMsg.token, swapInMsg.to, swapID, swapInMsg.amount.toString(), swapInMsg.fromChainID, chainID, swapInMsg.txs)
 
             await expect(routerV1.connect(owner)['swapIn(bytes32,address,address,uint256,uint256,string)'](swapID, swapInMsg.token, swapInMsg.to, swapInMsg.amount.toString(), swapInMsg.fromChainID, swapInMsg.txs))
-                .to.be.revertedWith("swapID is completed")
+                .to.be.revertedWith("C3SwapIDKeeper: swapID is completed")
 
 
             expect(await erc20Token.balanceOf(otherAccount.address)).to.equal(amount)

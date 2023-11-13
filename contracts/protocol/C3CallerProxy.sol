@@ -72,6 +72,10 @@ contract C3CallerProxy is IC3Caller, IC3CallerProxy {
         return isOperator[sender];
     }
 
+    function isCaller(address sender) external view override returns (bool) {
+        return sender == c3caller;
+    }
+
     function context()
         external
         view

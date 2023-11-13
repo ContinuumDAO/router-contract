@@ -3,6 +3,8 @@ pragma solidity 0.8.19;
 
 interface IC3CallerProxy {
     function isExecutor(address sender) external returns (bool);
+
+    function isCaller(address sender) external returns (bool);
 }
 
 interface IC3Dapp {

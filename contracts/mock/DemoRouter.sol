@@ -26,7 +26,7 @@ interface ISwapIDKeeper {
         address from,
         string calldata to,
         uint256 amount,
-        uint256 toChainID,
+        string calldata toChainID,
         string calldata dapp,
         bytes calldata data
     ) external returns (bytes32 swapID);
@@ -175,6 +175,7 @@ library SafeERC20 {
 }
 
 import "../protocol/C3CallerDapp.sol";
+import "../protocol/IC3Caller.sol";
 
 contract DemoRouter is C3CallerDapp {
     using SafeERC20 for IERC20;
@@ -189,6 +190,8 @@ contract DemoRouter is C3CallerDapp {
     address[] public operators;
 
     address public swapIDKeeper;
+
+    uint256 constant dappID = 1;
 
     constructor(
         address _wNATIVE,
@@ -232,7 +235,7 @@ contract DemoRouter is C3CallerDapp {
         string to,
         uint256 amount,
         uint256 fromChainID,
-        uint256 toChainID,
+        string toChainID,
         uint256 fee,
         bytes32 swapoutID,
         string callDapp,
@@ -248,6 +251,13 @@ contract DemoRouter is C3CallerDapp {
         string sourceTx,
         bool success,
         bytes result
+    );
+
+    event LogFallback(
+        uint256 indexed dappID,
+        bytes32 indexed swapID,
+        bytes data,
+        bytes reason
     );
 
     modifier onlyMPC() {
@@ -375,11 +385,11 @@ contract DemoRouter is C3CallerDapp {
     function _swapOut(
         address from,
         address token,
-        string calldata to,
         uint256 amount,
-        uint256 toChainID
+        string calldata to,
+        string calldata receiver,
+        string calldata toChainID
     ) internal {
-        checkSwapOut(token, to);
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
             token,
             from,
@@ -387,13 +397,21 @@ contract DemoRouter is C3CallerDapp {
             amount,
             toChainID,
             "",
-            ""
+            bytes("")
         );
-        IC3ERC20(token).burn(from, amount);
-        uint256 swapFee = calcSwapFee(0, toChainID, token, amount);
-        if (swapFee > 0) {
-            IC3ERC20(token).mint(address(this), swapFee);
-        }
+        IC3Caller(c3CallerProxy).c3call(
+            dappID,
+            to,
+            toChainID,
+            abi.encodeWithSignature(
+                "swapInAuto(bytes32,address,address,uint256,uint256)",
+                swapID,
+                token,
+                address(bytes20(bytes(receiver))),
+                amount,
+                cID()
+            )
+        );
 
         emit LogSwapOut(
             token,
@@ -402,254 +420,21 @@ contract DemoRouter is C3CallerDapp {
             amount,
             cID(),
             toChainID,
-            swapFee,
+            0,
             swapID,
             "",
-            ""
+            bytes("")
         );
-    }
-
-    // need approve to router first
-    function _swapOutUnderlying(
-        address token,
-        uint256 amount
-    ) internal returns (uint256) {
-        address _underlying = IC3ERC20(token).underlying();
-        require(_underlying != address(0), "C3Router: no underlying");
-        uint256 old_balance = IERC20(_underlying).balanceOf(token);
-        IERC20(_underlying).safeTransferFrom(msg.sender, token, amount);
-        uint256 new_balance = IERC20(_underlying).balanceOf(token);
-        require(
-            new_balance >= old_balance && new_balance <= old_balance + amount
-        );
-        return new_balance - old_balance;
-    }
-
-    function _swapOutNative(address token) internal returns (uint256) {
-        require(wNATIVE != address(0), "C3Router: zero wNATIVE");
-        require(
-            IC3ERC20(token).underlying() == wNATIVE,
-            "C3Router: underlying is not wNATIVE"
-        );
-        uint256 old_balance = IERC20(wNATIVE).balanceOf(token);
-        IwNATIVE(wNATIVE).deposit{value: msg.value}();
-        IERC20(wNATIVE).safeTransfer(token, msg.value);
-        uint256 new_balance = IERC20(wNATIVE).balanceOf(token);
-        require(
-            new_balance >= old_balance && new_balance <= old_balance + msg.value
-        );
-        return new_balance - old_balance;
-    }
-
-    function multiSwapOut(
-        address[] calldata tokens,
-        string[] calldata to,
-        uint256[] calldata amounts,
-        uint256[] calldata toChainIDs
-    ) external {
-        for (uint i = 0; i < tokens.length; i++) {
-            _swapOut(msg.sender, tokens[i], to[i], amounts[i], toChainIDs[i]);
-        }
     }
 
     function swapOut(
         address token,
-        string calldata to,
         uint256 amount,
-        uint256 toChainID
+        string calldata to,
+        string calldata receiver,
+        string calldata toChainID
     ) external {
-        _swapOut(msg.sender, token, to, amount, toChainID);
-    }
-
-    function swapOutUnderlying(
-        address token,
-        string calldata to,
-        uint256 amount,
-        uint256 toChainID
-    ) external {
-        checkSwapOut(token, to);
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-            token,
-            msg.sender,
-            to,
-            amount,
-            toChainID,
-            "",
-            ""
-        );
-        uint256 recvAmount = _swapOutUnderlying(token, amount);
-        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
-        if (swapFee > 0) {
-            IC3ERC20(token).mint(address(this), swapFee);
-        }
-        emit LogSwapOut(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            swapFee,
-            swapID,
-            "",
-            ""
-        );
-    }
-
-    function swapOutNative(
-        address token,
-        string calldata to,
-        uint256 toChainID
-    ) external payable {
-        checkSwapOut(token, to);
-        uint256 recvAmount = _swapOutNative(token);
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            toChainID,
-            "",
-            ""
-        );
-        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
-        if (swapFee > 0) {
-            IC3ERC20(token).mint(address(this), swapFee);
-        }
-        emit LogSwapOut(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            swapFee,
-            swapID,
-            "",
-            ""
-        );
-    }
-
-    function swapOutAndCall(
-        address token,
-        string calldata to,
-        uint256 amount,
-        uint256 toChainID,
-        string calldata dapp,
-        bytes calldata data
-    ) external payable {
-        checkC3Call(toChainID, to, dapp, data);
-        bytes32 swapoutID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-            token,
-            msg.sender,
-            to,
-            amount,
-            toChainID,
-            dapp,
-            data
-        );
-        if (token != address(0)) {
-            checkSwapOut(token, to);
-            IC3ERC20(token).burn(msg.sender, amount);
-        }
-
-        emit LogSwapOut(
-            token,
-            msg.sender,
-            to,
-            amount,
-            cID(),
-            toChainID,
-            0,
-            swapoutID,
-            dapp,
-            data
-        );
-    }
-
-    function swapOutUnderlyingAndCall(
-        address token,
-        string calldata to,
-        uint256 amount,
-        uint256 toChainID,
-        string calldata dapp,
-        bytes calldata data
-    ) external payable {
-        checkC3Call(toChainID, to, dapp, data);
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-            token,
-            msg.sender,
-            to,
-            amount,
-            toChainID,
-            dapp,
-            data
-        );
-        uint256 recvAmount = 0;
-        if (token != address(0)) {
-            checkSwapOut(token, to);
-            recvAmount = _swapOutUnderlying(token, amount);
-        }
-
-        emit LogSwapOut(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            0,
-            swapID,
-            dapp,
-            data
-        );
-    }
-
-    function swapOutNativeAndCall(
-        address token,
-        string calldata to,
-        uint256 toChainID,
-        string calldata dapp,
-        bytes calldata data
-    ) external payable {
-        checkC3Call(toChainID, to, dapp, data);
-        uint256 recvAmount = 0;
-        if (token != address(0)) {
-            checkSwapOut(token, to);
-            recvAmount = _swapOutNative(token);
-        }
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            toChainID,
-            dapp,
-            data
-        );
-        uint256 fee = 0;
-
-        emit LogSwapOut(
-            token,
-            msg.sender,
-            to,
-            recvAmount,
-            cID(),
-            toChainID,
-            fee,
-            swapID,
-            dapp,
-            data
-        );
-    }
-
-    function _paySrcFees(uint256 fees, uint256 recvAmount) internal {
-        require(msg.value >= fees, "C3Router: not enough src fee");
-        if (msg.value - recvAmount > fees) {
-            // return remaining amount
-            (bool success, ) = msg.sender.call{value: msg.value - fees}("");
-            require(success, "C3Router: failed to return remaining amount");
-        }
+        _swapOut(msg.sender, token, amount, to, receiver, toChainID);
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID
@@ -658,57 +443,19 @@ contract DemoRouter is C3CallerDapp {
         address token,
         address to,
         uint256 amount,
-        uint256 fromChainID,
-        string calldata sourceTx
+        uint256 fromChainID
     ) internal returns (uint256) {
-        ISwapIDKeeper(swapIDKeeper).registerSwapin(swapID);
-        uint256 swapFee = calcSwapFee(fromChainID, 0, token, amount);
-        if (swapFee > 0) {
-            IC3ERC20(token).mint(address(this), swapFee);
-        }
-        IC3ERC20(token).mint(to, amount - swapFee);
+        (, , string memory _sourceTx) = context();
         emit LogSwapIn(
             token,
             to,
             swapID,
-            amount - swapFee,
-            fromChainID,
-            cID(),
-            sourceTx
-        );
-        return amount - swapFee;
-    }
-
-    // swaps `amount` `token` in `fromChainID` to `to` on this chainID
-    function swapIn(
-        bytes32 swapID,
-        address token,
-        address to,
-        uint256 amount,
-        uint256 fromChainID,
-        string calldata sourceTx
-    ) external onlyAuth {
-        _swapIn(swapID, token, to, amount, fromChainID, sourceTx);
-    }
-
-    // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying`
-    function swapInUnderlying(
-        bytes32 swapID,
-        address token,
-        address to,
-        uint256 amount,
-        uint256 fromChainID,
-        string calldata sourceTx
-    ) external onlyAuth {
-        uint256 recvAmount = _swapIn(
-            swapID,
-            token,
-            to,
             amount,
             fromChainID,
-            sourceTx
+            cID(),
+            _sourceTx
         );
-        IC3ERC20(token).withdrawVault(to, recvAmount, to);
+        return amount;
     }
 
     // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying` if possible
@@ -717,127 +464,17 @@ contract DemoRouter is C3CallerDapp {
         address token,
         address to,
         uint256 amount,
-        uint256 fromChainID,
-        string calldata sourceTx
-    ) external onlyAuth {
-        uint256 recvAmount = _swapIn(
-            swapID,
-            token,
-            to,
-            amount,
-            fromChainID,
-            sourceTx
-        );
-        IC3ERC20 _anyToken = IC3ERC20(token);
-        address _underlying = _anyToken.underlying();
-        if (
-            _underlying != address(0) &&
-            IERC20(_underlying).balanceOf(token) >= recvAmount
-        ) {
-            if (_underlying == wNATIVE) {
-                _anyToken.withdrawVault(to, recvAmount, address(this));
-                IwNATIVE(wNATIVE).withdraw(recvAmount);
-                TransferHelper.safeTransferNative(to, recvAmount);
-            } else {
-                _anyToken.withdrawVault(to, recvAmount, to);
-            }
-        }
-    }
-
-    function depositNative(
-        address token,
-        address to
-    ) external payable returns (uint256) {
-        require(wNATIVE != address(0), "C3Router: zero wNATIVE");
-        require(
-            IC3ERC20(token).underlying() == wNATIVE,
-            "C3Router: underlying is not wNATIVE"
-        );
-        IwNATIVE(wNATIVE).deposit{value: msg.value}();
-        assert(IwNATIVE(wNATIVE).transfer(token, msg.value));
-        IC3ERC20(token).depositVault(msg.value, to);
-        return msg.value;
-    }
-
-    function withdrawNative(
-        address token,
-        uint256 amount,
-        address to
-    ) external returns (uint256) {
-        require(wNATIVE != address(0), "C3Router: zero wNATIVE");
-        require(
-            IC3ERC20(token).underlying() == wNATIVE,
-            "C3Router: underlying is not wNATIVE"
-        );
-
-        uint256 old_balance = IERC20(wNATIVE).balanceOf(address(this));
-        IC3ERC20(token).withdrawVault(msg.sender, amount, address(this));
-        uint256 new_balance = IERC20(wNATIVE).balanceOf(address(this));
-        assert(new_balance == old_balance + amount);
-
-        IwNATIVE(wNATIVE).withdraw(amount);
-        TransferHelper.safeTransferNative(to, amount);
-        return amount;
-    }
-
-    //  extracts mpc fee from bridge fees
-    function swapFeeTo(address[] calldata tokens) external onlyMPC {
-        address _mpc = mpc();
-        for (uint index = 0; index < tokens.length; index++) {
-            address _token = tokens[index];
-            uint256 amount = IERC20(_token).balanceOf(address(this));
-            if (amount > 0) {
-                IC3ERC20(_token).withdrawVault(address(this), amount, _mpc);
-            }
-        }
-    }
-
-    function swapIn(
-        bytes32[] calldata swapIDs,
-        address[] calldata tokens,
-        address[] calldata to,
-        uint256[] calldata amounts,
-        uint256[] calldata fromChainIDs,
-        string[] calldata sourceTxs
-    ) external onlyAuth {
-        for (uint i = 0; i < tokens.length; i++) {
-            _swapIn(
-                swapIDs[i],
-                tokens[i],
-                to[i],
-                amounts[i],
-                fromChainIDs[i],
-                sourceTxs[i]
-            );
-        }
-    }
-
-    // TODO: how to ensure that the fee config are both setted in fromChain and toChain correctly
-    function calcSwapFee(
-        uint256 fromChainID,
-        uint256 toChainID,
-        address token,
-        uint256 amount
-    ) public view returns (uint256) {
-        (
-            uint256 maximumSwapFee,
-            uint256 minimumSwapFee,
-            uint256 swapFeeRatePerMillion
-        ) = IC3ERC20(token).getFeeConfig(fromChainID, toChainID);
-        if (swapFeeRatePerMillion == 0) return 0;
-        if (maximumSwapFee > 0 && maximumSwapFee == minimumSwapFee)
-            return maximumSwapFee;
-        uint256 _fee = (amount * swapFeeRatePerMillion) / 1000000;
-        require(_fee < amount, "C3Router: Invalid FeeConfig");
-        _fee = maximumSwapFee < _fee ? maximumSwapFee : _fee;
-        _fee = minimumSwapFee > _fee ? minimumSwapFee : _fee;
-        return _fee;
+        uint256 fromChainID
+    ) external onlyCaller {
+        _swapIn(swapID, token, to, amount, fromChainID);
     }
 
     function _c3Fallback(
-        uint256 dappID,
-        bytes32 swapID,
+        uint256 _dappID,
+        bytes32 _swapID,
         bytes calldata data,
         bytes calldata reason
-    ) internal override {}
+    ) internal override {
+        emit LogFallback(_dappID, _swapID, data, reason);
+    }
 }

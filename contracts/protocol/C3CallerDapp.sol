@@ -7,7 +7,18 @@ abstract contract C3CallerDapp is IC3Dapp {
     address public c3CallerProxy;
 
     modifier onlyExecutor() {
-        require(IC3CallerProxy(c3CallerProxy).isExecutor(msg.sender));
+        require(
+            IC3CallerProxy(c3CallerProxy).isExecutor(msg.sender),
+            "C3CallerDapp: onlyExecutor"
+        );
+        _;
+    }
+
+    modifier onlyCaller() {
+        require(
+            IC3CallerProxy(c3CallerProxy).isCaller(msg.sender),
+            "C3CallerDapp: onlyCaller"
+        );
         _;
     }
 
@@ -29,5 +40,17 @@ abstract contract C3CallerDapp is IC3Dapp {
         bytes calldata reason
     ) external override onlyExecutor {
         return _c3Fallback(dappID, swapID, data, reason);
+    }
+
+    function context()
+        internal
+        view
+        returns (
+            bytes32 swapID,
+            string memory fromChainID,
+            string memory sourceTx
+        )
+    {
+        return IC3Caller(c3CallerProxy).context();
     }
 }

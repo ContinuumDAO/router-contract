@@ -14,7 +14,7 @@ interface ISwapIDKeeper {
         bytes calldata data
     ) external returns (bytes32 swapID);
 
-    function genSwapID(
+    function genUUID(
         uint256 dappID,
         string calldata to,
         string calldata toChainID,

@@ -17,17 +17,17 @@ contract C3SwapIDKeeper {
     }
 
     modifier onlyAdmin() {
-        require(admin == msg.sender, "not supported caller");
+        require(admin == msg.sender, "C3SwapIDKeeper: not supported caller");
         _;
     }
 
     modifier onlyAuth() {
-        require(isSupportedCaller[msg.sender], "not supported caller");
+        require(isSupportedCaller[msg.sender], "C3SwapIDKeeper: not supported caller");
         _;
     }
 
     modifier checkCompletion(bytes32 swapID) {
-        require(!completedSwapin[swapID], "swapID is completed");
+        require(!completedSwapin[swapID], "C3SwapIDKeeper: swapID is completed");
         _;
     }
 
@@ -37,7 +37,7 @@ contract C3SwapIDKeeper {
     }
 
     function changeMPC(address newMPC) external onlyAdmin returns (bool) {
-        require(newMPC != address(0), "C3Router: address(0)");
+        require(newMPC != address(0), "C3SwapIDKeeper: address(0)");
         address oldAdmin = admin;
         isSupportedCaller[oldAdmin] = false;
         admin = newMPC;
@@ -106,7 +106,7 @@ contract C3SwapIDKeeper {
                 data
             )
         );
-        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
+        require(!this.isSwapoutIDExist(swapID), "C3SwapIDKeeper: swapID already exist");
         swapoutNonce[swapID] = currentSwapoutNonce;
         return swapID;
     }

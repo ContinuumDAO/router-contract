@@ -119,6 +119,7 @@ contract C3Caller is IC3Caller {
         }
     }
 
+    // TODO need add caller address, msg.sender is proxy
     function c3call(
         uint256 _dappID,
         string calldata _to,
@@ -129,12 +130,13 @@ contract C3Caller is IC3Caller {
         require(bytes(_to).length > 0, "C3Caller: empty _to");
         require(bytes(_toChainID).length > 0, "C3Caller: empty toChainID");
         require(_data.length > 0, "C3Caller: empty calldata");
-        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).genSwapID(
+        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).genUUID(
             _dappID,
             _to,
             _toChainID,
             _data
         );
+        // TODO add fallback address, it should be caller address
         emit LogC3Call(_dappID, _swapID, msg.sender, _toChainID, _to, _data);
     }
 
@@ -159,16 +161,18 @@ contract C3Caller is IC3Caller {
         bool success;
         bytes memory result;
 
-        try IC3CallExecutor(_to).execCall(_swapID, _data) returns (
-            bool succ,
-            bytes memory res
-        ) {
-            (success, result) = (succ, res);
-        } catch Error(string memory reason) {
-            result = bytes(reason);
-        } catch (bytes memory reason) {
-            result = reason;
-        }
+        (success, result) = _to.call(_data);
+
+        // try IC3CallExecutor(_to).execCall(_swapID, _data) returns (
+        //     bool succ,
+        //     bytes memory res
+        // ) {
+        //     (success, result) = (succ, res);
+        // } catch Error(string memory reason) {
+        //     result = bytes(reason);
+        // } catch (bytes memory reason) {
+        //     result = reason;
+        // }
         context = Context({swapID: "", fromChainID: "", sourceTx: ""});
 
         emit LogExecCall(
