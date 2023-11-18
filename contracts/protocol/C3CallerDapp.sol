@@ -5,6 +5,7 @@ import "./IC3Caller.sol";
 
 abstract contract C3CallerDapp is IC3Dapp {
     address public c3CallerProxy;
+    uint256 public dappID;
 
     modifier onlyExecutor() {
         require(
@@ -22,8 +23,9 @@ abstract contract C3CallerDapp is IC3Dapp {
         _;
     }
 
-    constructor(address _c3CallerProxy) {
+    constructor(address _c3CallerProxy, uint256 _dappID) {
         c3CallerProxy = _c3CallerProxy;
+        dappID = _dappID;
     }
 
     function _c3Fallback(
@@ -34,12 +36,13 @@ abstract contract C3CallerDapp is IC3Dapp {
     ) internal virtual;
 
     function c3Fallback(
-        uint256 dappID,
-        bytes32 swapID,
-        bytes calldata data,
-        bytes calldata reason
+        uint256 _dappID,
+        bytes32 _swapID,
+        bytes calldata _data,
+        bytes calldata _reason
     ) external override onlyExecutor {
-        return _c3Fallback(dappID, swapID, data, reason);
+        require(_dappID == dappID, "dappID dismatch");
+        return _c3Fallback(_dappID, _swapID, _data, _reason);
     }
 
     function context()
@@ -52,5 +55,13 @@ abstract contract C3CallerDapp is IC3Dapp {
         )
     {
         return IC3Caller(c3CallerProxy).context();
+    }
+
+    function c3call(
+        string memory _to,
+        string memory _toChainID,
+        bytes memory _data
+    ) internal {
+        IC3Caller(c3CallerProxy).c3call(dappID, _to, _toChainID, _data);
     }
 }

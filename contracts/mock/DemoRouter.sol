@@ -191,14 +191,13 @@ contract DemoRouter is C3CallerDapp {
 
     address public swapIDKeeper;
 
-    uint256 constant dappID = 1;
-
     constructor(
         address _wNATIVE,
         address _mpc,
         address _swapIDKeeper,
-        address _c3caller
-    ) C3CallerDapp(_c3caller) {
+        address _c3caller,
+        uint256 _dappID
+    ) C3CallerDapp(_c3caller, _dappID) {
         _newMPC = _mpc;
         _newMPCEffectiveTime = block.timestamp;
         wNATIVE = _wNATIVE;

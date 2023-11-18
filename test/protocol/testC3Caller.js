@@ -73,7 +73,7 @@ describe("protocal", function () {
             let erc20Token = await C3ERC20.deploy("ctmETHOD", "ctmETH", 18, weth.target, owner.address);
 
             let DemoRouter = await ethers.getContractFactory("DemoRouter");
-            let demoRouter = await DemoRouter.deploy(weth.target, owner.address, demoSwapIDKeeper.target, c3CallerProxy.target);
+            let demoRouter = await DemoRouter.deploy(weth.target, owner.address, demoSwapIDKeeper.target, c3CallerProxy.target, 1);
 
             await demoSwapIDKeeper.addSupportedCaller(demoRouter.target)
 

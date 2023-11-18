@@ -48,7 +48,7 @@ contract C3Caller is IC3Caller {
         uint256 indexed dappID,
         bytes32 indexed swapoutID,
         address from,
-        string indexed toChainID,
+        string toChainID,
         string to,
         bytes data
     );

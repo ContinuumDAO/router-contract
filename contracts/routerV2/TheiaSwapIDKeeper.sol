@@ -4,7 +4,7 @@ pragma solidity ^0.8.10;
 
 import "./ISwapIDKeeper.sol";
 
-contract C3SwapIDKeeper is ISwapIDKeeper {
+contract TheiaSwapIDKeeper is ISwapIDKeeper {
     address public admin;
     mapping(address => bool) public isSupportedCaller; // routers address
     address[] public supportedCallers;
@@ -17,8 +17,6 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         currentSwapoutNonce++;
         _;
     }
-
-    event SwapID(bytes encodeData, bytes32 kacaData);
 
     modifier onlyAdmin() {
         require(admin == msg.sender, "C3SwapIDKeeper: not supported caller");
@@ -86,54 +84,47 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         return completedSwapin[swapID];
     }
 
-    function revokeSwapin(bytes32 swapID) external onlyAdmin {
-        completedSwapin[swapID] = false;
-    }
-
     function registerSwapin(
         bytes32 swapID
     ) external onlyAuth checkCompletion(swapID) {
         completedSwapin[swapID] = true;
     }
 
-    function registerSwapout(
-        uint256 dappID,
+    function registerSwapoutEvm(
         address token,
         address from,
-        string calldata to,
         uint256 amount,
-        string calldata toChainID,
-        bytes calldata data
+        address receiver,
+        uint256 toChainID
     ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
         swapID = keccak256(
             abi.encode(
                 address(this),
                 msg.sender,
                 block.chainid,
-                dappID,
                 token,
                 from,
-                to,
+                receiver,
                 amount,
                 currentSwapoutNonce,
-                toChainID,
-                data
+                toChainID
             )
         );
-        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
+        require(
+            !this.isSwapoutIDExist(swapID),
+            "C3SwapIDKeeper: swapID already exist"
+        );
         swapoutNonce[swapID] = currentSwapoutNonce;
         return swapID;
     }
 
     function calcSwapID(
+        address sender,
         address token,
         address from,
-        string calldata to,
         uint256 amount,
-        string calldata toChainID,
-        address sender,
-        string calldata dapp,
-        bytes calldata data
+        address receiver,
+        uint256 toChainID
     ) public view returns (bytes32) {
         uint256 nonce = currentSwapoutNonce + 1;
         return
@@ -144,94 +135,64 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
                     block.chainid,
                     token,
                     from,
-                    to,
+                    receiver,
                     amount,
                     nonce,
-                    toChainID,
-                    dapp,
-                    data
+                    toChainID
                 )
             );
     }
 
-    function genUUID(
-        uint256 dappID,
-        string calldata to,
-        string calldata toChainID,
-        bytes calldata data
+    function registerSwapoutNonEvm(
+        address token,
+        address from,
+        uint256 amount,
+        string calldata receiver,
+        string calldata toChainID
     ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
         swapID = keccak256(
             abi.encode(
                 address(this),
                 msg.sender,
                 block.chainid,
-                dappID,
-                to,
-                toChainID,
+                token,
+                from,
+                receiver,
+                amount,
                 currentSwapoutNonce,
-                data
+                toChainID
             )
         );
-        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
-        swapoutNonce[swapID] = currentSwapoutNonce;
-        emit SwapID(
-            abi.encode(
-                address(this),
-                msg.sender,
-                block.chainid,
-                dappID,
-                to,
-                toChainID,
-                currentSwapoutNonce,
-                data
-            ),
-            swapID
+        require(
+            !this.isSwapoutIDExist(swapID),
+            "C3SwapIDKeeper: swapID already exist"
         );
+        swapoutNonce[swapID] = currentSwapoutNonce;
         return swapID;
     }
 
-    function calcCallerUUID(
+    function calcNonEvmSwapID(
+        address sender,
+        address token,
         address from,
-        uint256 dappID,
-        string calldata to,
-        string calldata toChainID,
-        bytes calldata data
+        uint256 amount,
+        string calldata receiver,
+        string calldata toChainID
     ) public view returns (bytes32) {
         uint256 nonce = currentSwapoutNonce + 1;
         return
             keccak256(
                 abi.encode(
                     address(this),
-                    from,
+                    sender,
                     block.chainid,
-                    dappID,
-                    to,
-                    toChainID,
+                    token,
+                    from,
+                    receiver,
+                    amount,
                     nonce,
-                    data
+                    toChainID
                 )
-            );
-    }
-
-    // TODO test code
-    function calcCallerEncode(
-        address from,
-        uint256 dappID,
-        string calldata to,
-        string calldata toChainID,
-        bytes calldata data
-    ) public view returns (bytes memory) {
-        uint256 nonce = currentSwapoutNonce + 1;
-        return
-            abi.encode(
-                address(this),
-                from,
-                block.chainid,
-                dappID,
-                to,
-                toChainID,
-                nonce,
-                data
             );
     }
 }
