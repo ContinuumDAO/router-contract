@@ -18,8 +18,6 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         _;
     }
 
-    event SwapID(bytes encodeData, bytes32 kacaData);
-
     modifier onlyAdmin() {
         require(admin == msg.sender, "C3SwapIDKeeper: not supported caller");
         _;
@@ -174,19 +172,6 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         );
         require(!this.isSwapoutIDExist(swapID), "swapID already exist");
         swapoutNonce[swapID] = currentSwapoutNonce;
-        emit SwapID(
-            abi.encode(
-                address(this),
-                msg.sender,
-                block.chainid,
-                dappID,
-                to,
-                toChainID,
-                currentSwapoutNonce,
-                data
-            ),
-            swapID
-        );
         return swapID;
     }
 

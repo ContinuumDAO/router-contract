@@ -26,6 +26,7 @@ interface IwNATIVE {
 }
 
 contract TheiaRouter is C3CallerDapp {
+    using Strings for *;
     using SafeERC20 for IERC20;
 
     address public constant factory = address(0);
@@ -307,8 +308,10 @@ contract TheiaRouter is C3CallerDapp {
         );
 
         c3call(
-            Strings.toHexString(_to),
-            Strings.toHexString(_toChainID),
+            _to.toHexString(),
+            _toChainID.toString(),
+            // Strings.toHexString(_to),
+            // Strings.toHexString(_toChainID),
             _data
         );
 

@@ -164,14 +164,13 @@ describe("TheiaRouter", function () {
             let calldata = await routerV2.swapInAutoCallData(erc20Token.target, amount.toString(), otherAccount.address, swapID)
 
             // routerV2.target solidity string is different from calldata string
-            let encodedata = await c3SwapIDKeeper.calcCallerEncode(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
-            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target, "250", calldata)
-            // console.log(routerV2.target, uuid, calldata, c3CallerProxy.target, web3.utils.toHex(250))
+            // let encodedata = await c3SwapIDKeeper.calcCallerEncode(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+            // console.log(uuid, web3.utils.toHex(250), routerV2.target)
 
             await expect(routerV2.connect(otherAccount)["swapOut(address,uint256,address,address,uint256)"](erc20Token.target, amount.toString(), routerV2.target, otherAccount.address, 250))
                 .to.emit(routerV2, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
-                // .to.emit(c3SwapIDKeeper, "SwapID").withArgs(encodedata, uuid)
-                .to.emit(c3Caller, "LogC3Call").withArgs("1", "0xbf76c6730e9555c3c0ba469ba660d275ddd3c2e310ae19ae10d465afb9871a1e", c3CallerProxy.target, web3.utils.toHex(250), routerV2.target.toLowerCase(), calldata)
+                .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, c3CallerProxy.target, "250", routerV2.target.toLowerCase(), calldata)
 
 
             // abi.encode(
