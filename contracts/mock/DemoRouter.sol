@@ -398,7 +398,7 @@ contract DemoRouter is C3CallerDapp {
             "",
             bytes("")
         );
-        IC3Caller(c3CallerProxy).c3call(
+        IC3CallerProxy(c3CallerProxy).c3call(
             dappID,
             to,
             toChainID,
@@ -473,7 +473,8 @@ contract DemoRouter is C3CallerDapp {
         bytes32 _swapID,
         bytes calldata data,
         bytes calldata reason
-    ) internal override {
+    ) internal override returns (bool) {
         emit LogFallback(_dappID, _swapID, data, reason);
+        return true;
     }
 }

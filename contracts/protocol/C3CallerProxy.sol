@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import "./IC3Caller.sol";
 
-contract C3CallerProxy is IC3Caller, IC3CallerProxy {
+contract C3CallerProxy is IC3CallerProxy {
     address public mpc;
     address public pendingMPC;
 
@@ -95,7 +95,7 @@ contract C3CallerProxy is IC3Caller, IC3CallerProxy {
         string calldata _toChainID,
         bytes calldata _data
     ) external override {
-        IC3Caller(c3caller).c3call(_dappID, _to, _toChainID, _data);
+        IC3Caller(c3caller).c3call(_dappID, msg.sender, _to, _toChainID, _data);
     }
 
     function execute(
@@ -106,7 +106,7 @@ contract C3CallerProxy is IC3Caller, IC3CallerProxy {
         string calldata _sourceTx,
         string calldata _fallback,
         bytes calldata _data
-    ) external virtual override onlyAuth {
+    ) external override onlyAuth {
         IC3Caller(c3caller).execute(
             _dappID,
             _swapID,
@@ -115,6 +115,26 @@ contract C3CallerProxy is IC3Caller, IC3CallerProxy {
             _sourceTx,
             _fallback,
             _data
+        );
+    }
+
+    function c3Fallback(
+        uint256 _dappID,
+        bytes32 _swapID,
+        address _to,
+        string calldata _failChainID,
+        string calldata _failTx,
+        bytes calldata _data,
+        bytes calldata _reason
+    ) external override onlyAuth {
+        IC3Caller(c3caller).c3Fallback(
+            _dappID,
+            _swapID,
+            _to,
+            _failChainID,
+            _failTx,
+            _data,
+            _reason
         );
     }
 }

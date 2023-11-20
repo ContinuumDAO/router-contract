@@ -47,7 +47,7 @@ contract C3Caller is IC3Caller {
     event LogC3Call(
         uint256 indexed dappID,
         bytes32 indexed swapoutID,
-        address from,
+        address caller,
         string toChainID,
         string to,
         bytes data
@@ -68,7 +68,20 @@ contract C3Caller is IC3Caller {
         bytes32 swapoutID,
         string fromChainID,
         string sourceTx,
-        bytes data
+        bytes data,
+        bytes reasons
+    );
+
+    event LogExecFallback(
+        uint256 indexed dappID,
+        address indexed to,
+        bool indexed success,
+        bytes32 swapoutID,
+        string fromChainID,
+        string sourceTx,
+        bytes fallbackReason,
+        bytes data,
+        bytes reasons
     );
 
     constructor(address _mpc, address _swapIDKeeper) {
@@ -119,9 +132,9 @@ contract C3Caller is IC3Caller {
         }
     }
 
-    // TODO need add caller address, msg.sender is proxy
     function c3call(
         uint256 _dappID,
+        address _caller,
         string calldata _to,
         string calldata _toChainID,
         bytes calldata _data
@@ -136,8 +149,7 @@ contract C3Caller is IC3Caller {
             _toChainID,
             _data
         );
-        // TODO add fallback address, it should be caller address
-        emit LogC3Call(_dappID, _swapID, msg.sender, _toChainID, _to, _data);
+        emit LogC3Call(_dappID, _swapID, _caller, _toChainID, _to, _data);
     }
 
     function execute(
@@ -148,20 +160,19 @@ contract C3Caller is IC3Caller {
         string calldata _sourceTx,
         string calldata _fallback,
         bytes calldata _data
-    ) external virtual override onlyAuth {
+    ) external override onlyAuth {
         require(_data.length > 0, "C3Caller: empty calldata");
-        ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
-
+        require(
+            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_swapID),
+            "C3Caller: already completed"
+        );
         context = Context({
             swapID: _swapID,
             fromChainID: _fromChainID,
             sourceTx: _sourceTx
         });
 
-        bool success;
-        bytes memory result;
-
-        (success, result) = _to.call(_data);
+        (bool success, bytes memory result) = _to.call(_data);
 
         // try IC3CallExecutor(_to).execCall(_swapID, _data) returns (
         //     bool succ,
@@ -182,9 +193,13 @@ contract C3Caller is IC3Caller {
             _swapID,
             _fromChainID,
             _sourceTx,
-            _data
+            _data,
+            result
         );
-        if (!success && bytes(_fallback).length > 0) {
+        (bool ok, uint rs) = toUint(result);
+        if (success && ok && rs == 1) {
+            ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
+        } else {
             emit LogFallbackCall(
                 _dappID,
                 _swapID,
@@ -199,5 +214,60 @@ contract C3Caller is IC3Caller {
                 result
             );
         }
+    }
+
+    function c3Fallback(
+        uint256 _dappID,
+        bytes32 _swapID,
+        address _to,
+        string calldata _fromChainID,
+        string calldata _sourceTx,
+        bytes calldata _data,
+        bytes calldata _reason
+    ) external override onlyAuth {
+        require(_data.length > 0, "C3Caller: empty calldata");
+        require(
+            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_swapID),
+            "C3Caller: already completed"
+        );
+
+        context = Context({
+            swapID: _swapID,
+            fromChainID: _fromChainID,
+            sourceTx: _sourceTx
+        });
+
+        (bool success, bytes memory result) = _to.call(_data);
+
+        context = Context({swapID: "", fromChainID: "", sourceTx: ""});
+
+        emit LogExecFallback(
+            _dappID,
+            _to,
+            success,
+            _swapID,
+            _fromChainID,
+            _sourceTx,
+            _reason,
+            _data,
+            result
+        );
+
+        (bool ok, uint rs) = toUint(result);
+
+        if (success && ok && rs == 1) {
+            ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
+        }
+    }
+
+    function toUint(bytes memory bs) internal pure returns (bool, uint) {
+        if (bs.length < 32) {
+            return (false, 0);
+        }
+        uint x;
+        assembly {
+            x := mload(add(bs, add(0x20, 0)))
+        }
+        return (true, x);
     }
 }

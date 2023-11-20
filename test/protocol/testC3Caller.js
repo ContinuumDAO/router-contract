@@ -46,7 +46,7 @@ describe("protocal", function () {
         it("c3call", async function () {
             let data = web3.utils.randomBytes(10)
             let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", "to", "_toChainID", data)
-            await expect(c3Caller.connect(otherAccount).c3call("1", "to", "_toChainID", data))
+            await expect(c3Caller.connect(otherAccount).c3call("1", otherAccount.address, "to", "_toChainID", data))
                 .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, otherAccount.address, "_toChainID", "to", data)
         });
 
@@ -57,7 +57,7 @@ describe("protocal", function () {
 
             let c3Fallback = "0x2b716a080000000000000000000000000000000000000000000000000000000000000001" + uuid.toString().substring(2) + "000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
             await expect(c3Caller.execute("1", uuid, c3SwapIDKeeper.target, "_fromChainID", "_sourceTx", "_fallback", data))
-                .to.emit(c3Caller, "LogExecCall").withArgs("1", c3SwapIDKeeper.target, false, uuid, "_fromChainID", "_sourceTx", data)
+                .to.emit(c3Caller, "LogExecCall").withArgs("1", c3SwapIDKeeper.target, false, uuid, "_fromChainID", "_sourceTx", data, "0x")
                 .emit(c3Caller, "LogFallbackCall").withArgs("1", uuid, "_fallback", c3Fallback, "0x")
 
         });
@@ -84,10 +84,11 @@ describe("protocal", function () {
 
             await expect(demoRouter.connect(otherAccount).swapOut(erc20Token.target, amount.toString(), demoRouter.target, owner.address.toString(), "toChain")).to
                 // .emit(demoRouter, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, demoRouter.target, amount.toString(), 31337, "toChain", "0", "0xdab0d7fd87aa592f8a2a3e6ba011a8719667618183607cf204bcea20fd31f75d", "", "0x")
-                .emit(c3Caller, "LogC3Call").withArgs("1", "0xd1214ee27fed9820cfdef5f0e58cdb14c7f36ad7eab7b8c122799c4e2b40cb75", c3CallerProxy.target, "toChain", demoRouter.target, data)
+                .emit(c3Caller, "LogC3Call").withArgs("1", "0xd1214ee27fed9820cfdef5f0e58cdb14c7f36ad7eab7b8c122799c4e2b40cb75", demoRouter.target, "toChain", demoRouter.target, data)
 
             await expect(c3CallerProxy.execute("1", uuid, demoRouter.target, "_fromChainID", "_sourceTx", "", data))
-                .to.emit(c3Caller, "LogExecCall").withArgs("1", demoRouter.target, true, uuid, "_fromChainID", "_sourceTx", data)
+                .to.emit(c3Caller, "LogExecCall").withArgs("1", demoRouter.target, true, uuid, "_fromChainID", "_sourceTx", data, "0x")
+
         });
 
     });

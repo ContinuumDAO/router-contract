@@ -33,14 +33,14 @@ abstract contract C3CallerDapp is IC3Dapp {
         bytes32 swapID,
         bytes calldata data,
         bytes calldata reason
-    ) internal virtual;
+    ) internal virtual returns (bool);
 
     function c3Fallback(
         uint256 _dappID,
         bytes32 _swapID,
         bytes calldata _data,
         bytes calldata _reason
-    ) external override onlyExecutor {
+    ) external override onlyExecutor returns (bool) {
         require(_dappID == dappID, "dappID dismatch");
         return _c3Fallback(_dappID, _swapID, _data, _reason);
     }
@@ -54,7 +54,7 @@ abstract contract C3CallerDapp is IC3Dapp {
             string memory sourceTx
         )
     {
-        return IC3Caller(c3CallerProxy).context();
+        return IC3CallerProxy(c3CallerProxy).context();
     }
 
     function c3call(
@@ -62,6 +62,6 @@ abstract contract C3CallerDapp is IC3Dapp {
         string memory _toChainID,
         bytes memory _data
     ) internal {
-        IC3Caller(c3CallerProxy).c3call(dappID, _to, _toChainID, _data);
+        IC3CallerProxy(c3CallerProxy).c3call(dappID, _to, _toChainID, _data);
     }
 }
