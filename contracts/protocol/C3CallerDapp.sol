@@ -29,20 +29,18 @@ abstract contract C3CallerDapp is IC3Dapp {
     }
 
     function _c3Fallback(
-        uint256 dappID,
-        bytes32 swapID,
+        bytes4 selector,
         bytes calldata data,
         bytes calldata reason
     ) internal virtual returns (bool);
 
     function c3Fallback(
         uint256 _dappID,
-        bytes32 _swapID,
         bytes calldata _data,
         bytes calldata _reason
-    ) external override onlyExecutor returns (bool) {
+    ) external override onlyCaller returns (bool) {
         require(_dappID == dappID, "dappID dismatch");
-        return _c3Fallback(_dappID, _swapID, _data, _reason);
+        return _c3Fallback(bytes4(_data[0:4]), _data[4:], _reason);
     }
 
     function context()

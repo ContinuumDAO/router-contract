@@ -46,7 +46,6 @@ interface IC3CallerProxy {
 interface IC3Dapp {
     function c3Fallback(
         uint256 dappID,
-        bytes32 swapID,
         bytes calldata data,
         bytes calldata reason
     ) external returns (bool);

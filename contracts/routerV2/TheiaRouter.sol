@@ -40,6 +40,21 @@ contract TheiaRouter is C3CallerDapp {
 
     address public swapIDKeeper;
 
+    bytes4 public constant SWAPOUT_SELECTOR =
+        bytes4(
+            keccak256(bytes("swapOut(address,uint256,address,address,uint256)"))
+        );
+
+    bytes4 public constant SWAPOUTUNDERLYING_SELECTOR =
+        bytes4(
+            keccak256(
+                bytes("swapOutUnderlying(address,address,uint256,uint256)")
+            )
+        );
+
+    bytes4 public constant SWAPOUTNATIVE_SELECTOR =
+        bytes4(keccak256(bytes("swapOutNative(address,string,uint256)")));
+
     constructor(
         address _wNATIVE,
         address _mpc,
@@ -98,6 +113,16 @@ contract TheiaRouter is C3CallerDapp {
         string sourceTx,
         bool success,
         bytes result
+    );
+
+    event LogSwapFallback(
+        bytes32 indexed swapID,
+        address indexed token,
+        address indexed receiver,
+        uint256 amount,
+        bytes4 selector,
+        bytes data,
+        bytes reason
     );
 
     modifier onlyMPC() {
@@ -259,22 +284,6 @@ contract TheiaRouter is C3CallerDapp {
         return new_balance - old_balance;
     }
 
-    function swapInAutoCallData(
-        address _token,
-        uint256 _amount,
-        address _receiver,
-        bytes32 _swapID
-    ) external pure returns (bytes memory) {
-        return
-            abi.encodeWithSignature(
-                "swapInAuto(bytes32,address,address,uint256)",
-                _swapID,
-                _token,
-                _receiver,
-                _amount
-            );
-    }
-
     function swapOut(
         address _token,
         uint256 _amount,
@@ -362,39 +371,45 @@ contract TheiaRouter is C3CallerDapp {
         );
     }
 
-    // function swapOutNative(
-    //     address token,
-    //     string calldata to,
-    //     uint256 toChainID
-    // ) external payable {
-    //     checkSwapOut(token, to);
-    //     uint256 recvAmount = _swapOutNative(token);
-    //     bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         recvAmount,
-    //         toChainID,
-    //         "",
-    //         ""
-    //     );
-    //     uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
-    //     if (swapFee > 0) {
-    //         ITheiaERC20(token).mint(address(this), swapFee);
-    //     }
-    //     emit LogSwapOut(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         recvAmount,
-    //         cID(),
-    //         toChainID,
-    //         swapFee,
-    //         swapID,
-    //         "",
-    //         ""
-    //     );
-    // }
+    function swapOutNative(
+        address token,
+        address to,
+        uint256 toChainID
+    ) external payable {
+        checkSwapOut(token, to);
+        uint256 recvAmount = _swapOutNative(token);
+        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
+            token,
+            msg.sender,
+            recvAmount,
+            to,
+            toChainID
+        );
+        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
+        if (swapFee > 0) {
+            ITheiaERC20(token).mint(address(this), swapFee);
+        }
+
+        bytes memory _data = abi.encodeWithSignature(
+            "swapInAuto(bytes32,address,address,uint256)",
+            swapID,
+            token,
+            to,
+            recvAmount - swapFee
+        );
+
+        emit LogSwapOut(
+            token,
+            msg.sender,
+            to.toHexString(),
+            recvAmount,
+            cID(),
+            toChainID,
+            swapFee,
+            swapID,
+            _data
+        );
+    }
 
     // function swapOutAndCall(
     //     address token,
@@ -626,11 +641,38 @@ contract TheiaRouter is C3CallerDapp {
     }
 
     function _c3Fallback(
-        uint256 dappID,
-        bytes32 swapID,
-        bytes calldata data,
-        bytes calldata reason
+        bytes4 _selector,
+        bytes calldata _data,
+        bytes calldata _reason
     ) internal override returns (bool) {
+        (
+            bytes32 _swapID,
+            address _token,
+            address _receiver,
+            uint256 _amount
+        ) = abi.decode(_data, (bytes32, address, address, uint256));
+
+        // require(ISwapIDKeeper(swapIDKeeper).isSwapoutIDExist(_swapID));
+
+        if (_selector == SWAPOUT_SELECTOR) {
+            
+        } else if (
+            _selector == SWAPOUTUNDERLYING_SELECTOR
+        ) {
+
+        } else if (_selector == SWAPOUTNATIVE_SELECTOR) {
+
+        }
+
+        emit LogSwapFallback(
+            _swapID,
+            _token,
+            _receiver,
+            _amount,
+            _selector,
+            _data,
+            _reason
+        );
         return true;
     }
 
@@ -702,6 +744,22 @@ contract TheiaRouter is C3CallerDapp {
         _fee = maximumSwapFee < _fee ? maximumSwapFee : _fee;
         _fee = minimumSwapFee > _fee ? minimumSwapFee : _fee;
         return _fee;
+    }
+
+    function genSwapInAutoCallData(
+        address _token,
+        uint256 _amount,
+        address _receiver,
+        bytes32 _swapID
+    ) external pure returns (bytes memory) {
+        return
+            abi.encodeWithSignature(
+                "swapInAuto(bytes32,address,address,uint256)",
+                _swapID,
+                _token,
+                _receiver,
+                _amount
+            );
     }
 
     function strToUint(

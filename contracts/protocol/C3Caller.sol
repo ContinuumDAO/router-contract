@@ -56,9 +56,8 @@ contract C3Caller is IC3Caller {
     event LogFallbackCall(
         uint256 indexed dappID,
         bytes32 indexed swapoutID,
-        string indexed to,
-        bytes data,
-        bytes reason
+        string to,
+        bytes data
     );
 
     event LogExecCall(
@@ -207,11 +206,9 @@ contract C3Caller is IC3Caller {
                 abi.encodeWithSelector(
                     IC3Dapp.c3Fallback.selector,
                     _dappID,
-                    _swapID,
                     _data,
                     result
-                ),
-                result
+                )
             );
         }
     }
@@ -254,7 +251,7 @@ contract C3Caller is IC3Caller {
         );
 
         (bool ok, uint rs) = toUint(result);
-
+        // ool rs = abi.decode(result, (bool));
         if (success && ok && rs == 1) {
             ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
         }

@@ -252,12 +252,7 @@ contract DemoRouter is C3CallerDapp {
         bytes result
     );
 
-    event LogFallback(
-        uint256 indexed dappID,
-        bytes32 indexed swapID,
-        bytes data,
-        bytes reason
-    );
+    event LogFallback(bytes4 selector, bytes data, bytes reason);
 
     modifier onlyMPC() {
         require(msg.sender == mpc(), "C3Router: MPC FORBIDDEN");
@@ -469,12 +464,11 @@ contract DemoRouter is C3CallerDapp {
     }
 
     function _c3Fallback(
-        uint256 _dappID,
-        bytes32 _swapID,
+        bytes4 selector,
         bytes calldata data,
         bytes calldata reason
     ) internal override returns (bool) {
-        emit LogFallback(_dappID, _swapID, data, reason);
+        emit LogFallback(selector, data, reason);
         return true;
     }
 }
