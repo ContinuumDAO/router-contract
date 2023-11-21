@@ -622,6 +622,14 @@ contract TheiaRouter is C3CallerDapp {
             sourceChainID,
             _sourceTx
         );
+        return _swapAuto(token, to, recvAmount);
+    }
+
+    function _swapAuto(
+        address token,
+        address to,
+        uint256 recvAmount
+    ) internal returns (bool) {
         ITheiaERC20 _anyToken = ITheiaERC20(token);
         address _underlying = _anyToken.underlying();
         if (
@@ -652,17 +660,12 @@ contract TheiaRouter is C3CallerDapp {
             uint256 _amount
         ) = abi.decode(_data, (bytes32, address, address, uint256));
 
-        // require(ISwapIDKeeper(swapIDKeeper).isSwapoutIDExist(_swapID));
-
-        if (_selector == SWAPOUT_SELECTOR) {
-            
-        } else if (
-            _selector == SWAPOUTUNDERLYING_SELECTOR
-        ) {
-
-        } else if (_selector == SWAPOUTNATIVE_SELECTOR) {
-
-        }
+        require(
+            ISwapIDKeeper(swapIDKeeper).isSwapoutIDExist(_swapID),
+            "TheiaRouter: swapId not exists"
+        );
+        ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
+        ITheiaERC20(_token).mint(_receiver, _amount);
 
         emit LogSwapFallback(
             _swapID,
@@ -673,7 +676,7 @@ contract TheiaRouter is C3CallerDapp {
             _data,
             _reason
         );
-        return true;
+        return _swapAuto(_token, _receiver, _amount);
     }
 
     function depositNative(

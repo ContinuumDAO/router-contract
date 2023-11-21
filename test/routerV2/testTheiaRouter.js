@@ -184,9 +184,20 @@ describe("TheiaRouter", function () {
         });
 
         it("Fallback", async function () {
+            expect(await erc20Token.isMinter(routerV2.target)).to.equal(true)
             let amount = web3.utils.toNumber("1000000000000000000")
+            await otherAccount.sendTransaction({
+                to: weth.target,
+                value: amount,
+            });
+            await erc20Token.connect(otherAccount).deposit()
+
             let swapID = await swapIDKeeper.calcSwapID(routerV2.target, erc20Token.target, otherAccount.address, amount.toString(), otherAccount.address, "250")
             let calldata = await routerV2.genSwapInAutoCallData(erc20Token.target, amount.toString(), otherAccount.address, swapID)
+
+            await expect(routerV2.connect(otherAccount)["swapOut(address,uint256,address,address,uint256)"](erc20Token.target, amount.toString(), routerV2.target, otherAccount.address, 250))
+                .to.emit(routerV2, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
+
             let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", erc20Token.target.toLowerCase(), "250", calldata)
             let fallbackdata = "0xb121f51d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000008401b0e5e00224329e01f2fae9573c96b436220758e129c2537e3bbdcf22a9ef2d9fa13dc2000000000000000000000000286b8decd5ed79c962b2d8f4346cd97ff0e2c35200000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
             await expect(c3CallerProxy.execute("1", uuid, erc20Token.target, chainID.toString(), "sourceTxHash", routerV2.target, calldata))
