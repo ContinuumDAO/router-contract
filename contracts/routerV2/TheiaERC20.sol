@@ -2,116 +2,15 @@
 
 pragma solidity ^0.8.19;
 
-/**
- * @dev Interface of the ERC20 standard as defined in the EIP.
- */
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./TheiaERC20FeeConfig.sol";
 
-    function decimals() external view returns (uint8);
-
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    function allowance(
-        address owner,
-        address spender
-    ) external view returns (uint256);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approval(
-        address indexed owner,
-        address indexed spender,
-        uint256 value
-    );
-}
-
-library Address {
-    function isContract(address account) internal view returns (bool) {
-        bytes32 codehash;
-        bytes32 accountHash = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            codehash := extcodehash(account)
-        }
-        return (codehash != 0x0 && codehash != accountHash);
-    }
-}
-
-library SafeERC20 {
-    using Address for address;
-
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(token.transfer.selector, to, value)
-        );
-    }
-
-    function safeTransferFrom(
-        IERC20 token,
-        address from,
-        address to,
-        uint256 value
-    ) internal {
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(token.transferFrom.selector, from, to, value)
-        );
-    }
-
-    function safeApprove(
-        IERC20 token,
-        address spender,
-        uint256 value
-    ) internal {
-        require(
-            (value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
-        );
-        callOptionalReturn(
-            token,
-            abi.encodeWithSelector(token.approve.selector, spender, value)
-        );
-    }
-
-    function callOptionalReturn(IERC20 token, bytes memory data) private {
-        require(address(token).isContract(), "SafeERC20: call to non-contract");
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = address(token).call(data);
-        require(success, "SafeERC20: low-level call failed");
-
-        if (returndata.length > 0) {
-            // Return data is optional
-            // solhint-disable-next-line max-line-length
-            require(
-                abi.decode(returndata, (bool)),
-                "SafeERC20: ERC20 operation did not succeed"
-            );
-        }
-    }
-}
-
-import "../config/C3ERC20FeeConfig.sol";
-
-contract TheiaERC20 is IERC20, C3ERC20FeeConfig {
+contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     using SafeERC20 for IERC20;
     string public name;
     string public symbol;
-    uint8 public immutable override decimals;
+    uint8 public immutable decimals;
 
     address public immutable underlying;
     bool public constant underlyingIsMinted = false;
@@ -121,9 +20,6 @@ contract TheiaERC20 is IERC20, C3ERC20FeeConfig {
 
     // init flag for setting immediate vault, needed for CREATE2 support
     bool private _init;
-
-    // flag to enable/disable swapout vs vault.burn so multiple events are triggered
-    bool private _vaultOnly;
 
     // delay for timelock functions
     uint public constant DELAY = 2 days;
@@ -158,10 +54,6 @@ contract TheiaERC20 is IERC20, C3ERC20FeeConfig {
     // @deprecated  not mpc
     function mpc() external view returns (address) {
         return vault;
-    }
-
-    function setVaultOnly(bool enabled) external onlyVault {
-        _vaultOnly = enabled;
     }
 
     function initVault(address _vault) external onlyVault {
@@ -232,39 +124,6 @@ contract TheiaERC20 is IERC20, C3ERC20FeeConfig {
         return true;
     }
 
-    function Swapin(
-        bytes32 txhash,
-        address account,
-        uint256 amount
-    ) external onlyAuth returns (bool) {
-        if (
-            underlying != address(0) &&
-            IERC20(underlying).balanceOf(address(this)) >= amount
-        ) {
-            IERC20(underlying).safeTransfer(account, amount);
-        } else {
-            _mint(account, amount);
-        }
-        emit LogSwapin(txhash, account, amount);
-        return true;
-    }
-
-    function Swapout(uint256 amount, address bindaddr) external returns (bool) {
-        require(!_vaultOnly, "C3ERC20: vaultOnly");
-        require(bindaddr != address(0), "C3ERC20: address(0)");
-        if (underlying != address(0) && balanceOf[msg.sender] < amount) {
-            IERC20(underlying).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amount
-            );
-        } else {
-            _burn(msg.sender, amount);
-        }
-        emit LogSwapout(msg.sender, bindaddr, amount);
-        return true;
-    }
-
     mapping(address => mapping(address => uint256)) public override allowance;
 
     event LogChangeVault(
@@ -294,15 +153,8 @@ contract TheiaERC20 is IERC20, C3ERC20FeeConfig {
         symbol = _symbol;
         decimals = _decimals;
         underlying = _underlying;
-        if (_underlying != address(0)) {
-            require(_decimals == IERC20(_underlying).decimals());
-        }
-
         // Use init to allow for CREATE2 accross all chains
         _init = true;
-
-        // Disable/Enable swapout for v1 tokens vs mint/burn for v3 tokens
-        _vaultOnly = false;
 
         vault = _vault;
         isMinter[_vault] = true;
