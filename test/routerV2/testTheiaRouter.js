@@ -46,7 +46,8 @@ describe("TheiaRouter", function () {
         c3Caller = await C3Caller.deploy(_owner.address, c3SwapIDKeeper.target);
 
         const C3CallerProxy = await ethers.getContractFactory("C3CallerProxy");
-        c3CallerProxy = await C3CallerProxy.deploy(_owner.address, c3Caller.target);
+        // c3CallerProxy = await C3CallerProxy.deploy(_owner.address, c3Caller.target);
+        c3CallerProxy = await upgrades.deployProxy(C3CallerProxy, [_owner.address, c3Caller.target], { initializer: 'initialize', kind: 'uups' });
 
         await c3SwapIDKeeper.addSupportedCaller(c3Caller.target)
 
@@ -199,7 +200,7 @@ describe("TheiaRouter", function () {
                 .to.emit(routerV2, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
 
             let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", erc20Token.target.toLowerCase(), "250", calldata)
-            let fallbackdata = "0xb121f51d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000008401b0e5e00224329e01f2fae9573c96b436220758e129c2537e3bbdcf22a9ef2d9fa13dc2000000000000000000000000286b8decd5ed79c962b2d8f4346cd97ff0e2c35200000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            let fallbackdata = "0xb121f51d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000008401b0e5e0df731eaf185f98a604c20563f0b23c3f5a574f278612b0bddc28bba5a5128c21000000000000000000000000a4e00cb342b36ec9fdc4b50b3d527c3643d4c49e00000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
             await expect(c3CallerProxy.execute("1", uuid, erc20Token.target, chainID.toString(), "sourceTxHash", routerV2.target, calldata))
                 .to.emit(c3Caller, "LogExecCall").withArgs("1", erc20Token.target, false, uuid, chainID, "sourceTxHash", calldata, "0x")
                 .emit(c3Caller, "LogFallbackCall").withArgs("1", uuid, routerV2.target, fallbackdata)

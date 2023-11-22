@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "./IC3Caller.sol";
 
-contract C3CallerProxy is IC3CallerProxy {
+contract C3CallerProxy is
+    Initializable,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    IC3CallerProxy
+{
     address public mpc;
     address public pendingMPC;
 
@@ -12,25 +20,33 @@ contract C3CallerProxy is IC3CallerProxy {
     mapping(address => bool) public isOperator;
     address[] public operators;
 
-    /// @dev Access control function
-    modifier onlyMPC() {
-        require(msg.sender == mpc, "C3CallerProxy: only MPC");
-        _;
-    }
-
     modifier onlyAuth() {
         require(isOperator[msg.sender], "C3CallerProxy: AUTH FORBIDDEN");
         _;
     }
 
-    constructor(address _mpc, address _c3caller) {
+    // constructor(address _mpc, address _c3caller) {
+    //     require(_mpc != address(0));
+    //     mpc = _mpc;
+    //     _addOperator(_mpc);
+    //     c3caller = _c3caller;
+    // }
+
+    function initialize(address _mpc, address _c3caller) public initializer {
         require(_mpc != address(0));
         mpc = _mpc;
         _addOperator(_mpc);
         c3caller = _c3caller;
+        __UUPSUpgradeable_init();
+        __Ownable_init();
+        transferOwnership(_mpc);
     }
 
-    function changeMPC(address _mpc) external onlyMPC {
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    function changeMPC(address _mpc) external onlyOwner {
         pendingMPC = _mpc;
     }
 
@@ -47,7 +63,7 @@ contract C3CallerProxy is IC3CallerProxy {
         operators.push(op);
     }
 
-    function addOperator(address _auth) external onlyMPC {
+    function addOperator(address _auth) external onlyOwner {
         _addOperator(_auth);
     }
 
@@ -55,7 +71,7 @@ contract C3CallerProxy is IC3CallerProxy {
         return operators;
     }
 
-    function revokeOperator(address _auth) external onlyMPC {
+    function revokeOperator(address _auth) external onlyOwner {
         require(isOperator[_auth], "C3Caller: Operator not found");
         isOperator[_auth] = false;
         uint256 length = operators.length;

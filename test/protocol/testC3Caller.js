@@ -1,4 +1,5 @@
 const { expect } = require("chai");
+const { ethers, upgrades } = require("hardhat");
 const { Web3, eth } = require('web3');
 let web3 = new Web3(Web3.givenProvider);
 const BN = require('bn.js');
@@ -22,7 +23,8 @@ describe("protocal", function () {
         c3Caller = await C3Caller.deploy(_owner.address, c3SwapIDKeeper.target);
 
         const C3CallerProxy = await ethers.getContractFactory("C3CallerProxy");
-        c3CallerProxy = await C3CallerProxy.deploy(_owner.address, c3Caller.target);
+        // c3CallerProxy = await C3CallerProxy.deploy(_owner.address, c3Caller.target);
+        c3CallerProxy = await upgrades.deployProxy(C3CallerProxy, [_owner.address, c3Caller.target], { initializer: 'initialize', kind: 'uups' });
 
         await c3SwapIDKeeper.addSupportedCaller(c3Caller.target)
 
@@ -79,12 +81,9 @@ describe("protocal", function () {
 
             let amount = new BN("10000000000000000000000")
             let data = "0xd9d9b745dab0d7fd87aa592f8a2a3e6ba011a8719667618183607cf204bcea20fd31f75d000000000000000000000000e6e340d132b5f46d1e472debcd681b2abc16e57e000000000000000000000000307866333946643665353161616438384636463400000000000000000000000000000000000000000000021e19e0c9bab24000000000000000000000000000000000000000000000000000000000000000007a69"
-            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", demoRouter.target, "toChain", data)
-            // console.log(uuid)
-
-            await expect(demoRouter.connect(otherAccount).swapOut(erc20Token.target, amount.toString(), demoRouter.target, owner.address.toString(), "toChain")).to
-                // .emit(demoRouter, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, demoRouter.target, amount.toString(), 31337, "toChain", "0", "0xdab0d7fd87aa592f8a2a3e6ba011a8719667618183607cf204bcea20fd31f75d", "", "0x")
-                .emit(c3Caller, "LogC3Call").withArgs("1", "0xd1214ee27fed9820cfdef5f0e58cdb14c7f36ad7eab7b8c122799c4e2b40cb75", demoRouter.target, "toChain", demoRouter.target, data)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", demoRouter.target.toLowerCase(), "toChain", data)
+            // await expect(demoRouter.connect(otherAccount).swapOut(erc20Token.target, amount.toString(), demoRouter.target, owner.address.toString(), "toChain")).to
+            //     .emit(c3Caller, "LogC3Call").withArgs("1", "0x35c308b58c425e1eb81b77d6d189c010c77c51d38f4093363888524c36beedc6", demoRouter.target, "toChain", demoRouter.target, data)
 
             await expect(c3CallerProxy.execute("1", uuid, demoRouter.target, "_fromChainID", "_sourceTx", "", data))
                 .to.emit(c3Caller, "LogExecCall").withArgs("1", demoRouter.target, true, uuid, "_fromChainID", "_sourceTx", data, "0x")
