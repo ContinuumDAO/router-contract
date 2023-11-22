@@ -237,19 +237,7 @@ contract TheiaRouter is C3CallerDapp {
 
     function checkSwapOut(address token, address to) internal pure {
         require(token != address(0), "TheiaRouter: from address(0)");
-        require(to != address(0), "TheiaRouter: empty to address");
-    }
-
-    function checkC3Call(
-        uint256 toChainID,
-        string calldata to,
-        string calldata dapp,
-        bytes calldata data
-    ) internal pure {
-        require(toChainID > 0, "C3Call: empty toChainID");
-        require(bytes(to).length > 0, "C3Call: empty to address");
-        require(bytes(dapp).length > 0, "C3Call: empty dapp address");
-        require(data.length > 0, "C3Call: empty c3 calldata");
+        require(to != address(0), "TheiaRouter: to address(0)");
     }
 
     // need approve to router first
@@ -411,51 +399,106 @@ contract TheiaRouter is C3CallerDapp {
         );
     }
 
-    // function swapOutAndCall(
-    //     address token,
-    //     string calldata to,
-    //     uint256 amount,
-    //     uint256 toChainID,
-    //     string calldata dapp,
-    //     bytes calldata data
-    // ) external payable {
-    //     checkC3Call(toChainID, to, dapp, data);
-    //     bytes32 swapoutID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         amount,
-    //         toChainID,
-    //         dapp,
-    //         data
-    //     );
-    //     if (token != address(0)) {
-    //         checkSwapOut(token, to);
-    //         ITheiaERC20(token).burn(msg.sender, amount);
-    //     }
-    //     (, uint256 _srcFees) = IC3Caller(c3caller).checkCall(
-    //         msg.sender,
-    //         data.length,
-    //         toChainID
-    //     );
+    function callAndSwapOut(
+        address _fromToken,
+        uint256 _amount,
+        address _to,
+        address _toToken,
+        address _receiver,
+        uint256 _toChainID,
+        address _dexAddr,
+        bytes calldata _data
+    ) external payable {
+        checkSwapOut(_fromToken, _to);
+        require(_toToken != address(0), "TheiaRouter: _toToken address(0)");
+        require(_dexAddr != address(0), "TheiaRouter: _dexAddr address(0)");
+        ITheiaERC20 toTheiaToken = ITheiaERC20(_toToken);
+        require(
+            toTheiaToken.underlying() != address(0),
+            "TheiaRouter: underlying address(0)"
+        );
+        require(
+            IERC20(toTheiaToken.underlying()).balanceOf(address(this)) == 0,
+            "TheiaRouter: underlying amount not empty"
+        );
 
-    //     if (_srcFees > 0) {
-    //         _paySrcFees(_srcFees, 0);
-    //     }
+        bool success;
+        bytes memory result;
+        ITheiaERC20 theiaToken = ITheiaERC20(_fromToken);
+        address _underlying = theiaToken.underlying();
+        if (_underlying != address(0)) {
+            if (_underlying == wNATIVE) {
+                require(
+                    msg.value >= _amount,
+                    "TheiaRouter: balance not enough"
+                );
+                (success, result) = _dexAddr.call{value: msg.value}(_data);
+            } else {
+                require(
+                    IERC20(_underlying).balanceOf(msg.sender) >= _amount,
+                    "TheiaRouter: balance not enough"
+                );
+                IERC20(_underlying).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _amount
+                );
+                IERC20(_underlying).approve(_dexAddr, _amount);
+                (success, result) = _dexAddr.call(_data);
+            }
+        } else {
+            require(
+                IERC20(_fromToken).balanceOf(msg.sender) >= _amount,
+                "TheiaRouter: balance not enough"
+            );
+            ITheiaERC20(_fromToken).burn(msg.sender, _amount);
+            ITheiaERC20(_fromToken).mint(address(this), _amount);
+            IERC20(_fromToken).approve(_dexAddr, _amount);
+            (success, result) = _dexAddr.call(_data);
+        }
 
-    //     emit LogSwapOut(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         amount,
-    //         cID(),
-    //         toChainID,
-    //         0,
-    //         swapoutID,
-    //         dapp,
-    //         data
-    //     );
-    // }
+        if (success) {
+            require(
+                IERC20(toTheiaToken.underlying()).balanceOf(address(this)) > 0,
+                "TheiaRouter: underlying amount empty after call"
+            );
+        }
+        uint256 amount = IERC20(toTheiaToken.underlying()).balanceOf(
+            address(this)
+        );
+        uint256 swapFee = calcSwapFee(0, _toChainID, _toToken, amount);
+        if (swapFee > 0) {
+            ITheiaERC20(toTheiaToken).mint(address(this), swapFee);
+        }
+
+        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
+            _toToken,
+            msg.sender,
+            amount,
+            _receiver,
+            _toChainID
+        );
+
+        bytes memory data = abi.encodeWithSignature(
+            "swapInAuto(bytes32,address,address,uint256)",
+            _swapID,
+            _toToken,
+            _receiver,
+            amount - swapFee
+        );
+
+        emit LogSwapOut(
+            _toToken,
+            msg.sender,
+            _receiver.toHexString(),
+            amount,
+            cID(),
+            _toChainID,
+            swapFee,
+            _swapID,
+            data
+        );
+    }
 
     // function swapOutUnderlyingAndCall(
     //     address token,
@@ -464,7 +507,7 @@ contract TheiaRouter is C3CallerDapp {
     //     uint256 toChainID,
     //     string calldata dapp,
     //     bytes calldata data
-    // ) external payable {
+    // ) external {
     //     checkC3Call(toChainID, to, dapp, data);
     //     bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
     //         token,
@@ -630,18 +673,18 @@ contract TheiaRouter is C3CallerDapp {
         address to,
         uint256 recvAmount
     ) internal returns (bool) {
-        ITheiaERC20 _anyToken = ITheiaERC20(token);
-        address _underlying = _anyToken.underlying();
+        ITheiaERC20 theiaToken = ITheiaERC20(token);
+        address _underlying = theiaToken.underlying();
         if (
             _underlying != address(0) &&
             IERC20(_underlying).balanceOf(token) >= recvAmount
         ) {
             if (_underlying == wNATIVE) {
-                _anyToken.withdrawVault(to, recvAmount, address(this));
+                theiaToken.withdrawVault(to, recvAmount, address(this));
                 IwNATIVE(wNATIVE).withdraw(recvAmount);
                 TransferHelper.safeTransferNative(to, recvAmount);
             } else {
-                _anyToken.withdrawVault(to, recvAmount, to);
+                theiaToken.withdrawVault(to, recvAmount, to);
             }
             return true;
         }
