@@ -28,6 +28,10 @@ abstract contract C3CallerDapp is IC3Dapp {
         dappID = _dappID;
     }
 
+    function isCaller(address addr) internal returns (bool) {
+        return IC3CallerProxy(c3CallerProxy).isCaller(addr);
+    }
+
     function _c3Fallback(
         bytes4 selector,
         bytes calldata data,
@@ -47,7 +51,7 @@ abstract contract C3CallerDapp is IC3Dapp {
         internal
         view
         returns (
-            bytes32 swapID,
+            bytes32 uuid,
             string memory fromChainID,
             string memory sourceTx
         )

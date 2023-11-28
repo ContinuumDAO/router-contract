@@ -131,7 +131,10 @@ contract TheiaRouter is C3CallerDapp {
     }
 
     modifier onlyAuth() {
-        require(isOperator[msg.sender], "C3ERC20: AUTH FORBIDDEN");
+        require(
+            isOperator[msg.sender] || isCaller(msg.sender),
+            "C3ERC20: AUTH FORBIDDEN"
+        );
         _;
     }
 
@@ -235,9 +238,16 @@ contract TheiaRouter is C3CallerDapp {
         return ITheiaERC20(token).revokeMinter(_auth);
     }
 
-    function checkSwapOut(address token, address to) internal pure {
+    function checkSwapOut(
+        address token,
+        address to,
+        address receiver,
+        uint256 amount
+    ) internal pure {
         require(token != address(0), "TheiaRouter: from address(0)");
         require(to != address(0), "TheiaRouter: to address(0)");
+        require(receiver != address(0), "TheiaRouter: receiver address(0)");
+        require(amount > 0, "TheiaRouter: amount must be greater than 0");
     }
 
     // need approve to router first
@@ -279,7 +289,7 @@ contract TheiaRouter is C3CallerDapp {
         address _receiver,
         uint256 _toChainID
     ) external {
-        checkSwapOut(_token, _to);
+        checkSwapOut(_token, _to, _receiver, _amount);
 
         ITheiaERC20(_token).burn(msg.sender, _amount);
         uint256 swapFee = calcSwapFee(0, _toChainID, _token, _amount);
@@ -317,14 +327,81 @@ contract TheiaRouter is C3CallerDapp {
         );
     }
 
+    function swapOutAuto(
+        address _token,
+        uint256 _amount,
+        address _to,
+        address _receiver,
+        uint256 _toChainID
+    ) external payable {
+        checkSwapOut(_token, _to, _receiver, _amount);
+        ITheiaERC20 theiaToken = ITheiaERC20(_token);
+        address _underlying = theiaToken.underlying();
+        uint256 _recvAmount = 0;
+        if (_underlying != address(0)) {
+            if (_underlying == wNATIVE) {
+                require(
+                    msg.value >= _amount,
+                    "TheiaRouter: balance not enough"
+                );
+                _recvAmount = _swapOutNative(_token);
+            } else {
+                _recvAmount = _swapOutUnderlying(_token, _amount);
+            }
+        } else {
+            ITheiaERC20(_token).burn(msg.sender, _amount);
+            _recvAmount = _amount;
+        }
+        uint256 swapFee = calcSwapFee(0, _toChainID, _token, _recvAmount);
+        if (swapFee > 0) {
+            ITheiaERC20(_token).mint(address(this), swapFee);
+        }
+
+        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
+            _token,
+            msg.sender,
+            _recvAmount,
+            _receiver,
+            _toChainID
+        );
+
+        bytes memory _data = abi.encodeWithSignature(
+            "swapInAuto(bytes32,address,address,uint256)",
+            swapID,
+            _token,
+            _receiver,
+            _recvAmount - swapFee
+        );
+
+        c3call(_to.toHexString(), _toChainID.toString(), _data);
+
+        emit LogSwapOut(
+            _token,
+            msg.sender,
+            _receiver.toHexString(),
+            _recvAmount,
+            cID(),
+            _toChainID,
+            swapFee,
+            swapID,
+            _data
+        );
+    }
+
     function swapOutUnderlying(
         address _token,
-        address _receiver,
         uint256 _amount,
+        address _to,
+        address _receiver,
         uint256 _toChainID
     ) external {
-        checkSwapOut(_token, _receiver);
+        checkSwapOut(_token, _to, _receiver, _amount);
 
+        uint256 recvAmount = _swapOutUnderlying(_token, _amount);
+        uint256 swapFee = calcSwapFee(0, _toChainID, _token, recvAmount);
+        if (swapFee > 0) {
+            ITheiaERC20(_token).mint(address(this), swapFee);
+        }
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
             _token,
             msg.sender,
@@ -332,12 +409,6 @@ contract TheiaRouter is C3CallerDapp {
             _receiver,
             _toChainID
         );
-
-        uint256 recvAmount = _swapOutUnderlying(_token, _amount);
-        uint256 swapFee = calcSwapFee(0, _toChainID, _token, recvAmount);
-        if (swapFee > 0) {
-            ITheiaERC20(_token).mint(address(this), swapFee);
-        }
         bytes memory _data = abi.encodeWithSignature(
             "swapInAuto(bytes32,address,address,uint256)",
             swapID,
@@ -345,6 +416,8 @@ contract TheiaRouter is C3CallerDapp {
             _receiver,
             _amount - swapFee
         );
+
+        c3call(_to.toHexString(), _toChainID.toString(), _data);
 
         emit LogSwapOut(
             _token,
@@ -360,39 +433,42 @@ contract TheiaRouter is C3CallerDapp {
     }
 
     function swapOutNative(
-        address token,
-        address to,
-        uint256 toChainID
+        address _token,
+        address _to,
+        address _receiver,
+        uint256 _toChainID
     ) external payable {
-        checkSwapOut(token, to);
-        uint256 recvAmount = _swapOutNative(token);
+        checkSwapOut(_token, _to, _receiver, msg.value);
+        uint256 recvAmount = _swapOutNative(_token);
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
-            token,
+            _token,
             msg.sender,
             recvAmount,
-            to,
-            toChainID
+            _receiver,
+            _toChainID
         );
-        uint256 swapFee = calcSwapFee(0, toChainID, token, recvAmount);
+        uint256 swapFee = calcSwapFee(0, _toChainID, _token, recvAmount);
         if (swapFee > 0) {
-            ITheiaERC20(token).mint(address(this), swapFee);
+            ITheiaERC20(_token).mint(address(this), swapFee);
         }
 
         bytes memory _data = abi.encodeWithSignature(
             "swapInAuto(bytes32,address,address,uint256)",
             swapID,
-            token,
-            to,
+            _token,
+            _to,
             recvAmount - swapFee
         );
 
+        c3call(_to.toHexString(), _toChainID.toString(), _data);
+
         emit LogSwapOut(
-            token,
+            _token,
             msg.sender,
-            to.toHexString(),
+            _receiver.toHexString(),
             recvAmount,
             cID(),
-            toChainID,
+            _toChainID,
             swapFee,
             swapID,
             _data
@@ -409,7 +485,7 @@ contract TheiaRouter is C3CallerDapp {
         address _dexAddr,
         bytes calldata _data
     ) external payable {
-        checkSwapOut(_fromToken, _to);
+        checkSwapOut(_fromToken, _to, _receiver, _amount);
         require(_toToken != address(0), "TheiaRouter: _toToken address(0)");
         require(_dexAddr != address(0), "TheiaRouter: _dexAddr address(0)");
         ITheiaERC20 toTheiaToken = ITheiaERC20(_toToken);
@@ -426,7 +502,10 @@ contract TheiaRouter is C3CallerDapp {
         bytes memory result;
         ITheiaERC20 theiaToken = ITheiaERC20(_fromToken);
         address _underlying = theiaToken.underlying();
-        if (_underlying != address(0)) {
+        if (
+            _underlying != address(0) &&
+            IERC20(_fromToken).balanceOf(msg.sender) < _amount
+        ) {
             if (_underlying == wNATIVE) {
                 require(
                     msg.value >= _amount,
@@ -466,6 +545,7 @@ contract TheiaRouter is C3CallerDapp {
         uint256 amount = IERC20(toTheiaToken.underlying()).balanceOf(
             address(this)
         );
+
         uint256 swapFee = calcSwapFee(0, _toChainID, _toToken, amount);
         if (swapFee > 0) {
             ITheiaERC20(toTheiaToken).mint(address(this), swapFee);
@@ -487,6 +567,8 @@ contract TheiaRouter is C3CallerDapp {
             amount - swapFee
         );
 
+        c3call(_to.toHexString(), _toChainID.toString(), _data);
+
         emit LogSwapOut(
             _toToken,
             msg.sender,
@@ -500,123 +582,83 @@ contract TheiaRouter is C3CallerDapp {
         );
     }
 
-    // function swapOutUnderlyingAndCall(
-    //     address token,
-    //     string calldata to,
-    //     uint256 amount,
-    //     uint256 toChainID,
-    //     string calldata dapp,
-    //     bytes calldata data
-    // ) external {
-    //     checkC3Call(toChainID, to, dapp, data);
-    //     bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         amount,
-    //         toChainID,
-    //         dapp,
-    //         data
-    //     );
-    //     uint256 recvAmount = 0;
-    //     if (token != address(0)) {
-    //         checkSwapOut(token, to);
-    //         recvAmount = _swapOutUnderlying(token, amount);
-    //     }
+    function swapOutAndCall(
+        address _token,
+        uint256 _amount,
+        address _to,
+        address _receiver,
+        uint256 _toChainID,
+        bool _native,
+        address _dex,
+        bytes calldata _data
+    ) external payable {
+        checkSwapOut(_token, _to, _receiver, _amount);
+        require(_dex != address(0), "TheiaRouter: dex address(0)");
+        require(_data.length > 0, "TheiaRouter: data is empty");
 
-    //     (, uint256 _srcFees) = IC3Caller(c3caller).checkCall(
-    //         msg.sender,
-    //         data.length,
-    //         toChainID
-    //     );
-
-    //     if (_srcFees > 0) {
-    //         _paySrcFees(_srcFees, 0);
-    //     }
-
-    //     emit LogSwapOut(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         recvAmount,
-    //         cID(),
-    //         toChainID,
-    //         0,
-    //         swapID,
-    //         dapp,
-    //         data
-    //     );
-    // }
-
-    // function swapOutNativeAndCall(
-    //     address token,
-    //     string calldata to,
-    //     uint256 toChainID,
-    //     string calldata dapp,
-    //     bytes calldata data
-    // ) external payable {
-    //     checkC3Call(toChainID, to, dapp, data);
-    //     uint256 recvAmount = 0;
-    //     if (token != address(0)) {
-    //         checkSwapOut(token, to);
-    //         recvAmount = _swapOutNative(token);
-    //     }
-    //     bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapout(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         recvAmount,
-    //         toChainID,
-    //         dapp,
-    //         data
-    //     );
-    //     uint256 fee = 0;
-    //     {
-    //         (, uint256 _srcFees) = IC3Caller(c3caller).checkCall(
-    //             msg.sender,
-    //             data.length,
-    //             toChainID
-    //         );
-    //         if (_srcFees > 0) {
-    //             if (recvAmount > 0) {
-    //                 ITheiaERC20(token).mint(address(this), _srcFees);
-    //                 ITheiaERC20(token).withdrawVault(
-    //                     address(this),
-    //                     _srcFees,
-    //                     address(this)
-    //                 );
-    //                 IwNATIVE(wNATIVE).withdraw(_srcFees);
-    //             }
-    //             _paySrcFees(_srcFees, recvAmount);
-    //             fee = _srcFees;
-    //         }
-    //     }
-
-    //     emit LogSwapOut(
-    //         token,
-    //         msg.sender,
-    //         to,
-    //         recvAmount,
-    //         cID(),
-    //         toChainID,
-    //         fee,
-    //         swapID,
-    //         dapp,
-    //         data
-    //     );
-    // }
-
-    function _paySrcFees(uint256 fees, uint256 recvAmount) internal {
-        require(msg.value >= fees, "TheiaRouter: not enough src fee");
-        // if (fees > 0) {
-        //     // pay fees
-        //     IC3Caller(c3caller).paySrcFees{value: fees}(msg.sender, fees);
-        // }
-        if (msg.value - recvAmount > fees) {
-            // return remaining amount
-            (bool success, ) = msg.sender.call{value: msg.value - fees}("");
-            require(success, "TheiaRouter: failed to return remaining amount");
+        uint256 recvAmount = 0;
+        ITheiaERC20 theiaToken = ITheiaERC20(_token);
+        address _underlying = theiaToken.underlying();
+        if (
+            _underlying != address(0) &&
+            IERC20(_token).balanceOf(msg.sender) < _amount
+        ) {
+            if (_underlying == wNATIVE) {
+                require(
+                    msg.value >= _amount,
+                    "TheiaRouter: native is mismatch with amount"
+                );
+                recvAmount = _swapOutNative(_token);
+            } else {
+                require(
+                    IERC20(_underlying).balanceOf(msg.sender) >= _amount,
+                    "TheiaRouter: balance not enough"
+                );
+                recvAmount = _swapOutUnderlying(_token, _amount);
+            }
+        } else {
+            require(
+                IERC20(_token).balanceOf(msg.sender) >= _amount,
+                "TheiaRouter: balance not enough"
+            );
+            ITheiaERC20(_token).burn(msg.sender, _amount);
+            recvAmount = _amount;
         }
+        uint256 swapFee = calcSwapFee(0, _toChainID, _token, recvAmount);
+        if (swapFee > 0) {
+            ITheiaERC20(_token).mint(address(this), swapFee);
+        }
+        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
+            _token,
+            msg.sender,
+            _amount,
+            _receiver,
+            _toChainID
+        );
+
+        bytes memory data = abi.encodeWithSignature(
+            "swapInAutoAndCall(bytes32,address,bool,address,uint256,address,bytes)",
+            _swapID,
+            _token,
+            _native,
+            _receiver,
+            recvAmount - swapFee,
+            _dex,
+            _data
+        );
+        c3call(_to.toHexString(), _toChainID.toString(), data);
+
+        emit LogSwapOut(
+            _token,
+            msg.sender,
+            _receiver.toHexString(),
+            _amount,
+            cID(),
+            _toChainID,
+            swapFee,
+            _swapID,
+            data
+        );
     }
 
     function _swapIn(
@@ -675,10 +717,12 @@ contract TheiaRouter is C3CallerDapp {
     ) internal returns (bool) {
         ITheiaERC20 theiaToken = ITheiaERC20(token);
         address _underlying = theiaToken.underlying();
-        if (
-            _underlying != address(0) &&
-            IERC20(_underlying).balanceOf(token) >= recvAmount
-        ) {
+        if (_underlying != address(0)) {
+            // TODO is it allowed to just mint veToken if underlying is insufficient?
+            require(
+                IERC20(_underlying).balanceOf(token) >= recvAmount,
+                "TheiaRouter: insufficient balance"
+            );
             if (_underlying == wNATIVE) {
                 theiaToken.withdrawVault(to, recvAmount, address(this));
                 IwNATIVE(wNATIVE).withdraw(recvAmount);
@@ -686,9 +730,59 @@ contract TheiaRouter is C3CallerDapp {
             } else {
                 theiaToken.withdrawVault(to, recvAmount, to);
             }
-            return true;
         }
-        return false;
+        return true;
+    }
+
+    function swapInAutoAndCall(
+        bytes32 swapID,
+        address token,
+        bool native,
+        address to,
+        uint256 amount,
+        address dex,
+        bytes memory data
+    ) external onlyAuth returns (bool) {
+        (, string memory fromChainID, string memory _sourceTx) = context();
+
+        (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
+        require(ok, "TheiaRouter: sourceChain is invalid");
+
+        uint256 recvAmount = _swapIn(
+            swapID,
+            token,
+            to,
+            amount,
+            sourceChainID,
+            _sourceTx
+        );
+
+        ITheiaERC20 theiaToken = ITheiaERC20(token);
+        address _underlying = theiaToken.underlying();
+
+        bool success;
+        bytes memory result;
+        if (
+            _underlying != address(0) &&
+            IERC20(_underlying).balanceOf(token) >= recvAmount
+        ) {
+            theiaToken.withdrawVault(to, recvAmount, address(this));
+            if (_underlying == wNATIVE && native) {
+                IwNATIVE(wNATIVE).withdraw(recvAmount);
+                (success, result) = dex.call{value: recvAmount}(data);
+            } else {
+                IERC20(_underlying).approve(dex, recvAmount); // safeApprove?
+                (success, result) = dex.call(data);
+            }
+        } else {
+            theiaToken.burn(to, recvAmount);
+            theiaToken.mint(address(this), recvAmount);
+            IERC20(token).approve(dex, recvAmount);
+            (success, result) = dex.call(data);
+        }
+
+        // require(success, "TheiaRouter: swapInAutoAndCall failed");
+        return success;
     }
 
     function _c3Fallback(
@@ -759,7 +853,7 @@ contract TheiaRouter is C3CallerDapp {
     }
 
     //  extracts mpc fee from bridge fees
-    function swapFeeTo(address[] calldata tokens) external onlyMPC {
+    function withdrawFee(address[] calldata tokens) external onlyMPC {
         address _mpc = mpc();
         for (uint index = 0; index < tokens.length; index++) {
             address _token = tokens[index];
@@ -770,7 +864,6 @@ contract TheiaRouter is C3CallerDapp {
         }
     }
 
-    // TODO: how to ensure that the fee config are both setted in fromChain and toChain correctly
     function calcSwapFee(
         uint256 fromChainID,
         uint256 toChainID,

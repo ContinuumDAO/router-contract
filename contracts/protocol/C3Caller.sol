@@ -213,6 +213,21 @@ contract C3Caller is IC3Caller {
         }
     }
 
+    // TODO test code
+    function getFallbackCallData(
+        uint256 _dappID,
+        bytes memory _data,
+        bytes memory result
+    ) public pure returns (bytes memory) {
+        return
+            abi.encodeWithSelector(
+                IC3Dapp.c3Fallback.selector,
+                _dappID,
+                _data,
+                result
+            );
+    }
+
     function c3Fallback(
         uint256 _dappID,
         bytes32 _swapID,

@@ -90,6 +90,14 @@ contract TheiaSwapIDKeeper is ISwapIDKeeper {
         completedSwapin[swapID] = true;
     }
 
+    // TODO test code
+    function registerSwapout(
+        bytes32 swapID,
+        uint256 nonce
+    ) external onlyAuth checkCompletion(swapID) {
+        swapoutNonce[swapID] = nonce;
+    }
+
     function registerSwapoutEvm(
         address token,
         address from,

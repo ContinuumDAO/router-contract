@@ -5,8 +5,8 @@ const BN = require('bn.js');
 
 describe("TheiaRouter", function () {
     let routerV2
-    let erc20Token
-    let weth
+    let erc20Token, underlyingToken
+    let weth, usdc
     let owner
     let otherAccount
     let chainID
@@ -52,20 +52,24 @@ describe("TheiaRouter", function () {
         await c3SwapIDKeeper.addSupportedCaller(c3Caller.target)
 
         await c3Caller.addOperator(c3CallerProxy.target)
+
+        const USDC = await ethers.getContractFactory("USDC");
+        usdc = await USDC.deploy();
     }
 
     async function deployC3ERC20(name, symbol, decimals, underlying, vault) {
         // Contracts are deployed using the first signer/account by default
         const [_owner, _otherAccount] = await ethers.getSigners();
         const TheiaERC20 = await ethers.getContractFactory("TheiaERC20");
-        erc20Token = await TheiaERC20.deploy(name, symbol, decimals, underlying, vault);
+        return await TheiaERC20.deploy(name, symbol, decimals, underlying, vault);
     }
 
 
     beforeEach(async () => {
         await deployC3Caller()
         await deployRouterV2()
-        await deployC3ERC20("ctmETHOD", "ctmETH", 18, weth.target, routerV2.target)
+        erc20Token = await deployC3ERC20("theiaETHOD", "theiaETH", 18, weth.target, routerV2.target)
+        underlyingToken = await deployC3ERC20("theiaUSDC", "theiaUSDC", 18, usdc.target, routerV2.target)
     })
 
 
@@ -200,7 +204,8 @@ describe("TheiaRouter", function () {
                 .to.emit(routerV2, "LogSwapOut").withArgs(erc20Token.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
 
             let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", erc20Token.target.toLowerCase(), "250", calldata)
-            let fallbackdata = "0xb121f51d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000008401b0e5e0df731eaf185f98a604c20563f0b23c3f5a574f278612b0bddc28bba5a5128c21000000000000000000000000a4e00cb342b36ec9fdc4b50b3d527c3643d4c49e00000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            let fallbackdata = "0xb121f51d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000008401b0e5e0af1bceafadb2fdd7be28bc8a20a209fda49a7e633e8ca361790dcd80f1057d080000000000000000000000008e45c0936fa1a65bdad3222befec6a03c83372ce00000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a7640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            // call the wrong to contract
             await expect(c3CallerProxy.execute("1", uuid, erc20Token.target, chainID.toString(), "sourceTxHash", routerV2.target, calldata))
                 .to.emit(c3Caller, "LogExecCall").withArgs("1", erc20Token.target, false, uuid, chainID, "sourceTxHash", calldata, "0x")
                 .emit(c3Caller, "LogFallbackCall").withArgs("1", uuid, routerV2.target, fallbackdata)
@@ -210,6 +215,81 @@ describe("TheiaRouter", function () {
                 .emit(routerV2, "LogSwapFallback").withArgs(swapID, erc20Token.target, otherAccount.address, amount.toString(), "0x01b0e5e0", "0x" + calldata.substring(10), "0x")
 
         });
+
+        it("swapOutUnderlying", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+
+            await usdc.approve(routerV2.target, amount)
+            expect(await usdc.allowance(owner.address, routerV2.target)).to.equal(amount)
+
+            let swapID = await swapIDKeeper.calcSwapID(routerV2.target, underlyingToken.target, owner.address, amount.toString(), otherAccount.address, "250")
+            let calldata = await routerV2.genSwapInAutoCallData(underlyingToken.target, amount.toString(), otherAccount.address, swapID)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+            // console.log(underlyingToken.target, owner.address, otherAccount.address.toString().toLowerCase(),swapID,uuid)
+            await expect(routerV2.swapOutUnderlying(underlyingToken.target, amount.toString(), routerV2.target, otherAccount.address, 250))
+                .to.emit(routerV2, "LogSwapOut").withArgs(underlyingToken.target, owner.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
+                .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
+
+            expect(await usdc.balanceOf(underlyingToken.target)).to.equal(amount)
+
+            await expect(c3CallerProxy.execute("1", uuid, routerV2.target, chainID.toString(), "sourceTxHash", "", calldata))
+                .to.emit(c3Caller, "LogExecCall").withArgs("1", routerV2.target, true, uuid, chainID, "sourceTxHash", calldata, "0x0000000000000000000000000000000000000000000000000000000000000001")
+                .to.emit(routerV2, "LogSwapIn").withArgs(underlyingToken.target, otherAccount.address, swapID, amount.toString(), chainID, chainID, "sourceTxHash")
+
+            expect(await underlyingToken.balanceOf(otherAccount.address)).to.equal(0)
+            expect(await usdc.balanceOf(otherAccount.address)).to.equal(amount)
+        });
+
+        it("swapOutAuto Underlying", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+
+            await usdc.approve(routerV2.target, amount)
+            expect(await usdc.allowance(owner.address, routerV2.target)).to.equal(amount)
+
+            let swapID = await swapIDKeeper.calcSwapID(routerV2.target, underlyingToken.target, owner.address, amount.toString(), otherAccount.address, "250")
+            let calldata = await routerV2.genSwapInAutoCallData(underlyingToken.target, amount.toString(), otherAccount.address, swapID)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+            // console.log(underlyingToken.target, owner.address, otherAccount.address.toString().toLowerCase(),swapID,uuid)
+            await expect(routerV2.swapOutAuto(underlyingToken.target, amount.toString(), routerV2.target, otherAccount.address, 250))
+                .to.emit(routerV2, "LogSwapOut").withArgs(underlyingToken.target, owner.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
+                .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
+
+            expect(await usdc.balanceOf(underlyingToken.target)).to.equal(amount)
+
+            await expect(c3CallerProxy.execute("1", uuid, routerV2.target, chainID.toString(), "sourceTxHash", "", calldata))
+                .to.emit(c3Caller, "LogExecCall").withArgs("1", routerV2.target, true, uuid, chainID, "sourceTxHash", calldata, "0x0000000000000000000000000000000000000000000000000000000000000001")
+                .to.emit(routerV2, "LogSwapIn").withArgs(underlyingToken.target, otherAccount.address, swapID, amount.toString(), chainID, chainID, "sourceTxHash")
+
+            expect(await underlyingToken.balanceOf(otherAccount.address)).to.equal(0)
+            expect(await usdc.balanceOf(otherAccount.address)).to.equal(amount)
+        });
+
+
+        it("swapOutAuto Underlying fallback", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+
+            let swapID = await swapIDKeeper.calcSwapID(routerV2.target, underlyingToken.target, owner.address, amount.toString(), otherAccount.address, "250")
+            let calldata = await routerV2.genSwapInAutoCallData(underlyingToken.target, amount.toString(), otherAccount.address, swapID)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+
+            await swapIDKeeper.registerSwapout(swapID, 1)
+            let result = "0x08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000215468656961526f757465723a20696e73756666696369656e742062616c616e636500000000000000000000000000000000000000000000000000000000000000"
+            let fallbackdata = await c3Caller.getFallbackCallData("1", calldata, result)
+
+            await expect(c3CallerProxy.execute("1", uuid, routerV2.target, chainID.toString(), "sourceTxHash", routerV2.target, calldata))
+                .to.emit(c3Caller, "LogExecCall").withArgs("1", routerV2.target, false, uuid, chainID, "sourceTxHash", calldata, result)
+                .to.emit(c3Caller, "LogFallbackCall").withArgs("1", uuid, routerV2.target, fallbackdata)
+
+            await usdc.transfer(underlyingToken.target, amount)
+
+            await expect(c3CallerProxy.c3Fallback("1", uuid, routerV2.target, chainID.toString(), "failTxHash", fallbackdata, result))
+                .to.emit(c3Caller, "LogExecFallback").withArgs("1", routerV2.target, true, uuid, chainID, "failTxHash", result, fallbackdata, "0x0000000000000000000000000000000000000000000000000000000000000001")
+                .to.emit(routerV2, "LogSwapFallback").withArgs(swapID, underlyingToken.target, otherAccount.address, amount.toString(), calldata.substring(0, 10), "0x" + calldata.substring(10), result)
+
+            expect(await usdc.balanceOf(otherAccount.address)).to.equals(amount)
+        });
+
+
 
         it("DepositNative", async function () {
             let amount = web3.utils.toNumber("10000000000000000000")
