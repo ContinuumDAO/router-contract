@@ -567,7 +567,7 @@ contract TheiaRouter is C3CallerDapp {
             amount - swapFee
         );
 
-        c3call(_to.toHexString(), _toChainID.toString(), _data);
+        c3call(_to.toHexString(), _toChainID.toString(), data);
 
         emit LogSwapOut(
             _toToken,
@@ -898,6 +898,28 @@ contract TheiaRouter is C3CallerDapp {
                 _token,
                 _receiver,
                 _amount
+            );
+    }
+
+    function genCallData4SwapInAndCall(
+        address _token,
+        uint256 _amount,
+        address _receiver,
+        bool _native,
+        address _dex,
+        bytes32 _swapID,
+        bytes calldata _data
+    ) external pure returns (bytes memory) {
+        return
+            abi.encodeWithSignature(
+                "swapInAutoAndCall(bytes32,address,bool,address,uint256,address,bytes)",
+                _swapID,
+                _token,
+                _native,
+                _receiver,
+                _amount,
+                _dex,
+                _data
             );
     }
 

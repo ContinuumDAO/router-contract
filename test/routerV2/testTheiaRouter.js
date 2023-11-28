@@ -64,6 +64,24 @@ describe("TheiaRouter", function () {
         return await TheiaERC20.deploy(name, symbol, decimals, underlying, vault);
     }
 
+    function demoXCallData(amount, to) {
+        let ABI = [{
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "x",
+                    "type": "uint256"
+                }
+            ],
+            "name": "setX",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        }]
+        let contract = new web3.eth.Contract(ABI);
+        return contract.methods.setX(amount, to).encodeABI()
+    }
+
 
     beforeEach(async () => {
         await deployC3Caller()
@@ -382,6 +400,68 @@ describe("TheiaRouter", function () {
             expect(await ethers.provider.getBalance(to)).to.equals(amount)
         });
 
+
+        it("callAndSwapOut", async function () {
+            let amount = web3.utils.toNumber("10000000000000000000")
+            let to = otherAccount.address
+
+            let DemoRouter = await ethers.getContractFactory("DemoRouter");
+            let demoRouter = await DemoRouter.deploy(weth.target, owner.address, swapIDKeeper.target, c3CallerProxy.target, 2);
+
+            let dexData = demoXCallData(amount, to)
+
+            await usdc.approve(routerV2.target, amount)
+
+            await owner.sendTransaction({
+                to: weth.target,
+                value: amount,
+            });
+            await weth.transfer(demoRouter.target, amount)
+
+            expect(await weth.balanceOf(demoRouter.target)).to.equals(amount)
+
+            let swapID = await swapIDKeeper.calcSwapID(routerV2.target, erc20Token.target, owner.address, amount.toString(), otherAccount.address, "250")
+            let calldata = await routerV2.genSwapInAutoCallData(erc20Token.target, amount.toString(), otherAccount.address, swapID)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+
+            await expect(routerV2.callAndSwapOut(underlyingToken.target, amount.toString(), routerV2.target, erc20Token.target, to, 250, demoRouter.target, dexData))
+                .to.emit(routerV2, "LogSwapOut").withArgs(erc20Token.target, owner.address, to.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
+                .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
+        });
+
+        it("swapOutAndCall", async function () {
+            let amount = web3.utils.toNumber("10000000000000000000")
+            let to = otherAccount.address
+
+            let DemoRouter = await ethers.getContractFactory("DemoRouter");
+            let demoRouter = await DemoRouter.deploy(weth.target, owner.address, swapIDKeeper.target, c3CallerProxy.target, 2);
+
+            let dexData = demoXCallData(amount, to)
+
+            await usdc.approve(routerV2.target, amount)
+
+            await owner.sendTransaction({
+                to: weth.target,
+                value: amount,
+            });
+            await weth.transfer(demoRouter.target, amount)
+
+            expect(await weth.balanceOf(demoRouter.target)).to.equals(amount)
+
+            let swapID = await swapIDKeeper.calcSwapID(routerV2.target, underlyingToken.target, owner.address, amount.toString(), otherAccount.address, "250")
+            let calldata = await routerV2.genCallData4SwapInAndCall(underlyingToken.target, amount.toString(), to, false, demoRouter.target, swapID, dexData)
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", routerV2.target.toLowerCase(), "250", calldata)
+
+            await expect(routerV2.swapOutAndCall(underlyingToken.target, amount.toString(), routerV2.target, to, 250, false, demoRouter.target, dexData))
+                .to.emit(routerV2, "LogSwapOut").withArgs(underlyingToken.target, owner.address, to.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
+                .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
+
+
+            await expect(c3CallerProxy.execute("1", uuid, routerV2.target, chainID.toString(), "sourceTxHash", routerV2.target, calldata))
+                .to.emit(c3Caller, "LogExecCall").withArgs("1", routerV2.target, true, uuid, chainID, "sourceTxHash", calldata, "0x0000000000000000000000000000000000000000000000000000000000000001")
+                .to.emit(routerV2, "LogSwapIn").withArgs(underlyingToken.target, to, swapID, amount, chainID, chainID, "sourceTxHash")
+
+        });
 
         it("DepositNative", async function () {
             let amount = web3.utils.toNumber("10000000000000000000")

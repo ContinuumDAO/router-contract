@@ -252,6 +252,8 @@ contract DemoRouter is C3CallerDapp {
         bytes result
     );
 
+    event TestCall(uint256 x);
+
     event LogFallback(bytes4 selector, bytes data, bytes reason);
 
     modifier onlyMPC() {
@@ -470,5 +472,10 @@ contract DemoRouter is C3CallerDapp {
     ) internal override returns (bool) {
         emit LogFallback(selector, data, reason);
         return true;
+    }
+
+    function setX(uint256 x) external payable {
+        IERC20(wNATIVE).transfer(msg.sender, x);
+        emit TestCall(x);
     }
 }
