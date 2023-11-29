@@ -1,8 +1,10 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@openzeppelin/hardhat-upgrades")
+require("./scripts/theiaRouter/erc20")
 
 const {
-  BSC_TEST
+  BSC_TEST,
+  GOERLI
 } = require("./env.json")
 
 
@@ -31,7 +33,7 @@ module.exports = {
       viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 200,
+        runs: 1000,
       }
     }
   },
@@ -41,13 +43,19 @@ module.exports = {
     bsc_test: {
       url: BSC_TEST.URL,
       chainId: 97,
-      // gasPrice: BSC_TEST.GASPRICE,
+      gasPrice: BSC_TEST.GASPRICE,
       accounts: [BSC_TEST.DEPLOY_KEY]
+    },
+    goerli: {
+      url: GOERLI.URL,
+      chainId: 5,
+      accounts: [GOERLI.DEPLOY_KEY]
     }
   },
   etherscan: {
     apiKey: {
       bscTestnet: BSC_TEST.API_KEY,
+      goerli: GOERLI.API_KEY
     }
   }
 };

@@ -15,4 +15,7 @@ npx hardhat run scripts/deploy.js
 npx hardhat run scripts/deployV1.js --network bsc_test
 
 npx hardhat verify --network bsc_test <address>
+
+npx hardhat erc20 --network bsc_test name symbol decimals underlying 
+
 ```
