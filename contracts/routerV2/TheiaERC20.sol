@@ -38,12 +38,12 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     uint public delayVault;
 
     modifier onlyAuth() {
-        require(isMinter[msg.sender], "C3ERC20: FORBIDDEN");
+        require(isMinter[msg.sender], "TheiaERC20: FORBIDDEN");
         _;
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, "C3ERC20: FORBIDDEN");
+        require(msg.sender == vault, "TheiaERC20: FORBIDDEN");
         _;
     }
 
@@ -65,7 +65,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     function setVault(address _vault) external onlyVault {
-        require(_vault != address(0), "C3ERC20: address(0)");
+        require(_vault != address(0), "TheiaERC20: address(0)");
         pendingVault = _vault;
         delayVault = block.timestamp + DELAY;
     }
@@ -79,7 +79,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     function setMinter(address _auth) external onlyVault {
-        require(_auth != address(0), "C3ERC20: address(0)");
+        require(_auth != address(0), "TheiaERC20: address(0)");
         pendingMinter = _auth;
         delayMinter = block.timestamp + DELAY;
     }
@@ -103,7 +103,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     function changeVault(address newVault) external onlyVault returns (bool) {
-        require(newVault != address(0), "C3ERC20: address(0)");
+        require(newVault != address(0), "TheiaERC20: address(0)");
         emit LogChangeVault(vault, newVault, block.timestamp);
         vault = newVault;
         pendingVault = address(0);
@@ -282,7 +282,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     ) external override returns (bool) {
         require(to != address(0) && to != address(this));
         uint256 balance = balanceOf[msg.sender];
-        require(balance >= value, "C3ERC20: transfer amount exceeds balance");
+        require(balance >= value, "TheiaERC20: transfer amount exceeds balance");
 
         balanceOf[msg.sender] = balance - value;
         balanceOf[to] += value;
@@ -300,7 +300,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         if (from != msg.sender) {
             uint256 allowed = allowance[from][msg.sender];
             if (allowed != type(uint256).max) {
-                require(allowed >= value, "C3ERC20: request exceeds allowance");
+                require(allowed >= value, "TheiaERC20: request exceeds allowance");
                 uint256 reduced = allowed - value;
                 allowance[from][msg.sender] = reduced;
                 emit Approval(from, msg.sender, reduced);
@@ -308,7 +308,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         }
 
         uint256 balance = balanceOf[from];
-        require(balance >= value, "C3ERC20: transfer amount exceeds balance");
+        require(balance >= value, "TheiaERC20: transfer amount exceeds balance");
 
         balanceOf[from] = balance - value;
         balanceOf[to] += value;

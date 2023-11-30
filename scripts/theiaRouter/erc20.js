@@ -8,8 +8,11 @@ async function deploy(args, hre) {
     const theiaERC20 = await TheiaERC20.waitForDeployment();
     console.log("TheiaERC20 :", theiaERC20.target);
 
-    result = { name: args.name, symbol: args.symbol, decimals: args.decimals, underlying: args.underlying, address: theiaERC20.target, chain: networkName, chainId: chainId };
-    fs.appendFileSync("ERC20-" + networkName + ".txt", JSON.stringify(result) + "\n");
+    result = {
+        name: args.name, symbol: args.symbol, decimals: args.decimals, underlying: args.underlying,
+        address: theiaERC20.target, chain: networkName, chainId: chainId, router: evn[networkName].TheiaRouter
+    };
+    fs.appendFileSync("ERC20.txt", JSON.stringify(result) + "\n");
 
     return hre.run("verify:verify", {
         address: theiaERC20.target,
