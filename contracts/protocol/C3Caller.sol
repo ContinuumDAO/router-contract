@@ -173,16 +173,6 @@ contract C3Caller is IC3Caller {
 
         (bool success, bytes memory result) = _to.call(_data);
 
-        // try IC3CallExecutor(_to).execCall(_swapID, _data) returns (
-        //     bool succ,
-        //     bytes memory res
-        // ) {
-        //     (success, result) = (succ, res);
-        // } catch Error(string memory reason) {
-        //     result = bytes(reason);
-        // } catch (bytes memory reason) {
-        //     result = reason;
-        // }
         context = Context({swapID: "", fromChainID: "", sourceTx: ""});
 
         emit LogExecCall(

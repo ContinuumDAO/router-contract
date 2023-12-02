@@ -159,6 +159,8 @@ contract C3DappManager is Pausable, Ownable {
             feeCurrencies[_feeToken].swapFee > 0,
             "C3Dapp: fee token not supported"
         );
+        require(bytes(_appDomain).length > 0, "C3Dapp: appDomain empty");
+        require(bytes(_email).length > 0, "C3Dapp: email empty");
 
         dappID++;
         DappConfig storage config = dappConfig[dappID];
