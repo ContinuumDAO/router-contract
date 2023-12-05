@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 interface ISwapIDKeeper {
-    function registerSwapin(bytes32 swapID) external;
+    function registerSwapin(bytes32 uuid) external;
 
     function registerSwapout(
         uint256 dappID,
@@ -12,14 +12,14 @@ interface ISwapIDKeeper {
         uint256 amount,
         string calldata toChainID,
         bytes calldata data
-    ) external returns (bytes32 swapID);
+    ) external returns (bytes32 uuid);
 
     function genUUID(
         uint256 dappID,
         string calldata to,
         string calldata toChainID,
         bytes calldata data
-    ) external returns (bytes32 swapID);
+    ) external returns (bytes32 uuid);
 
-    function isSwapCompleted(bytes32 swapID) external view returns (bool);
+    function isSwapCompleted(bytes32 uuid) external view returns (bool);
 }

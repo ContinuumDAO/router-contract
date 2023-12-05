@@ -46,7 +46,7 @@ contract C3Caller is IC3Caller {
 
     event LogC3Call(
         uint256 indexed dappID,
-        bytes32 indexed swapoutID,
+        bytes32 indexed uuid,
         address caller,
         string toChainID,
         string to,
@@ -55,7 +55,7 @@ contract C3Caller is IC3Caller {
 
     event LogFallbackCall(
         uint256 indexed dappID,
-        bytes32 indexed swapoutID,
+        bytes32 indexed uuid,
         string to,
         bytes data
     );
@@ -64,7 +64,7 @@ contract C3Caller is IC3Caller {
         uint256 indexed dappID,
         address indexed to,
         bool indexed success,
-        bytes32 swapoutID,
+        bytes32 uuid,
         string fromChainID,
         string sourceTx,
         bytes data,
@@ -75,7 +75,7 @@ contract C3Caller is IC3Caller {
         uint256 indexed dappID,
         address indexed to,
         bool indexed success,
-        bytes32 swapoutID,
+        bytes32 uuid,
         string fromChainID,
         string sourceTx,
         bytes fallbackReason,
@@ -142,18 +142,18 @@ contract C3Caller is IC3Caller {
         require(bytes(_to).length > 0, "C3Caller: empty _to");
         require(bytes(_toChainID).length > 0, "C3Caller: empty toChainID");
         require(_data.length > 0, "C3Caller: empty calldata");
-        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).genUUID(
+        bytes32 _uuid = ISwapIDKeeper(swapIDKeeper).genUUID(
             _dappID,
             _to,
             _toChainID,
             _data
         );
-        emit LogC3Call(_dappID, _swapID, _caller, _toChainID, _to, _data);
+        emit LogC3Call(_dappID, _uuid, _caller, _toChainID, _to, _data);
     }
 
     function execute(
         uint256 _dappID,
-        bytes32 _swapID,
+        bytes32 _uuid,
         address _to,
         string calldata _fromChainID,
         string calldata _sourceTx,
@@ -162,11 +162,11 @@ contract C3Caller is IC3Caller {
     ) external override onlyAuth {
         require(_data.length > 0, "C3Caller: empty calldata");
         require(
-            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_swapID),
+            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_uuid),
             "C3Caller: already completed"
         );
         context = Context({
-            swapID: _swapID,
+            swapID: _uuid,
             fromChainID: _fromChainID,
             sourceTx: _sourceTx
         });
@@ -179,7 +179,7 @@ contract C3Caller is IC3Caller {
             _dappID,
             _to,
             success,
-            _swapID,
+            _uuid,
             _fromChainID,
             _sourceTx,
             _data,
@@ -187,11 +187,11 @@ contract C3Caller is IC3Caller {
         );
         (bool ok, uint rs) = toUint(result);
         if (success && ok && rs == 1) {
-            ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
+            ISwapIDKeeper(swapIDKeeper).registerSwapin(_uuid);
         } else {
             emit LogFallbackCall(
                 _dappID,
-                _swapID,
+                _uuid,
                 _fallback,
                 abi.encodeWithSelector(
                     IC3Dapp.c3Fallback.selector,
@@ -220,7 +220,7 @@ contract C3Caller is IC3Caller {
 
     function c3Fallback(
         uint256 _dappID,
-        bytes32 _swapID,
+        bytes32 _uuid,
         address _to,
         string calldata _fromChainID,
         string calldata _sourceTx,
@@ -229,12 +229,12 @@ contract C3Caller is IC3Caller {
     ) external override onlyAuth {
         require(_data.length > 0, "C3Caller: empty calldata");
         require(
-            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_swapID),
+            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_uuid),
             "C3Caller: already completed"
         );
 
         context = Context({
-            swapID: _swapID,
+            swapID: _uuid,
             fromChainID: _fromChainID,
             sourceTx: _sourceTx
         });
@@ -247,7 +247,7 @@ contract C3Caller is IC3Caller {
             _dappID,
             _to,
             success,
-            _swapID,
+            _uuid,
             _fromChainID,
             _sourceTx,
             _reason,
@@ -258,7 +258,7 @@ contract C3Caller is IC3Caller {
         (bool ok, uint rs) = toUint(result);
         // ool rs = abi.decode(result, (bool));
         if (success && ok && rs == 1) {
-            ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
+            ISwapIDKeeper(swapIDKeeper).registerSwapin(_uuid);
         }
     }
 

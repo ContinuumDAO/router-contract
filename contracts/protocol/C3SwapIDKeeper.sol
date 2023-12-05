@@ -31,10 +31,10 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         _;
     }
 
-    modifier checkCompletion(bytes32 swapID) {
+    modifier checkCompletion(bytes32 uuid) {
         require(
-            !completedSwapin[swapID],
-            "C3SwapIDKeeper: swapID is completed"
+            !completedSwapin[uuid],
+            "C3SwapIDKeeper: uuid is completed"
         );
         _;
     }
@@ -76,22 +76,22 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         }
     }
 
-    function isSwapoutIDExist(bytes32 swapoutID) external view returns (bool) {
-        return swapoutNonce[swapoutID] != 0;
+    function isSwapoutIDExist(bytes32 uuid) external view returns (bool) {
+        return swapoutNonce[uuid] != 0;
     }
 
-    function isSwapCompleted(bytes32 swapID) external view returns (bool) {
-        return completedSwapin[swapID];
+    function isSwapCompleted(bytes32 uuid) external view returns (bool) {
+        return completedSwapin[uuid];
     }
 
-    function revokeSwapin(bytes32 swapID) external onlyAdmin {
-        completedSwapin[swapID] = false;
+    function revokeSwapin(bytes32 uuid) external onlyAdmin {
+        completedSwapin[uuid] = false;
     }
 
     function registerSwapin(
-        bytes32 swapID
-    ) external onlyAuth checkCompletion(swapID) {
-        completedSwapin[swapID] = true;
+        bytes32 uuid
+    ) external onlyAuth checkCompletion(uuid) {
+        completedSwapin[uuid] = true;
     }
 
     function registerSwapout(
@@ -102,8 +102,8 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         uint256 amount,
         string calldata toChainID,
         bytes calldata data
-    ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
-        swapID = keccak256(
+    ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 uuid) {
+        uuid = keccak256(
             abi.encode(
                 address(this),
                 msg.sender,
@@ -118,9 +118,9 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
                 data
             )
         );
-        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
-        swapoutNonce[swapID] = currentSwapoutNonce;
-        return swapID;
+        require(!this.isSwapoutIDExist(uuid), "uuid already exist");
+        swapoutNonce[uuid] = currentSwapoutNonce;
+        return uuid;
     }
 
     function calcSwapID(
@@ -157,8 +157,8 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         string calldata to,
         string calldata toChainID,
         bytes calldata data
-    ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
-        swapID = keccak256(
+    ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 uuid) {
+        uuid = keccak256(
             abi.encode(
                 address(this),
                 msg.sender,
@@ -170,9 +170,9 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
                 data
             )
         );
-        require(!this.isSwapoutIDExist(swapID), "swapID already exist");
-        swapoutNonce[swapID] = currentSwapoutNonce;
-        return swapID;
+        require(!this.isSwapoutIDExist(uuid), "uuid already exist");
+        swapoutNonce[uuid] = currentSwapoutNonce;
+        return uuid;
     }
 
     function calcCallerUUID(
