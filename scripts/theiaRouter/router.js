@@ -15,17 +15,20 @@ async function main() {
 
     const TheiaSwapIDKeeper = await hre.ethers.deployContract("TheiaSwapIDKeeper", [evn[networkName.toUpperCase()].MPC]);
     await TheiaSwapIDKeeper.waitForDeployment();
-    console.log("TheiaSwapIDKeeper :", TheiaSwapIDKeeper.target);
+    console.log('"TheiaSwapIDKeeper":', `"${TheiaSwapIDKeeper.target}",`);
+
 
     const TheiaRouter = await hre.ethers.deployContract("TheiaRouter", [evn[networkName.toUpperCase()].wNATIVE, evn[networkName.toUpperCase()].MPC
         , TheiaSwapIDKeeper.target, evn[networkName.toUpperCase()].C3CallerProxy, 1]);
     await TheiaRouter.waitForDeployment();
-    console.log("TheiaRouter :", TheiaRouter.target);
+    console.log('"TheiaRouter":', `"${TheiaRouter.target}",`);
 
     await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
 
     // const TheiaSwapIDKeeper = await hre.ethers.getContractAt("TheiaSwapIDKeeper", evn[networkName.toUpperCase()].TheiaSwapIDKeeper);
     // const TheiaRouter = await hre.ethers.getContractAt("TheiaRouter", evn[networkName.toUpperCase()].TheiaRouter);
+    console.log(`npx hardhat verify --network ${networkName} ${TheiaSwapIDKeeper.target} ${signer.address}`);
+    console.log(`npx hardhat verify --network ${networkName} ${TheiaRouter.target} ${evn[networkName.toUpperCase()].wNATIVE} ${signer.address} ${TheiaSwapIDKeeper.target} ${evn[networkName.toUpperCase()].C3CallerProxy} 1`);
 
     await hre.run("verify:verify", {
         address: TheiaSwapIDKeeper.target,

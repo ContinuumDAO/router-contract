@@ -118,7 +118,7 @@ contract TheiaRouter is C3CallerDapp {
     modifier onlyAuth() {
         require(
             isOperator[msg.sender] || isCaller(msg.sender),
-            "C3ERC20: AUTH FORBIDDEN"
+            "TR: AUTH FORBIDDEN"
         );
         _;
     }
@@ -266,7 +266,7 @@ contract TheiaRouter is C3CallerDapp {
         );
         return new_balance - old_balance;
     }
-
+    // TODO calc amont by token decimal
     function swapOutAuto(
         address _token,
         uint256 _amount,

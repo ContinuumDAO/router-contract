@@ -35,7 +35,7 @@ async function main() {
         }
         const args = JSON.parse(line);
         if (!chains[args.chainId]) {
-            let tx = await aRouterConfig.setChainConfig(args.chainId, args.chain, evn[networkName.toUpperCase()].TheiaRouter + ":v1;",
+            let tx = await aRouterConfig.setChainConfig(args.chainId, args.chain, evn[args.chain.toUpperCase()].TheiaRouter + ":v1;",
                 evn[args.chain.toUpperCase()].CONFIRMATIONS, evn[args.chain.toUpperCase()].INITIAL_HEIGHT, "{}")
             console.log("setChainConfig:", args.chainId, args.chain, "Tx:", tx.hash);
             chains[args.chainId] = {

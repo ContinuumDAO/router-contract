@@ -15,7 +15,13 @@ async function main() {
     const aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig");
     await aRouterConfig.waitForDeployment();
 
-    console.log("RouterConfig address:", aRouterConfig.target);
+    console.log('"TheiaRouterConfig":', `"${aRouterConfig.target}",`);
+
+    await hre.run("verify:verify", {
+        address: aRouterConfig.target,
+        contract: "contracts/routerV2/TheiaRouterConfig.sol:TheiaRouterConfig",
+        constructorArguments: [],
+    });
 }
 
 main().catch((error) => {
