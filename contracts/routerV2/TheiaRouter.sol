@@ -272,9 +272,11 @@ contract TheiaRouter is C3CallerDapp {
         uint256 _amount,
         address _to,
         address _receiver,
+        address _recToken,
         uint256 _toChainID
     ) external payable {
         checkSwapOut(_token, _to, _receiver, _amount);
+        require(_recToken != address(0), "TR:recToken empty");
         ITheiaERC20 theiaToken = ITheiaERC20(_token);
         address _underlying = theiaToken.underlying();
         uint256 _recvAmount = 0;
@@ -304,7 +306,7 @@ contract TheiaRouter is C3CallerDapp {
         bytes memory _data = abi.encodeWithSignature(
             "swapInAuto(bytes32,address,address,uint256)",
             swapID,
-            _token,
+            _recToken,
             _receiver,
             _recvAmount - swapFee
         );
@@ -330,13 +332,15 @@ contract TheiaRouter is C3CallerDapp {
         address _to,
         address _toToken,
         address _receiver,
+        address _recToken,
         uint256 _toChainID,
         address _dexAddr,
         bytes calldata _data
     ) external payable {
         checkSwapOut(_fromToken, _to, _receiver, _amount);
-        require(_toToken != address(0), "TR:_toToken empty");
-        require(_dexAddr != address(0), "TR:_dexAddr empty");
+        require(_toToken != address(0), "TR:toToken empty");
+        require(_dexAddr != address(0), "TR:dexAddr empty");
+        require(_recToken != address(0), "TR:recToken empty");
         ITheiaERC20 toTheiaToken = ITheiaERC20(_toToken);
         require(toTheiaToken.underlying() != address(0), "TR:underlying empty");
         require(
@@ -405,7 +409,7 @@ contract TheiaRouter is C3CallerDapp {
         bytes memory data = abi.encodeWithSignature(
             "swapInAuto(bytes32,address,address,uint256)",
             _swapID,
-            _toToken,
+            _recToken,
             _receiver,
             amount - swapFee
         );
@@ -430,6 +434,7 @@ contract TheiaRouter is C3CallerDapp {
         uint256 _amount,
         address _to,
         address _receiver,
+        address _recToken,
         uint256 _toChainID,
         bool _native,
         address _dex,
@@ -438,7 +443,7 @@ contract TheiaRouter is C3CallerDapp {
         checkSwapOut(_token, _to, _receiver, _amount);
         require(_dex != address(0), "TR:dex empty");
         require(_data.length > 0, "TR:data empty");
-
+        require(_recToken != address(0), "TR:recToken empty");
         uint256 recvAmount = 0;
         ITheiaERC20 theiaToken = ITheiaERC20(_token);
         address _underlying = theiaToken.underlying();
@@ -479,7 +484,7 @@ contract TheiaRouter is C3CallerDapp {
         bytes memory data = abi.encodeWithSignature(
             "swapInAutoAndCall(bytes32,address,bool,address,uint256,address,bytes)",
             _swapID,
-            _token,
+            _recToken,
             _native,
             _receiver,
             recvAmount - swapFee,

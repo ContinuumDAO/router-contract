@@ -89,10 +89,3 @@ interface IC3Caller {
         bytes calldata reason
     ) external;
 }
-
-interface IC3CallExecutor {
-    function execCall(
-        bytes32 _swapID,
-        bytes calldata _data
-    ) external returns (bool success, bytes memory result);
-}
