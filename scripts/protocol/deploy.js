@@ -15,15 +15,15 @@ async function main() {
 
     const c3SwapIDKeeper = await hre.ethers.deployContract("contracts/protocol/C3SwapIDKeeper.sol:C3SwapIDKeeper", [evn[networkName.toUpperCase()].MPC]);
     await c3SwapIDKeeper.waitForDeployment();
-    console.log("C3SwapIDKeeper :", c3SwapIDKeeper.target);
+    console.log('"C3SwapIDKeeper":', `"${c3SwapIDKeeper.target}",`);
 
     const c3Caller = await hre.ethers.deployContract("contracts/protocol/C3Caller.sol:C3Caller", [evn[networkName.toUpperCase()].MPC, c3SwapIDKeeper.target]);
     await c3Caller.waitForDeployment();
-    console.log("C3Caller :", c3Caller.target);
+    console.log('"C3Caller":', `"${c3Caller.target}",`);
 
     const C3DappManager = await hre.ethers.deployContract("C3DappManager", [evn[networkName.toUpperCase()].MPC]);
     await C3DappManager.waitForDeployment();
-    console.log("C3DappManager :", C3DappManager.target);
+    console.log('"C3DappManager":', `"${C3DappManager.target}",`);
 
     const C3CallerProxy = await hre.ethers.getContractFactory("C3CallerProxy");
     const c3CallerProxy = await hre.upgrades.deployProxy(
@@ -33,10 +33,18 @@ async function main() {
     );
 
     await c3CallerProxy.waitForDeployment();
-    console.log("C3CallerProxy :", c3CallerProxy.target);
+    console.log('"C3CallerProxy":', `"${c3CallerProxy.target}",`);
 
     const currentImplAddress = await hre.upgrades.erc1967.getImplementationAddress(c3CallerProxy.target);
-    console.log("C3CallerProxyImp :", currentImplAddress);
+    console.log('"C3CallerProxyImp":', `"${currentImplAddress}",`);
+
+    await c3SwapIDKeeper.addSupportedCaller(c3Caller.target)
+    await c3Caller.addOperator(currentImplAddress)
+
+    console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target} ${signer.address}`);
+    console.log(`npx hardhat verify --network ${networkName} ${c3Caller.target} ${signer.address} ${c3SwapIDKeeper.target}`);
+    console.log(`npx hardhat verify --network ${networkName} ${C3DappManager.target} ${signer.address}`);
+    console.log(`npx hardhat verify --network ${networkName} ${currentImplAddress} ${signer.address}`);
 
     await hre.run("verify:verify", {
         address: c3SwapIDKeeper.target,
