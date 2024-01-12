@@ -39,7 +39,9 @@ async function main() {
     console.log('"C3CallerProxyImp":', `"${currentImplAddress}",`);
 
     await c3SwapIDKeeper.addSupportedCaller(c3Caller.target)
+    // add c3CallerProxy to Operator
     await c3Caller.addOperator(currentImplAddress)
+    await c3Caller.addOperator(c3CallerProxy.target)
 
     console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target} ${signer.address}`);
     console.log(`npx hardhat verify --network ${networkName} ${c3Caller.target} ${signer.address} ${c3SwapIDKeeper.target}`);
