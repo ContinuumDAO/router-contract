@@ -64,7 +64,7 @@ contract C3Caller is IC3Caller {
         uint256 indexed dappID,
         address indexed to,
         bool indexed success,
-        bytes32 uuid,
+        bytes32 uuid, // TODO need put in indexed
         string fromChainID,
         string sourceTx,
         bytes data,
