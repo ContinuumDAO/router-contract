@@ -38,12 +38,12 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     uint public delayVault;
 
     modifier onlyAuth() {
-        require(isMinter[msg.sender], "TheiaERC20: FORBIDDEN");
+        require(isMinter[msg.sender], "TheiaERC20: not Minter");
         _;
     }
 
     modifier onlyVault() {
-        require(msg.sender == vault, "TheiaERC20: FORBIDDEN");
+        require(msg.sender == vault, "TheiaERC20: not Vault");
         _;
     }
 
@@ -81,11 +81,12 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     function setMinter(address _auth) external onlyVault {
         require(_auth != address(0), "TheiaERC20: address(0)");
         pendingMinter = _auth;
-        delayMinter = block.timestamp + DELAY;
+        // delayMinter = block.timestamp + DELAY;
     }
 
     function applyMinter() external onlyVault {
-        require(pendingMinter != address(0) && block.timestamp >= delayMinter);
+        // require(pendingMinter != address(0) && block.timestamp >= delayMinter);
+        require(pendingMinter != address(0));
         isMinter[pendingMinter] = true;
         minters.push(pendingMinter);
 

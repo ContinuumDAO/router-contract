@@ -266,7 +266,7 @@ contract TheiaRouter is C3CallerDapp {
         );
         return new_balance - old_balance;
     }
-    // TODO calc amont by token decimal
+    // TODO calc amont by recToken decimal, need recToken decimal in
     function swapOutAuto(
         address _token,
         uint256 _amount,

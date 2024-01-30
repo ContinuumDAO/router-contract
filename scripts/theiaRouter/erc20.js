@@ -3,10 +3,20 @@ const fs = require("fs");
 async function deploy(args, hre) {
     const networkName = hre.network.name.toUpperCase()
     const chainId = hre.network.config.chainId
-    console.log(args, evn[networkName].TheiaRouter, chainId);
+
+    const [signer] = await ethers.getSigners()
+    console.log(args, evn[networkName].TheiaRouter, chainId, signer.address);
+
+
     const TheiaERC20 = await hre.ethers.deployContract("TheiaERC20", [args.name, args.symbol, args.decimals, args.underlying, evn[networkName].TheiaRouter]);
     const theiaERC20 = await TheiaERC20.waitForDeployment();
-    console.log("TheiaERC20 :", theiaERC20.target);
+    console.log("TheiaERC20 :", theiaERC20.target, "owner:", await theiaERC20.owner(), "minters", await theiaERC20.getAllMinters());
+
+    // if (args.underlying == "0x0000000000000000000000000000000000000000") {
+    //     await theiaERC20.connect(signer).setMinter(evn[networkName].TheiaRouter)
+    //     await theiaERC20.connect(signer).applyMinter()
+    //     console.log("TheiaERC20 getAllMinters:", await c3Caller.getAllMinters());
+    // }
 
     result = {
         name: args.name, symbol: args.symbol, decimals: args.decimals, underlying: args.underlying,
@@ -23,10 +33,10 @@ async function deploy(args, hre) {
 }
 
 task("erc20", "Deploys Theia ERC20 contract")
-    .addPositionalParam("name", "The student wallet address")
-    .addPositionalParam("symbol", "The student wallet address")
-    .addPositionalParam("decimals", "The student wallet address")
-    .addPositionalParam("underlying", "The student wallet address")
+    .addPositionalParam("name", "token name")
+    .addPositionalParam("symbol", "token symbol")
+    .addPositionalParam("decimals", "token decimals")
+    .addPositionalParam("underlying", "token underlying")
     .setAction(async (taskArgs, hre) => {
         await hre.run("compile");
         await deploy(taskArgs, hre).catch(async (error) => {
