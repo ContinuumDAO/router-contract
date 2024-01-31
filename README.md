@@ -13,6 +13,7 @@ npx hardhat run scripts/deploy.js
 ## deployment protocol
 ```
 npx hardhat verify --network bsc_test <address>
+npx hardhat verify --contract contracts/mock/USDC.sol:USDC  --network bsc_test <address> 
 
 npx hardhat run scripts/theiaRouter/router.js --network mumbai
 
