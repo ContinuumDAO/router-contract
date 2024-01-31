@@ -7,15 +7,19 @@ contract TheiaCallData {
         address _token,
         uint256 _amount,
         address _receiver,
-        bytes32 _swapID
+        bytes32 _swapID,
+        uint256 _recDecimals,
+        address _fromToken
     ) external pure returns (bytes memory) {
         return
             abi.encodeWithSignature(
-                "swapInAuto(bytes32,address,address,uint256)",
+                "swapInAuto(bytes32,address,address,uint256,uint256,address)",
                 _swapID,
                 _token,
                 _receiver,
-                _amount
+                _amount,
+                _recDecimals,
+                _fromToken
             );
     }
 

@@ -3,6 +3,8 @@
 pragma solidity ^0.8.19;
 
 interface ITheiaERC20 {
+    function decimals() external returns (uint8);
+
     function mint(address to, uint256 amount) external returns (bool);
 
     function burn(address from, uint256 amount) external returns (bool);

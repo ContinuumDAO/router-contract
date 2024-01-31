@@ -8,6 +8,7 @@ import "./ITheiaERC20.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 // helper methods for interacting with ERC20 tokens and sending NATIVE that do not consistently return true/false
 library TransferHelper {
@@ -28,6 +29,7 @@ interface IwNATIVE {
 contract TheiaRouter is C3CallerDapp {
     using Strings for *;
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     address public constant factory = address(0);
     address public immutable wNATIVE;
@@ -266,6 +268,7 @@ contract TheiaRouter is C3CallerDapp {
         );
         return new_balance - old_balance;
     }
+
     // TODO calc amont by recToken decimal, need recToken decimal in
     function swapOutAuto(
         address _token,
@@ -273,6 +276,7 @@ contract TheiaRouter is C3CallerDapp {
         address _to,
         address _receiver,
         address _recToken,
+        uint8 _recDecimals,
         uint256 _toChainID
     ) external payable {
         checkSwapOut(_token, _to, _receiver, _amount);
@@ -303,12 +307,24 @@ contract TheiaRouter is C3CallerDapp {
             _toChainID
         );
 
+        uint256 _toAmount = _recvAmount - swapFee;
+        if (ITheiaERC20(_token).decimals() != _recDecimals) {
+            _toAmount = convertDecimals(
+                _toAmount,
+                ITheiaERC20(_token).decimals(),
+                _recDecimals
+            );
+        }
+        require(_toAmount > 0, "TR:recAmount convert err");
+
         bytes memory _data = abi.encodeWithSignature(
-            "swapInAuto(bytes32,address,address,uint256)",
+            "swapInAuto(bytes32,address,address,uint256,uint256,address)",
             swapID,
             _recToken,
             _receiver,
-            _recvAmount - swapFee
+            _toAmount,
+            _recDecimals,
+            _token
         );
 
         c3call(_to.toHexString(), _toChainID.toString(), _data);
@@ -532,17 +548,30 @@ contract TheiaRouter is C3CallerDapp {
         return amount - swapFee;
     }
 
-    // swaps `amount` `token` in `fromChainID` to `to` on this chainID with `to` receiving `underlying` if possible
     function swapInAuto(
         bytes32 swapID,
         address token,
         address to,
-        uint256 amount
+        uint256 amount,
+        uint256 tokenDecimals,
+        address fromTokenAddr
     ) external onlyAuth returns (bool) {
+        require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
+        require(token != address(0), "TR:token empty");
+        require(swapID.length > 0, "TR:swapID empty");
+        require(to != address(0), "TR:to empty");
+        require(amount > 0, "TR:amount empty");
+        require(tokenDecimals > 0, "TR:tokenDecimals empty");
+        
         (, string memory fromChainID, string memory _sourceTx) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain invalid");
+
+        require(
+            ITheiaERC20(token).decimals() == tokenDecimals,
+            "TR:tokenDecimals dismatch"
+        );
 
         uint256 recvAmount = _swapIn(
             swapID,
@@ -637,28 +666,44 @@ contract TheiaRouter is C3CallerDapp {
     ) internal override returns (bool) {
         (
             bytes32 _swapID,
-            address _token,
+            ,
             address _receiver,
-            uint256 _amount
-        ) = abi.decode(_data, (bytes32, address, address, uint256));
+            uint256 _amount,
+            uint256 _recDecimals,
+            address _fromToken
+        ) = abi.decode(
+                _data,
+                (bytes32, address, address, uint256, uint256, address)
+            );
 
         require(
             ISwapIDKeeper(swapIDKeeper).isSwapoutIDExist(_swapID),
             "TR:swapId not exists"
         );
         ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
-        ITheiaERC20(_token).mint(_receiver, _amount);
+
+        uint256 _toAmount = _amount;
+        if (ITheiaERC20(_fromToken).decimals() != _recDecimals) {
+            _toAmount = convertDecimals(
+                _amount,
+                _recDecimals,
+                ITheiaERC20(_fromToken).decimals()
+            );
+        }
+        require(_toAmount > 0, "TR:recAmount convert err");
+
+        ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
 
         emit LogSwapFallback(
             _swapID,
-            _token,
+            _fromToken,
             _receiver,
-            _amount,
+            _toAmount,
             _selector,
             _data,
             _reason
         );
-        return _swapAuto(_token, _receiver, _amount);
+        return _swapAuto(_fromToken, _receiver, _toAmount);
     }
 
     function depositNative(
@@ -749,5 +794,24 @@ contract TheiaRouter is C3CallerDapp {
         }
 
         return (res, true);
+    }
+
+    function convertDecimals(
+        uint256 amount,
+        uint256 from,
+        uint256 to
+    ) public pure returns (uint256) {
+        if (from == to) return amount;
+        if (from > to) {
+            uint256 res = from.sub(to);
+            (bool ok, uint256 rtn) = amount.tryDiv(10 ** res);
+            if (ok) return rtn;
+            return 0;
+        } else {
+            uint256 res = to.sub(from);
+            (bool ok, uint256 rtn) = amount.tryMul(10 ** res);
+            if (ok) return rtn;
+            return 0;
+        }
     }
 }
