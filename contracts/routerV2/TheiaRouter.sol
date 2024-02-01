@@ -269,7 +269,6 @@ contract TheiaRouter is C3CallerDapp {
         return new_balance - old_balance;
     }
 
-    // TODO calc amont by recToken decimal, need recToken decimal in
     function swapOutAuto(
         address _token,
         uint256 _amount,
@@ -349,6 +348,7 @@ contract TheiaRouter is C3CallerDapp {
         address _toToken,
         address _receiver,
         address _recToken,
+        uint8 _recDecimals,
         uint256 _toChainID,
         address _dexAddr,
         bytes calldata _data
@@ -359,11 +359,8 @@ contract TheiaRouter is C3CallerDapp {
         require(_recToken != address(0), "TR:recToken empty");
         ITheiaERC20 toTheiaToken = ITheiaERC20(_toToken);
         require(toTheiaToken.underlying() != address(0), "TR:underlying empty");
-        require(
-            IERC20(toTheiaToken.underlying()).balanceOf(address(this)) == 0,
-            "TR:underlying amount >0"
-        );
 
+        uint256 _old_amount = _balanceOfSelf(toTheiaToken.underlying());
         bool success;
         bytes memory result;
         ITheiaERC20 theiaToken = ITheiaERC20(_fromToken);
@@ -399,38 +396,52 @@ contract TheiaRouter is C3CallerDapp {
             (success, result) = _dexAddr.call(_data);
         }
 
+        uint256 amount = _balanceOfSelf(toTheiaToken.underlying());
         if (success) {
-            require(
-                IERC20(toTheiaToken.underlying()).balanceOf(address(this)) > 0,
-                "TR:nothing received"
-            );
+            require(amount - _old_amount > 0, "TR:nothing received");
         }
-        uint256 amount = IERC20(toTheiaToken.underlying()).balanceOf(
-            address(this)
+
+        uint256 _toAmount = amount - _old_amount;
+        uint256 swapFee = calcSwapFee(0, _toChainID, _toToken, _toAmount);
+        if (swapFee > 0) {
+            toTheiaToken.mint(address(this), swapFee);
+            _toAmount = _toAmount - swapFee;
+        }
+        require(_toAmount > 0, "TR:nothing to cross");
+        IERC20(toTheiaToken.underlying()).safeTransferFrom(
+            address(this),
+            _toToken,
+            _toAmount
         );
 
-        uint256 swapFee = calcSwapFee(0, _toChainID, _toToken, amount);
-        if (swapFee > 0) {
-            ITheiaERC20(toTheiaToken).mint(address(this), swapFee);
+        if (toTheiaToken.decimals() != _recDecimals) {
+            _toAmount = convertDecimals(
+                _toAmount,
+                toTheiaToken.decimals(),
+                _recDecimals
+            );
         }
+        require(_toAmount > 0, "TR:recAmount convert err");
 
         bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
-            _toToken,
+            _fromToken,
             msg.sender,
-            amount,
+            _amount,
             _receiver,
             _toChainID
         );
 
-        bytes memory data = abi.encodeWithSignature(
-            "swapInAuto(bytes32,address,address,uint256)",
+        bytes memory _call_data = abi.encodeWithSignature(
+            "swapInAuto(bytes32,address,address,uint256,uint256,address)",
             _swapID,
             _recToken,
             _receiver,
-            amount - swapFee
+            _toAmount,
+            _recDecimals,
+            _toToken
         );
 
-        c3call(_to.toHexString(), _toChainID.toString(), data);
+        c3call(_to.toHexString(), _toChainID.toString(), _call_data);
 
         emit LogSwapOut(
             _toToken,
@@ -441,7 +452,7 @@ contract TheiaRouter is C3CallerDapp {
             _toChainID,
             swapFee,
             _swapID,
-            data
+            _call_data
         );
     }
 
@@ -562,7 +573,7 @@ contract TheiaRouter is C3CallerDapp {
         require(to != address(0), "TR:to empty");
         require(amount > 0, "TR:amount empty");
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
-        
+
         (, string memory fromChainID, string memory _sourceTx) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
@@ -813,5 +824,11 @@ contract TheiaRouter is C3CallerDapp {
             if (ok) return rtn;
             return 0;
         }
+    }
+
+    function _balanceOfSelf(
+        address receiveToken
+    ) internal view returns (uint256) {
+        return IERC20(receiveToken).balanceOf(address(this));
     }
 }
