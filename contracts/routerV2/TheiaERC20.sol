@@ -18,74 +18,69 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     mapping(address => uint256) public override balanceOf;
     uint256 private _totalSupply;
 
-    // init flag for setting immediate vault, needed for CREATE2 support
+    // init flag for setting immediate admin, needed for CREATE2 support
     bool private _init;
 
     // delay for timelock functions
-    uint public constant DELAY = 2 days;
+    uint public constant DELAY = 1 days;
 
     // set of minters, can be this bridge or other bridges
     mapping(address => bool) public isMinter;
     address[] public minters;
 
     // primary controller of the token contract
-    address public vault;
+    address public admin;
 
     address public pendingMinter;
     uint public delayMinter;
 
-    address public pendingVault;
-    uint public delayVault;
+    address public pendingAdmin;
+    uint public delayAdmin;
 
-    modifier onlyAuth() {
+    modifier onlyMinter() {
         require(isMinter[msg.sender], "TheiaERC20: not Minter");
         _;
     }
 
-    modifier onlyVault() {
-        require(msg.sender == vault, "TheiaERC20: not Vault");
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "TheiaERC20: not Admin");
         _;
     }
 
     function owner() external view returns (address) {
-        return vault;
+        return admin;
     }
 
-    // @deprecated  not mpc
-    function mpc() external view returns (address) {
-        return vault;
-    }
-
-    function initVault(address _vault) external onlyVault {
+    function initAdmin(address _admin) external onlyAdmin {
         require(_init);
         _init = false;
-        vault = _vault;
-        isMinter[_vault] = true;
-        minters.push(_vault);
+        admin = _admin;
+        isMinter[_admin] = true;
+        minters.push(_admin);
     }
 
-    function setVault(address _vault) external onlyVault {
-        require(_vault != address(0), "TheiaERC20: address(0)");
-        pendingVault = _vault;
-        delayVault = block.timestamp + DELAY;
+    function setAdmin(address _admin) external onlyAdmin {
+        require(_admin != address(0), "TheiaERC20: address(0)");
+        pendingAdmin = _admin;
+        delayAdmin = block.timestamp + DELAY;
     }
 
-    function applyVault() external onlyVault {
-        require(pendingVault != address(0) && block.timestamp >= delayVault);
-        vault = pendingVault;
+    function applyAdmin() external onlyAdmin {
+        require(pendingAdmin != address(0) && block.timestamp >= delayAdmin);
+        admin = pendingAdmin;
 
-        pendingVault = address(0);
-        delayVault = 0;
+        pendingAdmin = address(0);
+        delayAdmin = 0;
     }
 
-    function setMinter(address _auth) external onlyVault {
-        require(_auth != address(0), "TheiaERC20: address(0)");
-        pendingMinter = _auth;
-        // delayMinter = block.timestamp + DELAY;
+    function setMinter(address _minter) external onlyAdmin {
+        require(_minter != address(0), "TheiaERC20: address(0)");
+        pendingMinter = _minter;
+        delayMinter = block.timestamp + DELAY;
     }
 
-    function applyMinter() external onlyVault {
-        // require(pendingMinter != address(0) && block.timestamp >= delayMinter);
+    function applyMinter() external onlyAdmin {
+        require(pendingMinter != address(0) && block.timestamp >= delayMinter);
         require(pendingMinter != address(0));
         isMinter[pendingMinter] = true;
         minters.push(pendingMinter);
@@ -95,24 +90,18 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     // No time delay revoke minter emergency function
-    function revokeMinter(address _auth) external onlyVault {
-        isMinter[_auth] = false;
+    function revokeMinter(address _minter) external onlyAdmin {
+        isMinter[_minter] = false;
     }
 
     function getAllMinters() external view returns (address[] memory) {
         return minters;
     }
 
-    function changeVault(address newVault) external onlyVault returns (bool) {
-        require(newVault != address(0), "TheiaERC20: address(0)");
-        emit LogChangeVault(vault, newVault, block.timestamp);
-        vault = newVault;
-        pendingVault = address(0);
-        delayVault = 0;
-        return true;
-    }
-
-    function mint(address to, uint256 amount) external onlyAuth returns (bool) {
+    function mint(
+        address to,
+        uint256 amount
+    ) external onlyMinter returns (bool) {
         _mint(to, amount);
         return true;
     }
@@ -120,18 +109,13 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     function burn(
         address from,
         uint256 amount
-    ) external onlyAuth returns (bool) {
+    ) external onlyMinter returns (bool) {
         _burn(from, amount);
         return true;
     }
 
     mapping(address => mapping(address => uint256)) public override allowance;
 
-    event LogChangeVault(
-        address indexed oldVault,
-        address indexed newVault,
-        uint indexed effectiveTime
-    );
     event LogSwapin(
         bytes32 indexed txhash,
         address indexed account,
@@ -148,7 +132,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         string memory _symbol,
         uint8 _decimals,
         address _underlying,
-        address _vault
+        address _admin
     ) {
         name = _name;
         symbol = _symbol;
@@ -157,9 +141,9 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         // Use init to allow for CREATE2 accross all chains
         _init = true;
 
-        vault = _vault;
-        isMinter[_vault] = true;
-        minters.push(_vault);
+        admin = _admin;
+        isMinter[_admin] = true;
+        minters.push(_admin);
     }
 
     function totalSupply() external view override returns (uint256) {
@@ -185,7 +169,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     function depositVault(
         uint256 amount,
         address to
-    ) external onlyVault returns (uint256) {
+    ) external onlyAdmin returns (uint256) {
         return _deposit(amount, to);
     }
 
@@ -212,7 +196,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         address from,
         uint256 amount,
         address to
-    ) external onlyVault returns (uint256) {
+    ) external onlyAdmin returns (uint256) {
         return _withdraw(from, amount, to);
     }
 
@@ -228,15 +212,6 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         return amount;
     }
 
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
-     * the total supply.
-     *
-     * Emits a {Transfer} event with `from` set to the zero address.
-     *
-     * Requirements
-     *
-     * - `to` cannot be the zero address.
-     */
     function _mint(address account, uint256 amount) internal {
         require(account != address(0), "ERC20: mint to the zero address");
 
@@ -245,17 +220,6 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         emit Transfer(address(0), account, amount);
     }
 
-    /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
-     * total supply.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * Requirements
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
-     */
     function _burn(address account, uint256 amount) internal {
         require(account != address(0), "ERC20: burn from the zero address");
 
@@ -283,7 +247,10 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     ) external override returns (bool) {
         require(to != address(0) && to != address(this));
         uint256 balance = balanceOf[msg.sender];
-        require(balance >= value, "TheiaERC20: transfer amount exceeds balance");
+        require(
+            balance >= value,
+            "TheiaERC20: transfer amount exceeds balance"
+        );
 
         balanceOf[msg.sender] = balance - value;
         balanceOf[to] += value;
@@ -301,7 +268,10 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         if (from != msg.sender) {
             uint256 allowed = allowance[from][msg.sender];
             if (allowed != type(uint256).max) {
-                require(allowed >= value, "TheiaERC20: request exceeds allowance");
+                require(
+                    allowed >= value,
+                    "TheiaERC20: request exceeds allowance"
+                );
                 uint256 reduced = allowed - value;
                 allowance[from][msg.sender] = reduced;
                 emit Approval(from, msg.sender, reduced);
@@ -309,7 +279,10 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         }
 
         uint256 balance = balanceOf[from];
-        require(balance >= value, "TheiaERC20: transfer amount exceeds balance");
+        require(
+            balance >= value,
+            "TheiaERC20: transfer amount exceeds balance"
+        );
 
         balanceOf[from] = balance - value;
         balanceOf[to] += value;
@@ -325,7 +298,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         uint256 minFee,
         uint256 feeRate,
         uint256 payFrom // 1:from 2:to 0:free
-    ) external onlyVault returns (bool) {
+    ) external onlyAdmin returns (bool) {
         return
             _setFeeConfig(
                 srcChainID,
