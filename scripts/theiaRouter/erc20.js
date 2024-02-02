@@ -12,17 +12,13 @@ async function deploy(args, hre) {
     const theiaERC20 = await TheiaERC20.waitForDeployment();
     console.log("TheiaERC20 :", theiaERC20.target, "owner:", await theiaERC20.owner(), "minters", await theiaERC20.getAllMinters());
 
-    // if (args.underlying == "0x0000000000000000000000000000000000000000") {
-    //     await theiaERC20.connect(signer).setMinter(evn[networkName].TheiaRouter)
-    //     await theiaERC20.connect(signer).applyMinter()
-    //     console.log("TheiaERC20 getAllMinters:", await c3Caller.getAllMinters());
-    // }
-
     result = {
         name: args.name, symbol: args.symbol, decimals: args.decimals, underlying: args.underlying,
         address: theiaERC20.target, chain: networkName, chainId: chainId, router: evn[networkName].TheiaRouter
     };
     fs.appendFileSync("ERC20.txt", JSON.stringify(result) + "\n");
+
+    console.log(`npx hardhat verify --network ${networkName} ${theiaERC20.target} ${args.name} ${args.symbol} ${args.decimals} ${args.underlying} ${evn[networkName].TheiaRouter}`);
 
     return hre.run("verify:verify", {
         address: theiaERC20.target,
