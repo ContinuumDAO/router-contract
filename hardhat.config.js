@@ -5,7 +5,9 @@ require("./scripts/theiaRouter/erc20")
 const {
   BSC_TEST,
   GOERLI,
-  MUMBAI
+  MUMBAI,
+  ARB_TEST,
+  OP_GOERLI,
 } = require("./env.json")
 
 
@@ -52,10 +54,21 @@ module.exports = {
       chainId: 5,
       accounts: [GOERLI.DEPLOY_KEY]
     },
-    mumbai:{
+    mumbai: {
       url: MUMBAI.URL,
       chainId: 80001,
       accounts: [MUMBAI.DEPLOY_KEY]
+    },
+    arb_test: {
+      url: ARB_TEST.URL,
+      chainId: 421614,
+      accounts: [ARB_TEST.DEPLOY_KEY]
+    },
+    op_goerli: {
+      url: OP_GOERLI.URL,
+      gasPrice: OP_GOERLI.GASPRICE,
+      chainId: 420,
+      accounts: [OP_GOERLI.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -63,6 +76,8 @@ module.exports = {
       bscTestnet: BSC_TEST.API_KEY,
       goerli: GOERLI.API_KEY,
       polygonMumbai: MUMBAI.API_KEY,
+      arbitrumSepolia: ARB_TEST.API_KEY,
+      optimisticGoerli: OP_GOERLI.API_KEY,
     }
   }
 };
