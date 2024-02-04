@@ -168,7 +168,9 @@ contract C3DappManager is Pausable, Ownable {
         config.appAdmin = msg.sender;
         config.feeToken = _feeToken;
 
-        _setDappAddrlist(dappID, _whitelist);
+        if (_whitelist.length > 0) {
+            _setDappAddrlist(dappID, _whitelist);
+        }
 
         emit SetDAppConfig(dappID, msg.sender, _feeToken, _appDomain, _email);
     }
