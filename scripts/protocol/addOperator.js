@@ -19,11 +19,11 @@ async function main() {
     const c3CallerProxy = await hre.ethers.getContractAt("C3CallerProxy", evn[networkName.toUpperCase()].C3CallerProxy);
 
     // for estimate gas
-    // await c3CallerProxy.addOperator(op)
+    await c3CallerProxy.addOperator("0xEef3d3678E1E739C6522EEC209Bede0197791339")
     // for real call
     // await c3Caller.addOperator(op)
 
-    console.log("c3Caller getAllOperators:", await c3Caller.getAllOperators());
+    // console.log("c3Caller getAllOperators:", await c3Caller.getAllOperators());
     console.log("C3CallerProxy getAllOperators:", await c3CallerProxy.getAllOperators());
 
 }

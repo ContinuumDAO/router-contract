@@ -8,6 +8,7 @@ const {
   MUMBAI,
   ARB_TEST,
   OP_GOERLI,
+  SONIC
 } = require("./env.json")
 
 
@@ -69,6 +70,11 @@ module.exports = {
       gasPrice: OP_GOERLI.GASPRICE,
       chainId: 420,
       accounts: [OP_GOERLI.DEPLOY_KEY]
+    },
+    sonic: {
+      url: SONIC.URL,
+      chainId: 64165,
+      accounts: [SONIC.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -78,6 +84,17 @@ module.exports = {
       polygonMumbai: MUMBAI.API_KEY,
       arbitrumSepolia: ARB_TEST.API_KEY,
       optimisticGoerli: OP_GOERLI.API_KEY,
-    }
+    },
+    customChains: [
+      {
+        network: "sonic",
+        chainId: 64165,
+        urls: {
+          apiURL: SONIC.URL,
+          browserURL: "https://public-sonic.fantom.network",
+          apiKey: SONIC.API_KEY
+        }
+      }
+    ]
   }
 };

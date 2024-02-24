@@ -166,13 +166,6 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         return _deposit(amount, to);
     }
 
-    function depositVault(
-        uint256 amount,
-        address to
-    ) external onlyAdmin returns (uint256) {
-        return _deposit(amount, to);
-    }
-
     function _deposit(uint256 amount, address to) internal returns (uint256) {
         require(!underlyingIsMinted);
         require(underlying != address(0) && underlying != address(this));
@@ -190,14 +183,6 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
 
     function withdraw(uint256 amount, address to) external returns (uint256) {
         return _withdraw(msg.sender, amount, to);
-    }
-
-    function withdrawVault(
-        address from,
-        uint256 amount,
-        address to
-    ) external onlyAdmin returns (uint256) {
-        return _withdraw(from, amount, to);
     }
 
     function _withdraw(
