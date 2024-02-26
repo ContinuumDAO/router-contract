@@ -43,7 +43,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "TheiaERC20: not Admin");
+        require(msg.sender == admin, "TheiaERC20: not TheiaRouter");
         _;
     }
 
@@ -51,13 +51,13 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         return admin;
     }
 
-    function initAdmin(address _admin) external onlyAdmin {
-        require(_init);
-        _init = false;
-        admin = _admin;
-        isMinter[_admin] = true;
-        minters.push(_admin);
-    }
+    // function initAdmin(address _admin) external onlyAdmin {
+    //     require(_init);
+    //     _init = false;
+    //     admin = _admin;
+    //     isMinter[_admin] = true;
+    //     minters.push(_admin);
+    // }
 
     function setAdmin(address _admin) external onlyAdmin {
         require(_admin != address(0), "TheiaERC20: address(0)");
@@ -166,6 +166,13 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         return _deposit(amount, to);
     }
 
+    function depositVault(
+        uint256 amount,
+        address to
+    ) external onlyAdmin returns (uint256) {
+        return _deposit(amount, to);
+    }
+
     function _deposit(uint256 amount, address to) internal returns (uint256) {
         require(!underlyingIsMinted);
         require(underlying != address(0) && underlying != address(this));
@@ -183,6 +190,14 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
 
     function withdraw(uint256 amount, address to) external returns (uint256) {
         return _withdraw(msg.sender, amount, to);
+    }
+
+    function withdrawVault(
+        address from,
+        uint256 amount,
+        address to
+    ) external onlyAdmin returns (uint256) {
+        return _withdraw(from, amount, to);
     }
 
     function _withdraw(
