@@ -64,12 +64,14 @@ contract C3DappManager is Pausable, Ownable {
     event Deposit(
         uint256 indexed dappID,
         address indexed token,
-        uint256 amount
+        uint256 amount,
+        uint256 left
     );
     event Withdraw(
         uint256 indexed dappID,
         address indexed token,
-        uint256 amount
+        uint256 amount,
+        uint256 left
     );
     event Charging(
         uint256 indexed dappID,
@@ -297,7 +299,7 @@ contract C3DappManager is Pausable, Ownable {
         uint256 balance = new_balance - old_balance;
 
         dappStakePool[_dappID][_token] += balance;
-        emit Deposit(_dappID, _token, balance);
+        emit Deposit(_dappID, _token, balance, dappStakePool[_dappID][_token]);
     }
 
     function withdraw(
@@ -320,7 +322,7 @@ contract C3DappManager is Pausable, Ownable {
             "C3Dapp: transfer not successful"
         );
         dappStakePool[_dappID][_token] -= _amount;
-        emit Withdraw(_dappID, _token, _amount);
+        emit Withdraw(_dappID, _token, _amount, dappStakePool[_dappID][_token]);
     }
 
     function charging(

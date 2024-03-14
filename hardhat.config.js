@@ -8,7 +8,8 @@ const {
   MUMBAI,
   ARB_TEST,
   OP_GOERLI,
-  SONIC
+  SONIC,
+  SEPOLIA
 } = require("./env.json")
 
 
@@ -75,12 +76,18 @@ module.exports = {
       url: SONIC.URL,
       chainId: 64165,
       accounts: [SONIC.DEPLOY_KEY]
+    },
+    sepolia: {
+      url: SEPOLIA.URL,
+      chainId: 11155111,
+      accounts: [SEPOLIA.DEPLOY_KEY]
     }
   },
   etherscan: {
     apiKey: {
       bscTestnet: BSC_TEST.API_KEY,
       goerli: GOERLI.API_KEY,
+      sepolia: SEPOLIA.API_KEY,
       polygonMumbai: MUMBAI.API_KEY,
       arbitrumSepolia: ARB_TEST.API_KEY,
       optimisticGoerli: OP_GOERLI.API_KEY,
