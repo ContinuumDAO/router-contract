@@ -9,7 +9,8 @@ const {
   ARB_TEST,
   OP_GOERLI,
   SONIC,
-  SEPOLIA
+  SEPOLIA,
+  BLAST_SEP
 } = require("./env.json")
 
 
@@ -81,7 +82,19 @@ module.exports = {
       url: SEPOLIA.URL,
       chainId: 11155111,
       accounts: [SEPOLIA.DEPLOY_KEY]
-    }
+    },
+    blast: {
+      url: "https://rpc.blast.io",
+      chainId: 81457,
+      accounts: [SEPOLIA.DEPLOY_KEY],
+      gasPrice: 1000000000,
+    },
+    blast_sep: {
+      url: BLAST_SEP.URL,
+      chainId: 168587773,
+      accounts: [BLAST_SEP.DEPLOY_KEY],
+      gasPrice: 1000000000,
+    },
   },
   etherscan: {
     apiKey: {
