@@ -114,6 +114,21 @@ contract C3CallerProxy is
         IC3Caller(c3caller).c3call(_dappID, msg.sender, _to, _toChainID, _data);
     }
 
+    function c3broadcast(
+        uint256 _dappID,
+        string calldata _to,
+        string[] calldata _toChainIDs,
+        bytes calldata _data
+    ) external override {
+        IC3Caller(c3caller).c3broadcast(
+            _dappID,
+            msg.sender,
+            _to,
+            _toChainIDs,
+            _data
+        );
+    }
+
     function execute(
         uint256 _dappID,
         bytes32 _swapID,

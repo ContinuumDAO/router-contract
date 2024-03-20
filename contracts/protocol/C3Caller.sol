@@ -151,6 +151,29 @@ contract C3Caller is IC3Caller {
         emit LogC3Call(_dappID, _uuid, _caller, _toChainID, _to, _data);
     }
 
+    function c3broadcast(
+        uint256 _dappID,
+        address _caller,
+        string calldata _to,
+        string[] calldata _toChainIDs,
+        bytes calldata _data
+    ) external override {
+        require(_dappID > 0, "C3Caller: empty dappID");
+        require(bytes(_to).length > 0, "C3Caller: empty _to");
+        require(_toChainIDs.length > 0, "C3Caller: empty toChainID");
+        require(_data.length > 0, "C3Caller: empty calldata");
+
+        for (uint256 i = 0; i < _toChainIDs.length; i++) {
+            bytes32 _uuid = ISwapIDKeeper(swapIDKeeper).genUUID(
+                _dappID,
+                _to,
+                _toChainIDs[i],
+                _data
+            );
+            emit LogC3Call(_dappID, _uuid, _caller, _toChainIDs[i], _to, _data);
+        }
+    }
+
     function execute(
         uint256 _dappID,
         bytes32 _uuid,
