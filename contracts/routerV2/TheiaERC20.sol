@@ -22,7 +22,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     bool private _init;
 
     // delay for timelock functions
-    uint public constant DELAY = 1 days;
+    uint public DELAY = 1 days;
 
     // set of minters, can be this bridge or other bridges
     mapping(address => bool) public isMinter;
@@ -43,21 +43,13 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "TheiaERC20: not TheiaRouter");
+        require(msg.sender == admin, "TheiaERC20: not Admin");
         _;
     }
 
     function owner() external view returns (address) {
         return admin;
     }
-
-    // function initAdmin(address _admin) external onlyAdmin {
-    //     require(_init);
-    //     _init = false;
-    //     admin = _admin;
-    //     isMinter[_admin] = true;
-    //     minters.push(_admin);
-    // }
 
     function setAdmin(address _admin) external onlyAdmin {
         require(_admin != address(0), "TheiaERC20: address(0)");

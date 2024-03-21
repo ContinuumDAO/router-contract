@@ -104,13 +104,13 @@ describe("C3Router", function () {
             await erc20Token.connect(otherAccount).approve(c3DappManager.target, amount.toString())
 
             await expect(c3DappManager.connect(otherAccount).deposit(nextID, erc20Token.target, amount.toString()))
-                .to.emit(c3DappManager, "Deposit").withArgs(nextID, erc20Token.target, amount.toString());
+                .to.emit(c3DappManager, "Deposit").withArgs(nextID, erc20Token.target, amount.toString(), amount.toString());
 
             expect(await erc20Token.balanceOf(otherAccount)).to.equal("0");
             expect(await erc20Token.balanceOf(c3DappManager)).to.equal(amount.toString());
 
             await expect(c3DappManager.connect(otherAccount).withdraw(nextID, erc20Token.target, amount.toString()))
-                .to.emit(c3DappManager, "Withdraw").withArgs(nextID, erc20Token.target, amount.toString());
+                .to.emit(c3DappManager, "Withdraw").withArgs(nextID, erc20Token.target, amount.toString(), 0);
 
 
             expect(await erc20Token.balanceOf(otherAccount)).to.equal(amount.toString());
@@ -129,7 +129,7 @@ describe("C3Router", function () {
             await erc20Token.connect(otherAccount).approve(c3DappManager.target, amount.toString())
 
             await expect(c3DappManager.connect(otherAccount).deposit(nextID, erc20Token.target, amount.toString()))
-                .to.emit(c3DappManager, "Deposit").withArgs(nextID, erc20Token.target, amount.toString());
+                .to.emit(c3DappManager, "Deposit").withArgs(nextID, erc20Token.target, amount.toString(), amount.toString());
 
 
             await expect(c3DappManager.connect(otherAccount).charging([nextID], [erc20Token.target], [amount.toString()]))

@@ -195,10 +195,13 @@ contract C3Caller is IC3Caller {
         bytes calldata _data
     ) external override onlyAuth {
         require(_data.length > 0, "C3Caller: empty calldata");
+        // check dappID
+        require(IC3Dapp(_to).dappID() == _dappID, "C3Caller: dappID dismatch");
         require(
             !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_uuid),
             "C3Caller: already completed"
         );
+
         context = Context({
             swapID: _uuid,
             fromChainID: _fromChainID,

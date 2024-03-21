@@ -63,7 +63,7 @@ describe("TheiaRouter", function () {
     async function deployC3ERC20(name, symbol, decimals, underlying, vault) {
         // Contracts are deployed using the first signer/account by default
         const [_owner, _otherAccount] = await ethers.getSigners();
-        const TheiaERC20 = await ethers.getContractFactory("TheiaERC20");
+        const TheiaERC20 = await ethers.getContractFactory("TestTheiaERC20");
         return await TheiaERC20.deploy(name, symbol, decimals, underlying, vault);
     }
 
@@ -92,7 +92,11 @@ describe("TheiaRouter", function () {
         erc20Token = await deployC3ERC20("theiaETHOD", "theiaETH", 18, weth.target, routerV2.target)
         underlyingToken = await deployC3ERC20("theiaUSDC", "theiaUSDC", 18, usdc.target, routerV2.target)
         theiaToken = await deployC3ERC20("theiaToken", "theiaToken", 18, "0x0000000000000000000000000000000000000000", owner.address)
-        await theiaToken.initVault(routerV2.target)
+        // await theiaToken.initVault(routerV2.target)
+
+        await theiaToken.setDelay(0)
+        await theiaToken.setMinter(routerV2.target)
+        await theiaToken.applyMinter()
     })
 
 
@@ -232,13 +236,12 @@ describe("TheiaRouter", function () {
             let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", theiaToken.target.toLowerCase(), "250", calldata)
             let fallbackdata = "0xb121f51d00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000c404b97db9d9233bded7b9898c2c07a128ae0da6308be64ea4448a0917784a1c1217a95cd70000000000000000000000005322471a7e37ac2b8902cfcba84d266b37d811a000000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000000000000000000000000000120000000000000000000000005322471a7e37ac2b8902cfcba84d266b37d811a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
             // call the wrong to contract
-            await expect(c3CallerProxy.execute("1", uuid, theiaToken.target, chainID.toString(), "sourceTxHash", routerV2.target, calldata))
-                .to.emit(c3Caller, "LogExecCall").withArgs("1", theiaToken.target, false, uuid, chainID, "sourceTxHash", calldata, "0x")
-                .emit(c3Caller, "LogFallbackCall").withArgs("1", uuid, routerV2.target, fallbackdata)
+            await expect(c3CallerProxy.execute("2", uuid, routerV2.target, chainID.toString(), "sourceTxHash", fallbackdata, calldata))
+                .to.rejectedWith("C3Caller: dappID dismatch");
 
-            await expect(c3CallerProxy.c3Fallback("1", uuid, routerV2.target, chainID.toString(), "failTxHash", fallbackdata, "0x"))
-                .to.emit(c3Caller, "LogExecFallback").withArgs("1", routerV2.target, true, uuid, chainID, "failTxHash", "0x", fallbackdata, "0x0000000000000000000000000000000000000000000000000000000000000001")
-                .emit(routerV2, "LogSwapFallback").withArgs(swapID, theiaToken.target, otherAccount.address, amount.toString(), "0x04b97db9", "0x" + calldata.substring(10), "0x")
+            // await expect(c3CallerProxy.c3Fallback("1", uuid, routerV2.target, chainID.toString(), "failTxHash", fallbackdata, "0x"))
+            //     .to.emit(c3Caller, "LogExecFallback").withArgs("1", routerV2.target, true, uuid, chainID, "failTxHash", "0x", fallbackdata, "0x0000000000000000000000000000000000000000000000000000000000000001")
+            //     .emit(routerV2, "LogSwapFallback").withArgs(swapID, theiaToken.target, otherAccount.address, amount.toString(), "0x04b97db9", "0x" + calldata.substring(10), "0x")
 
         });
 

@@ -6,9 +6,6 @@ library Structs {
         uint256 ChainID;
         string BlockChain;
         string RouterContract;
-        uint64 Confirmations;
-        uint64 InitialHeight;
-        string Extra;
     }
 
     struct TokenConfig {
@@ -17,7 +14,7 @@ library Structs {
         string ContractAddress;
         uint256 ContractVersion;
         string RouterContract;
-        string Extra; //{underlying:}
+        string Underlying;
     }
 
     struct SwapConfig {
@@ -25,7 +22,6 @@ library Structs {
         uint256 ToChainID;
         uint256 MaximumSwap;
         uint256 MinimumSwap;
-        uint256 BigValueThreshold;
     }
 
     struct FeeConfig {
@@ -55,7 +51,6 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
     uint256[] private _allChainIDs;
     mapping(uint256 => bool) private _allChainIDsMap; // key is chainID
     mapping(uint256 => Structs.ChainConfig) private _chainConfig; // key is chainID
-    mapping(uint256 => mapping(string => string)) private _customConfig; // key is chainID,customKey
 
     // token configuration
     string[] private _allTokenIDs;
@@ -75,7 +70,6 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
     mapping(string => mapping(uint256 => mapping(uint256 => Structs.FeeConfig)))
         private _feeConfig; // key is tokenID,srcChainID,dstChainID
 
-    mapping(string => string) private _extraConfig; // key is customKey
     mapping(uint256 => mapping(string => string)) private _tokenIDMap; // key is chainID,tokenAddress
 
     // mpc configuration
@@ -163,7 +157,7 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
                 c.ContractAddress,
                 c.ContractVersion,
                 c.RouterContract,
-                c.Extra
+                c.Underlying
             );
         }
         return result;
@@ -196,10 +190,7 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
             result[i] = Structs.ChainConfig(
                 chainID,
                 c.BlockChain,
-                c.RouterContract,
-                c.Confirmations,
-                c.InitialHeight,
-                c.Extra
+                c.RouterContract
             );
         }
         return result;
@@ -311,19 +302,6 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         return result;
     }
 
-    function getCustomConfig(
-        uint256 chainID,
-        string memory key
-    ) external view returns (string memory) {
-        return _customConfig[chainID][key];
-    }
-
-    function getExtraConfig(
-        string memory key
-    ) external view returns (string memory) {
-        return _extraConfig[key];
-    }
-
     function getMPCPubkey(
         string memory mpcAddress
     ) external view returns (string memory) {
@@ -333,10 +311,7 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
     function setChainConfig(
         uint256 chainID,
         string memory blockChain,
-        string memory routerContract,
-        uint64 confirmations,
-        uint64 initialHeight,
-        string memory extra
+        string memory routerContract
     ) external returns (bool) {
         require(
             hasRole(CONFIG_ROLE, msg.sender),
@@ -345,28 +320,8 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         return
             _setChainConfig(
                 chainID,
-                Structs.ChainConfig(
-                    chainID,
-                    blockChain,
-                    routerContract,
-                    confirmations,
-                    initialHeight,
-                    extra
-                )
+                Structs.ChainConfig(chainID, blockChain, routerContract)
             );
-    }
-
-    function setChainExtraConfig(
-        uint256 chainID,
-        string memory extra
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        require(chainID > 0);
-        _chainConfig[chainID].Extra = extra;
-        return true;
     }
 
     function setTokenConfig(
@@ -376,7 +331,7 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         uint8 decimals,
         uint256 version,
         string memory routerContract,
-        string memory extra
+        string memory underlying
     ) external returns (bool) {
         require(
             hasRole(CONFIG_ROLE, msg.sender),
@@ -392,37 +347,9 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
                     tokenAddr,
                     version,
                     routerContract,
-                    extra
+                    underlying
                 )
             );
-    }
-
-    function setTokenRouterContract(
-        string memory tokenID,
-        uint256 chainID,
-        string memory routerContract
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        require(chainID > 0 && bytes(tokenID).length > 0);
-        _tokenConfig[tokenID][chainID].RouterContract = routerContract;
-        return true;
-    }
-
-    function setTokenExtraConfig(
-        string memory tokenID,
-        uint256 chainID,
-        string memory extra
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        require(chainID > 0 && bytes(tokenID).length > 0);
-        _tokenConfig[tokenID][chainID].Extra = extra;
-        return true;
     }
 
     function setSwapAndFeeConfig(
@@ -431,7 +358,6 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         uint256 dstChainID,
         uint256 maxSwap,
         uint256 minSwap,
-        uint256 bigSwap,
         uint256 maxFee,
         uint256 minFee,
         uint256 feeRate,
@@ -444,13 +370,7 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         return
             _setSwapConfig(
                 tokenID,
-                Structs.SwapConfig(
-                    srcChainID,
-                    dstChainID,
-                    maxSwap,
-                    minSwap,
-                    bigSwap
-                )
+                Structs.SwapConfig(srcChainID, dstChainID, maxSwap, minSwap)
             ) &&
             _setFeeConfig(
                 tokenID,
@@ -467,11 +387,9 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
 
     function setSwapConfig(
         string memory tokenID,
-        uint256 srcChainID,
         uint256 dstChainID,
         uint256 maxSwap,
-        uint256 minSwap,
-        uint256 bigSwap
+        uint256 minSwap
     ) external returns (bool) {
         require(
             hasRole(CONFIG_ROLE, msg.sender),
@@ -480,13 +398,7 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         return
             _setSwapConfig(
                 tokenID,
-                Structs.SwapConfig(
-                    srcChainID,
-                    dstChainID,
-                    maxSwap,
-                    minSwap,
-                    bigSwap
-                )
+                Structs.SwapConfig(block.chainid, dstChainID, maxSwap, minSwap)
             );
     }
 
@@ -501,16 +413,6 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         for (uint256 i = 0; i < configs.length; i++) {
             _setSwapConfig(tokenID, configs[i]);
         }
-    }
-
-    function _getAllChainIDsAndZero() internal view returns (uint256[] memory) {
-        uint256 count = _allChainIDs.length + 1;
-        uint256[] memory result = new uint256[](count);
-        for (uint256 i = 0; i < count - 1; i++) {
-            result[i] = _allChainIDs[i];
-        }
-        result[count - 1] = 0;
-        return result;
     }
 
     function setFeeConfig(
@@ -553,26 +455,6 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         }
     }
 
-    function setCustomConfig(
-        uint256 chainID,
-        string memory key,
-        string memory data
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        _customConfig[chainID][key] = data;
-    }
-
-    function setExtraConfig(string memory key, string memory data) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        _extraConfig[key] = data;
-    }
-
     function setMPCPubkey(string memory addr, string memory pubkey) external {
         require(
             hasRole(CONFIG_ROLE, msg.sender),
@@ -581,39 +463,39 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
         _mpcPubkey[addr] = pubkey;
     }
 
-    function addChainID(uint256 chainID) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        require(!isChainIDExist(chainID));
-        _allChainIDs.push(chainID);
-        _allChainIDsMap[chainID] = true;
-        return true;
-    }
+    // function addChainID(uint256 chainID) external returns (bool) {
+    //     require(
+    //         hasRole(CONFIG_ROLE, msg.sender),
+    //         "RouterConfig: no config role"
+    //     );
+    //     require(!isChainIDExist(chainID));
+    //     _allChainIDs.push(chainID);
+    //     _allChainIDsMap[chainID] = true;
+    //     return true;
+    // }
 
-    function addTokenID(string memory tokenID) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        require(!isTokenIDExist(tokenID));
-        _allTokenIDs.push(tokenID);
-        _allTokenIDsMap[tokenID] = true;
-        return true;
-    }
+    // function addTokenID(string memory tokenID) external returns (bool) {
+    //     require(
+    //         hasRole(CONFIG_ROLE, msg.sender),
+    //         "RouterConfig: no config role"
+    //     );
+    //     require(!isTokenIDExist(tokenID));
+    //     _allTokenIDs.push(tokenID);
+    //     _allTokenIDsMap[tokenID] = true;
+    //     return true;
+    // }
 
-    function setMultichainToken(
-        string memory tokenID,
-        uint256 chainID,
-        string memory token
-    ) public {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        _setMultichainToken(tokenID, chainID, token);
-    }
+    // function setMultichainToken(
+    //     string memory tokenID,
+    //     uint256 chainID,
+    //     string memory token
+    // ) public {
+    //     require(
+    //         hasRole(CONFIG_ROLE, msg.sender),
+    //         "RouterConfig: no config role"
+    //     );
+    //     _setMultichainToken(tokenID, chainID, token);
+    // }
 
     function _c3Fallback(
         bytes4 _selector,

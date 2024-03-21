@@ -56,6 +56,8 @@ interface IC3Dapp {
         bytes calldata data,
         bytes calldata reason
     ) external returns (bool);
+
+    function dappID() external returns (uint256);
 }
 
 interface IC3Caller {
