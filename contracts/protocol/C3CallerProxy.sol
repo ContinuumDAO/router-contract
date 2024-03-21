@@ -116,7 +116,7 @@ contract C3CallerProxy is
 
     function c3broadcast(
         uint256 _dappID,
-        string calldata _to,
+        string[] calldata _to,
         string[] calldata _toChainIDs,
         bytes calldata _data
     ) external override {

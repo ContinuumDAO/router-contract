@@ -68,7 +68,7 @@ abstract contract C3CallerDapp is IC3Dapp {
     }
 
     function c3broadcast(
-        string memory _to,
+        string[] memory _to,
         string[] memory _toChainIDs,
         bytes memory _data
     ) internal {

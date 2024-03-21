@@ -45,8 +45,9 @@ library Structs {
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
+import "../protocol/C3CallerDapp.sol";
 
-contract TheiaRouterConfig is AccessControl, Multicall {
+contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
     uint256 public constant CONFIG_VERSION = 1;
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
@@ -80,7 +81,10 @@ contract TheiaRouterConfig is AccessControl, Multicall {
     // mpc configuration
     mapping(string => string) private _mpcPubkey; // key is mpc address
 
-    constructor() {
+    constructor(
+        address _c3callerProxy,
+        uint256 _dappID
+    ) C3CallerDapp(_c3callerProxy, _dappID) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(CONFIG_ROLE, msg.sender);
     }
@@ -609,6 +613,14 @@ contract TheiaRouterConfig is AccessControl, Multicall {
             "RouterConfig: no config role"
         );
         _setMultichainToken(tokenID, chainID, token);
+    }
+
+    function _c3Fallback(
+        bytes4 _selector,
+        bytes calldata _data,
+        bytes calldata _reason
+    ) internal override returns (bool) {
+        return true;
     }
 
     function _isStringEqual(
