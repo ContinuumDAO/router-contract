@@ -17,7 +17,7 @@ contract TestTheiaERC20 is IERC20, TheiaERC20FeeConfig, TheiaERC20 {
     ) TheiaERC20(_name, _symbol, _decimals, _underlying, _admin) {}
 
     // for test
-    function setDelay(uint t) external onlyAdmin {
+    function setDelay(uint t) external {
         DELAY = t;
     }
 }

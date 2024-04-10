@@ -5,6 +5,7 @@ pragma solidity ^0.8.19;
 import "../protocol/C3CallerDapp.sol";
 import "./ISwapIDKeeper.sol";
 import "./ITheiaERC20.sol";
+import "./FeeManager.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -26,16 +27,13 @@ interface IwNATIVE {
     function withdraw(uint256) external;
 }
 
-contract TheiaRouter is C3CallerDapp {
+contract TheiaRouter is FeeManager, C3CallerDapp {
     using Strings for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     address public constant factory = address(0);
     address public immutable wNATIVE;
-
-    // delay for timelock functions
-    uint public constant DELAY = 2 days;
 
     mapping(address => bool) public isOperator;
     address[] public operators;
@@ -57,32 +55,21 @@ contract TheiaRouter is C3CallerDapp {
 
     constructor(
         address _wNATIVE,
-        address _mpc,
+        address _gov,
         address _swapIDKeeper,
         address _c3callerProxy,
+        address _feeToken,
         uint256 _dappID
-    ) C3CallerDapp(_c3callerProxy, _dappID) {
-        _newMPC = _mpc;
-        _newMPCEffectiveTime = block.timestamp;
+    ) C3CallerDapp(_c3callerProxy, _dappID) FeeManager(_feeToken, _gov) {
         wNATIVE = _wNATIVE;
         swapIDKeeper = _swapIDKeeper;
-        _addOperator(_mpc);
+        _addOperator(_gov);
     }
 
     receive() external payable {}
 
     fallback() external payable {}
 
-    address private _oldMPC;
-    address private _newMPC;
-    uint256 private _newMPCEffectiveTime;
-
-    event LogChangeMPC(
-        address indexed oldMPC,
-        address indexed newMPC,
-        uint indexed effectiveTime,
-        uint256 chainID
-    );
     event LogSwapIn(
         address indexed token,
         address indexed to,
@@ -125,11 +112,6 @@ contract TheiaRouter is C3CallerDapp {
         bytes reason
     );
 
-    modifier onlyMPC() {
-        require(msg.sender == mpc(), "TR:MPC FORBIDDEN");
-        _;
-    }
-
     modifier onlyAuth() {
         require(
             isOperator[msg.sender] || isCaller(msg.sender),
@@ -143,28 +125,12 @@ contract TheiaRouter is C3CallerDapp {
         _;
     }
 
-    function mpc() public view returns (address) {
-        if (block.timestamp >= _newMPCEffectiveTime) {
-            return _newMPC;
-        }
-        return _oldMPC;
-    }
-
     function cID() public view returns (uint) {
         return block.chainid;
     }
 
     function version() public pure returns (uint) {
         return 1;
-    }
-
-    function changeMPC(address newMPC) external onlyMPC returns (bool) {
-        require(newMPC != address(0), "TR:address(0)");
-        _oldMPC = mpc();
-        _newMPC = newMPC;
-        _newMPCEffectiveTime = block.timestamp + DELAY;
-        emit LogChangeMPC(_oldMPC, _newMPC, _newMPCEffectiveTime, cID());
-        return true;
     }
 
     function _addOperator(address op) internal {
@@ -174,7 +140,7 @@ contract TheiaRouter is C3CallerDapp {
         operators.push(op);
     }
 
-    function addOperator(address _auth) external onlyMPC {
+    function addOperator(address _auth) external onlyGov {
         _addOperator(_auth);
     }
 
@@ -182,7 +148,7 @@ contract TheiaRouter is C3CallerDapp {
         return operators;
     }
 
-    function revokeOperator(address _auth) external onlyMPC {
+    function revokeOperator(address _auth) external onlyGov {
         require(isOperator[_auth], "TR:Operator not found");
         isOperator[_auth] = false;
         uint256 length = operators.length;
@@ -198,43 +164,43 @@ contract TheiaRouter is C3CallerDapp {
     function changeVault(
         address token,
         address newVault
-    ) external onlyMPC returns (bool) {
+    ) external onlyGov returns (bool) {
         return ITheiaERC20(token).changeVault(newVault);
     }
 
-    function changeSwapIDKeeper(address _swapIDKeeper) external onlyMPC {
+    function changeSwapIDKeeper(address _swapIDKeeper) external onlyGov {
         swapIDKeeper = _swapIDKeeper;
     }
 
-    function setTokenFeeConfig(
-        address token,
-        uint256 srcChainID,
-        uint256 dstChainID,
-        uint256 maxFee,
-        uint256 minFee,
-        uint256 feeRate,
-        uint256 payFrom
-    ) external onlyMPC returns (bool) {
-        return
-            ITheiaERC20(token).setFeeConfig(
-                srcChainID,
-                dstChainID,
-                maxFee,
-                minFee,
-                feeRate,
-                payFrom
-            );
-    }
+    // function setTokenFeeConfig(
+    //     address token,
+    //     uint256 srcChainID,
+    //     uint256 dstChainID,
+    //     uint256 maxFee,
+    //     uint256 minFee,
+    //     uint256 feeRate,
+    //     uint256 payFrom
+    // ) external onlyGov returns (bool) {
+    //     return
+    //         ITheiaERC20(token).setFeeConfig(
+    //             srcChainID,
+    //             dstChainID,
+    //             maxFee,
+    //             minFee,
+    //             feeRate,
+    //             payFrom
+    //         );
+    // }
 
-    function setMinter(address token, address _auth) external onlyMPC {
+    function setMinter(address token, address _auth) external onlyGov {
         return ITheiaERC20(token).setMinter(_auth);
     }
 
-    function applyMinter(address token) external onlyMPC {
+    function applyMinter(address token) external onlyGov {
         return ITheiaERC20(token).applyMinter();
     }
 
-    function revokeMinter(address token, address _auth) external onlyMPC {
+    function revokeMinter(address token, address _auth) external onlyGov {
         return ITheiaERC20(token).revokeMinter(_auth);
     }
 
@@ -308,15 +274,24 @@ contract TheiaRouter is C3CallerDapp {
         address _to,
         address _receiver,
         address _recToken,
+        address _feeToken,
         uint8 _recDecimals,
         uint256 _toChainID
     ) external payable {
         checkSwapOut(_token, _to, _receiver, _amount);
         require(_recToken != address(0), "TR:recToken empty");
         uint256 _recvAmount = _getRevAmount(_token, _amount);
-        uint256 swapFee = calcSwapFee(0, _toChainID, _token, _recvAmount);
-        if (swapFee > 0) {
-            ITheiaERC20(_token).mint(address(this), swapFee);
+
+        uint256 feeReadable = calcBaseSwapFee(cID(), toChainID, _feeToken);
+        if (feeReadable > 0) {
+            uint256 _swapFee = convertDecimals(
+                feeReadable,
+                2,
+                ITheiaERC20(_feeToken).decimals()
+            );
+
+            uint256 paid = payFee(_swapFee);
+            require(paid == _swapFee, "TR:paid fee failed");
         }
 
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
@@ -591,7 +566,7 @@ contract TheiaRouter is C3CallerDapp {
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
         require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
 
-        (, string memory fromChainID, string memory _sourceTx,) = context();
+        (, string memory fromChainID, string memory _sourceTx, ) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain invalid");
@@ -653,7 +628,7 @@ contract TheiaRouter is C3CallerDapp {
         require(amount > 0, "TR:amount empty");
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
         require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
-        (, string memory fromChainID, string memory _sourceTx,) = context();
+        (, string memory fromChainID, string memory _sourceTx, ) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain is invalid");
@@ -809,37 +784,16 @@ contract TheiaRouter is C3CallerDapp {
         return amount;
     }
 
-    //  extracts mpc fee from bridge fees
-    function withdrawFee(address[] calldata tokens) external onlyMPC {
-        address _mpc = mpc();
+    //  extracts gov fee from bridge fees
+    function withdrawFee(address[] calldata tokens) external onlyGov {
+        address _gov = gov();
         for (uint index = 0; index < tokens.length; index++) {
             address _token = tokens[index];
             uint256 amount = IERC20(_token).balanceOf(address(this));
             if (amount > 0) {
-                ITheiaERC20(_token).withdrawVault(address(this), amount, _mpc);
+                ITheiaERC20(_token).withdrawVault(address(this), amount, _gov);
             }
         }
-    }
-
-    function calcSwapFee(
-        uint256 fromChainID,
-        uint256 toChainID,
-        address token,
-        uint256 amount
-    ) public view returns (uint256) {
-        (
-            uint256 maximumSwapFee,
-            uint256 minimumSwapFee,
-            uint256 swapFeeRatePerMillion
-        ) = ITheiaERC20(token).getFeeConfig(fromChainID, toChainID);
-        if (swapFeeRatePerMillion == 0) return 0;
-        if (maximumSwapFee > 0 && maximumSwapFee == minimumSwapFee)
-            return maximumSwapFee;
-        uint256 _fee = (amount * swapFeeRatePerMillion) / 1000000;
-        require(_fee < amount, "TR:Invalid FeeConfig");
-        _fee = maximumSwapFee < _fee ? maximumSwapFee : _fee;
-        _fee = minimumSwapFee > _fee ? minimumSwapFee : _fee;
-        return _fee;
     }
 
     function strToUint(
@@ -870,12 +824,14 @@ contract TheiaRouter is C3CallerDapp {
     ) public pure returns (uint256) {
         if (from == to) return amount;
         if (from > to) {
-            uint256 res = from.sub(to);
+            //uint256 res = from.sub(to);
+            uint256 res = from - to;
             (bool ok, uint256 rtn) = amount.tryDiv(10 ** res);
             if (ok) return rtn;
             return 0;
         } else {
-            uint256 res = to.sub(from);
+            //uint256 res = to.sub(from);
+            uint256 res = to - from;
             (bool ok, uint256 rtn) = amount.tryMul(10 ** res);
             if (ok) return rtn;
             return 0;

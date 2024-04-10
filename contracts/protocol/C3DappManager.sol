@@ -17,8 +17,8 @@ contract C3DappManager is Pausable, Ownable {
         uint256 swapFee;
         uint256 callPerByteFee;
     }
-    address public mpc;
-    address public pendingMPC;
+    address public gov;
+    address public pendingGov;
 
     uint256 public dappID;
 
@@ -33,14 +33,14 @@ contract C3DappManager is Pausable, Ownable {
 
     mapping(address => uint256) private fees;
 
-    event ChangeMPC(
-        address indexed oldMPC,
-        address indexed newMPC,
+    event ChangeGov(
+        address indexed oldGov,
+        address indexed newGov,
         uint256 timestamp
     );
-    event ApplyMPC(
-        address indexed oldMPC,
-        address indexed newMPC,
+    event ApplyGov(
+        address indexed oldGov,
+        address indexed newGov,
         uint256 timestamp
     );
     event SetDAppConfig(
@@ -81,14 +81,14 @@ contract C3DappManager is Pausable, Ownable {
         uint256 left
     );
 
-    constructor(address _mpc) {
-        require(_mpc != address(0));
-        mpc = _mpc;
-        _transferOwnership(mpc);
+    constructor(address _gov) {
+        require(_gov != address(0));
+        gov = _gov;
+        _transferOwnership(gov);
     }
 
-    modifier onlyMPC() {
-        require(msg.sender == mpc, "C3Dapp: only MPC");
+    modifier onlyGov() {
+        require(msg.sender == gov, "C3Dapp: only Gov");
         _;
     }
 
@@ -100,19 +100,19 @@ contract C3DappManager is Pausable, Ownable {
         _unpause();
     }
 
-    function changeMPC(address _mpc) external onlyMPC {
-        pendingMPC = _mpc;
-        emit ChangeMPC(mpc, _mpc, block.timestamp);
+    function changeGov(address _gov) external onlyGov {
+        pendingGov = _gov;
+        emit ChangeGov(gov, _gov, block.timestamp);
     }
 
-    function applyMPC() external {
-        require(msg.sender == pendingMPC);
-        emit ApplyMPC(mpc, pendingMPC, block.timestamp);
-        mpc = pendingMPC;
-        pendingMPC = address(0);
+    function applyGov() external {
+        require(msg.sender == pendingGov);
+        emit ApplyGov(gov, pendingGov, block.timestamp);
+        gov = pendingGov;
+        pendingGov = address(0);
     }
 
-    function setBlacklists(uint256 _dappID, bool _flag) external onlyMPC {
+    function setBlacklists(uint256 _dappID, bool _flag) external onlyGov {
         appBlacklist[_dappID] = _flag;
         emit SetBlacklists(_dappID, _flag);
     }
@@ -121,7 +121,7 @@ contract C3DappManager is Pausable, Ownable {
         address[] calldata _tokens,
         uint256[] calldata _swapfee,
         uint256[] calldata _callfee
-    ) external onlyMPC {
+    ) external onlyGov {
         for (uint256 index = 0; index < _tokens.length; index++) {
             feeCurrencies[_tokens[index]] = FeeConfig(
                 _swapfee[index],
@@ -136,7 +136,7 @@ contract C3DappManager is Pausable, Ownable {
         }
     }
 
-    function disableFeeCurrency(address _token) external onlyMPC {
+    function disableFeeCurrency(address _token) external onlyGov {
         delete feeCurrencies[_token];
         emit SetFeeConfig(_token, "0", 0, 0);
     }
@@ -146,7 +146,7 @@ contract C3DappManager is Pausable, Ownable {
         string calldata _chain,
         uint256 _fee,
         uint256 _callfee
-    ) external onlyMPC {
+    ) external onlyGov {
         speChainFees[_chain][_token] = FeeConfig(_fee, _callfee);
         emit SetFeeConfig(_token, _chain, _fee, _callfee);
     }
@@ -196,7 +196,7 @@ contract C3DappManager is Pausable, Ownable {
 
         require(config.appAdmin != address(0), "C3Dapp: app not exist");
         require(
-            msg.sender == mpc || msg.sender == config.appAdmin,
+            msg.sender == gov || msg.sender == config.appAdmin,
             "C3Dapp: forbid"
         );
 
@@ -211,7 +211,7 @@ contract C3DappManager is Pausable, Ownable {
 
         require(config.appAdmin != address(0), "C3Dapp: app not exist");
         require(
-            msg.sender == mpc || msg.sender == config.appAdmin,
+            msg.sender == gov || msg.sender == config.appAdmin,
             "C3Dapp: forbid"
         );
 
@@ -235,7 +235,7 @@ contract C3DappManager is Pausable, Ownable {
 
         require(config.appAdmin != address(0), "C3Dapp: app not exist");
         require(
-            msg.sender == mpc || msg.sender == config.appAdmin,
+            msg.sender == gov || msg.sender == config.appAdmin,
             "C3Dapp: forbid"
         );
         require(
@@ -253,17 +253,17 @@ contract C3DappManager is Pausable, Ownable {
 
         require(config.appAdmin != address(0), "C3Dapp: app not exist");
         require(
-            msg.sender == mpc || msg.sender == config.appAdmin,
+            msg.sender == gov || msg.sender == config.appAdmin,
             "C3Dapp: forbid"
         );
         config.appAdmin = _newAdmin;
     }
 
-    function updateDappByMPC(
+    function updateDappByGov(
         uint256 _dappID,
         address _feeToken,
         uint256 _discount
-    ) external onlyMPC {
+    ) external onlyGov {
         DappConfig storage config = dappConfig[_dappID];
 
         require(config.appAdmin != address(0), "C3Dapp: app not exist");
@@ -329,7 +329,7 @@ contract C3DappManager is Pausable, Ownable {
         uint256[] calldata _dappIDs,
         address[] calldata _tokens,
         uint256[] calldata _amounts
-    ) external onlyMPC {
+    ) external onlyGov {
         require(
             _dappIDs.length == _tokens.length &&
                 _dappIDs.length == _amounts.length,
@@ -357,10 +357,22 @@ contract C3DappManager is Pausable, Ownable {
         }
     }
 
-    function withdrawFees(address[] calldata _tokens) external onlyMPC {
+    function withdrawFees(address[] calldata _tokens) external onlyGov {
         for (uint256 index = 0; index < _tokens.length; index++) {
             if (fees[_tokens[index]] > 0) {
-                IERC20(_tokens[index]).transfer(mpc, fees[_tokens[index]]);
+                IERC20(_tokens[index]).transfer(gov, fees[_tokens[index]]);
+                fees[_tokens[index]] = 0;
+            }
+        }
+    }
+
+    function withdrawFeesTo(
+        address[] calldata _tokens,
+        address to
+    ) external onlyGov {
+        for (uint256 index = 0; index < _tokens.length; index++) {
+            if (fees[_tokens[index]] > 0) {
+                IERC20(_tokens[index]).transfer(to, fees[_tokens[index]]);
                 fees[_tokens[index]] = 0;
             }
         }

@@ -34,15 +34,6 @@ interface ITheiaERC20 {
 
     function withdraw(uint256 amount, address to) external returns (uint256);
 
-    function setFeeConfig(
-        uint256 srcChainID,
-        uint256 dstChainID,
-        uint256 maxFee,
-        uint256 minFee,
-        uint256 feeRate,
-        uint256 payFrom
-    ) external returns (bool);
-
     function getFeeConfig(
         uint256 fromChainID,
         uint256 toChainID
