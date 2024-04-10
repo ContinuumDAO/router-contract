@@ -9,6 +9,7 @@ contract C3Caller is IC3Caller {
         bytes32 swapID;
         string fromChainID;
         string sourceTx;
+        bytes reason;
     }
 
     Context public override context;
@@ -205,12 +206,18 @@ contract C3Caller is IC3Caller {
         context = Context({
             swapID: _uuid,
             fromChainID: _fromChainID,
-            sourceTx: _sourceTx
+            sourceTx: _sourceTx,
+            reason: ""
         });
 
         (bool success, bytes memory result) = _to.call(_data);
 
-        context = Context({swapID: "", fromChainID: "", sourceTx: ""});
+        context = Context({
+            swapID: "",
+            fromChainID: "",
+            sourceTx: "",
+            reason: ""
+        });
 
         emit LogExecCall(
             _dappID,
@@ -273,12 +280,18 @@ contract C3Caller is IC3Caller {
         context = Context({
             swapID: _uuid,
             fromChainID: _fromChainID,
-            sourceTx: _sourceTx
+            sourceTx: _sourceTx,
+            reason: _reason
         });
 
         (bool success, bytes memory result) = _to.call(_data);
 
-        context = Context({swapID: "", fromChainID: "", sourceTx: ""});
+        context = Context({
+            swapID: "",
+            fromChainID: "",
+            sourceTx: "",
+            reason: ""
+        });
 
         emit LogExecFallback(
             _dappID,

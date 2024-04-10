@@ -53,7 +53,8 @@ abstract contract C3CallerDapp is IC3Dapp {
         returns (
             bytes32 uuid,
             string memory fromChainID,
-            string memory sourceTx
+            string memory sourceTx,
+            bytes memory reason
         )
     {
         return IC3CallerProxy(c3CallerProxy).context();
