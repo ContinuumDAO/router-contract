@@ -1,49 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-library Structs {
-    struct ChainConfig {
-        uint256 ChainID;
-        string BlockChain;
-        string RouterContract;
-    }
-
-    struct TokenConfig {
-        uint256 ChainID;
-        uint8 Decimals;
-        string ContractAddress;
-        uint256 ContractVersion;
-        string RouterContract;
-        string Underlying;
-    }
-
-    struct SwapConfig {
-        uint256 FromChainID;
-        uint256 ToChainID;
-        uint256 MaximumSwap;
-        uint256 MinimumSwap;
-    }
-
-    struct FeeConfig {
-        uint256 FromChainID;
-        uint256 ToChainID;
-        uint256 MaximumSwapFee; // FixFee if MaximumSwapFee == MinimumSwapFee
-        uint256 MinimumSwapFee;
-        uint256 SwapFeeRatePerMillion;
-        uint256 PayFromOrTo; // 1:fromChainPay 2:toChainPay
-    }
-
-    struct MultichainToken {
-        uint256 ChainID;
-        string TokenAddress;
-    }
-}
-
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
 import "../protocol/C3CallerDapp.sol";
+import "./ITheiaConfig.sol";
 
-contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
+contract TheiaRouterConfig is
+    AccessControl,
+    Multicall,
+    C3CallerDapp,
+    ITheiaConfig
+{
     uint256 public constant CONFIG_VERSION = 1;
     bytes32 public constant CONFIG_ROLE = keccak256("CONFIG_ROLE");
 
@@ -212,6 +180,21 @@ contract TheiaRouterConfig is AccessControl, Multicall, C3CallerDapp {
             c.RouterContract = _chainConfig[chainID].RouterContract;
         }
         return c;
+    }
+
+    function getTokenConfigIfExist(
+        string memory tokenID,
+        uint256 toChainID
+    )
+        external
+        view
+        returns (Structs.TokenConfig memory, Structs.TokenConfig memory)
+    {
+        Structs.TokenConfig memory c = _tokenConfig[tokenID][block.chainid];
+        require(c.Decimals > 0, "Token not exist on fromChain");
+        Structs.TokenConfig memory tc = _tokenConfig[tokenID][toChainID];
+        require(tc.Decimals > 0, "TokenAddr not exist on toChain");
+        return (c, tc);
     }
 
     function getSwapConfig(
