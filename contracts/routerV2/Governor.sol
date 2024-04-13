@@ -3,8 +3,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "../protocol/C3CallerDapp.sol";
 
-contract Governor {
+abstract contract Governor is C3CallerDapp {
     // delay for timelock functions
     uint public delay = 2 days;
 
@@ -12,7 +13,11 @@ contract Governor {
     address private _newGov;
     uint256 private _newGovEffectiveTime;
 
-    constructor(address _gov) {
+    constructor(
+        address _gov,
+        address _c3callerProxy,
+        uint256 _dappID
+    ) C3CallerDapp(_c3callerProxy, _dappID) {
         _oldGov = _gov;
         _newGov = _gov;
         _newGovEffectiveTime = block.timestamp;
@@ -26,7 +31,7 @@ contract Governor {
     );
 
     modifier onlyGov() {
-        require(msg.sender == gov(), "Gov FORBIDDEN");
+        require(msg.sender == gov() || isCaller(msg.sender), "Gov FORBIDDEN");
         _;
     }
 
@@ -37,7 +42,8 @@ contract Governor {
         return _oldGov;
     }
 
-    function changeGov(address newGov) external onlyGov {
+    function changeGov(address newGov) external {
+        require(msg.sender == gov(), "Gov FORBIDDEN");
         require(newGov != address(0), "newGov is empty");
         _oldGov = gov();
         _newGov = newGov;
@@ -50,7 +56,8 @@ contract Governor {
         );
     }
 
-    function setDelay(uint _delay) external onlyGov {
+    function setDelay(uint _delay) external {
+        require(msg.sender == gov(), "Gov FORBIDDEN");
         delay = _delay;
     }
 }

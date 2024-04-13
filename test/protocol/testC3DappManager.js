@@ -72,7 +72,7 @@ describe("C3Router", function () {
             await expect(c3DappManager.connect(otherAccount).updateDAppConfig(nextID, weth.target, "test1.com", "admin@test1.com"))
                 .to.emit(c3DappManager, "SetDAppConfig").withArgs(nextID, otherAccount.address, weth.target, "test1.com", "admin@test1.com");
 
-            await expect(c3DappManager.connect(otherAccount).updateDappByMPC(nextID, weth.target, 10000000))
+            await expect(c3DappManager.connect(otherAccount).updateDappByGov(nextID, weth.target, 10000000))
                 .to.be.revertedWith("C3Dapp: only MPC");
 
         });
@@ -133,7 +133,7 @@ describe("C3Router", function () {
 
 
             await expect(c3DappManager.connect(otherAccount).charging([nextID], [erc20Token.target], [amount.toString()]))
-                .to.revertedWith("C3Dapp: only MPC");
+                .to.revertedWith("C3Dapp: only Gov");
 
             await expect(c3DappManager.charging([nextID], [erc20Token.target], [amount.div(new BN(2)).toString()]))
                 .to.emit(c3DappManager, "Charging").withArgs(nextID, erc20Token.target, amount.div(new BN(2)).toString(), amount.div(new BN(2)).toString(), amount.div(new BN(2)).toString());

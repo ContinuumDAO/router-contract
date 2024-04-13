@@ -2,7 +2,6 @@
 
 pragma solidity ^0.8.19;
 
-import "../protocol/C3CallerDapp.sol";
 import "./ISwapIDKeeper.sol";
 import "./ITheiaERC20.sol";
 import "./FeeManager.sol";
@@ -28,7 +27,7 @@ interface IwNATIVE {
     function withdraw(uint256) external;
 }
 
-contract TheiaRouter is FeeManager, C3CallerDapp {
+contract TheiaRouter is FeeManager {
     using Strings for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -57,13 +56,13 @@ contract TheiaRouter is FeeManager, C3CallerDapp {
 
     constructor(
         address _wNATIVE,
-        address _gov,
         address _swapIDKeeper,
-        address _feeToken,
         address _theiaConfig,
+        address _feeToken,
+        address _gov,
         address _c3callerProxy,
         uint256 _dappID
-    ) C3CallerDapp(_c3callerProxy, _dappID) FeeManager(_feeToken, _gov) {
+    ) FeeManager(_feeToken, _gov, _c3callerProxy, _dappID) {
         wNATIVE = _wNATIVE;
         swapIDKeeper = _swapIDKeeper;
         theiaConfig = _theiaConfig;
@@ -139,7 +138,6 @@ contract TheiaRouter is FeeManager, C3CallerDapp {
     }
 
     function _addOperator(address op) internal {
-        require(op != address(0), "TR:Operator is address(0)");
         require(!isOperator[op], "TR:Operator already exists");
         isOperator[op] = true;
         operators.push(op);
@@ -253,6 +251,22 @@ contract TheiaRouter is FeeManager, C3CallerDapp {
         return _recvAmount;
     }
 
+    function queryFee(
+        address _feeToken,
+        uint256 _toChainID
+    ) public view returns (uint256) {
+        uint256 feeReadable = calcBaseSwapFee(cID(), _toChainID, _feeToken);
+        if (feeReadable > 0) {
+            uint256 _swapFee = convertDecimals(
+                feeReadable,
+                2,
+                ITheiaERC20(_feeToken).decimals()
+            );
+            return _swapFee;
+        }
+        return 0;
+    }
+
     function _payFee(
         address _feeToken,
         uint256 _toChainID
@@ -286,6 +300,10 @@ contract TheiaRouter is FeeManager, C3CallerDapp {
                 _tokenID,
                 _toChainID
             );
+        require(
+            _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
+            "TR:token not support"
+        );
 
         address _token = address(bytes20(bytes(_fromConfig.ContractAddress)));
         address _recToken = address(bytes20(bytes(_toConfig.ContractAddress)));

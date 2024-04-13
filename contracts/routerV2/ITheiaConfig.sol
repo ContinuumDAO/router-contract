@@ -7,6 +7,7 @@ library Structs {
         uint256 ChainID;
         string BlockChain;
         string RouterContract;
+        string Extra;
     }
 
     struct TokenConfig {
@@ -23,15 +24,6 @@ library Structs {
         uint256 ToChainID;
         uint256 MaximumSwap;
         uint256 MinimumSwap;
-    }
-
-    struct FeeConfig {
-        uint256 FromChainID;
-        uint256 ToChainID;
-        uint256 MaximumSwapFee; // FixFee if MaximumSwapFee == MinimumSwapFee
-        uint256 MinimumSwapFee;
-        uint256 SwapFeeRatePerMillion;
-        uint256 PayFromOrTo; // 1:fromChainPay 2:toChainPay
     }
 
     struct MultichainToken {

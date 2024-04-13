@@ -25,7 +25,6 @@ contract TheiaRouterConfig is
     mapping(string => bool) private _allTokenIDsMap; // key is tokenID
     mapping(string => Structs.MultichainToken[]) private _allMultichainTokens; // key is tokenID
     mapping(string => Structs.SwapConfig[]) private _allSwapConfigs; // key is tokenID
-    mapping(string => Structs.FeeConfig[]) private _allFeeConfigs; // key is tokenID
 
     // relationship configuration
     mapping(string => mapping(uint256 => Structs.TokenConfig))
@@ -35,13 +34,19 @@ contract TheiaRouterConfig is
 
     mapping(string => mapping(uint256 => mapping(uint256 => Structs.SwapConfig)))
         private _swapConfig; // key is tokenID,srcChainID,dstChainID
-    mapping(string => mapping(uint256 => mapping(uint256 => Structs.FeeConfig)))
-        private _feeConfig; // key is tokenID,srcChainID,dstChainID
 
     mapping(uint256 => mapping(string => string)) private _tokenIDMap; // key is chainID,tokenAddress
 
     // mpc configuration
     mapping(string => string) private _mpcPubkey; // key is mpc address
+
+    modifier onlyAuth() {
+        require(
+            hasRole(CONFIG_ROLE, msg.sender) || isCaller(msg.sender),
+            "TR: AUTH FORBIDDEN"
+        );
+        _;
+    }
 
     constructor(
         address _c3callerProxy,
@@ -51,6 +56,10 @@ contract TheiaRouterConfig is
         _grantRole(CONFIG_ROLE, msg.sender);
     }
 
+    function cID() public view returns (uint) {
+        return block.chainid;
+    }
+    
     function getAllChainIDs() external view returns (uint256[] memory) {
         return _allChainIDs;
     }
@@ -158,7 +167,8 @@ contract TheiaRouterConfig is
             result[i] = Structs.ChainConfig(
                 chainID,
                 c.BlockChain,
-                c.RouterContract
+                c.RouterContract,
+                c.Extra
             );
         }
         return result;
@@ -191,9 +201,9 @@ contract TheiaRouterConfig is
         returns (Structs.TokenConfig memory, Structs.TokenConfig memory)
     {
         Structs.TokenConfig memory c = _tokenConfig[tokenID][block.chainid];
-        require(c.Decimals > 0, "Token not exist on fromChain");
+        // require(c.Decimals > 0, "Token not exist on fromChain");
         Structs.TokenConfig memory tc = _tokenConfig[tokenID][toChainID];
-        require(tc.Decimals > 0, "TokenAddr not exist on toChain");
+        // require(tc.Decimals > 0, "TokenAddr not exist on toChain");
         return (c, tc);
     }
 
@@ -203,14 +213,6 @@ contract TheiaRouterConfig is
         uint256 dstChainID
     ) external view returns (Structs.SwapConfig memory) {
         return _swapConfig[tokenID][srcChainID][dstChainID];
-    }
-
-    function getFeeConfig(
-        string memory tokenID,
-        uint256 srcChainID,
-        uint256 dstChainID
-    ) external view returns (Structs.FeeConfig memory) {
-        return _feeConfig[tokenID][srcChainID][dstChainID];
     }
 
     function getAllSwapConfigs(
@@ -249,42 +251,6 @@ contract TheiaRouterConfig is
         return result;
     }
 
-    function getAllFeeConfigs(
-        string memory tokenID
-    ) external view returns (Structs.FeeConfig[] memory) {
-        return _allFeeConfigs[tokenID];
-    }
-
-    function getFeeConfigsCount(
-        string memory tokenID
-    ) external view returns (uint256) {
-        return _allFeeConfigs[tokenID].length;
-    }
-
-    function getFeeConfigAtIndex(
-        string memory tokenID,
-        uint256 index
-    ) external view returns (Structs.FeeConfig memory) {
-        return _allFeeConfigs[tokenID][index];
-    }
-
-    function getFeeConfigAtIndexRange(
-        string memory tokenID,
-        uint256 startIndex,
-        uint256 endIndex
-    ) external view returns (Structs.FeeConfig[] memory) {
-        Structs.FeeConfig[] storage _configs = _allFeeConfigs[tokenID];
-        if (endIndex > _configs.length) {
-            endIndex = _configs.length;
-        }
-        uint256 count = endIndex - startIndex;
-        Structs.FeeConfig[] memory result = new Structs.FeeConfig[](count);
-        for (uint256 i = startIndex; i < endIndex; i++) {
-            result[i - startIndex] = _configs[i];
-        }
-        return result;
-    }
-
     function getMPCPubkey(
         string memory mpcAddress
     ) external view returns (string memory) {
@@ -294,16 +260,13 @@ contract TheiaRouterConfig is
     function setChainConfig(
         uint256 chainID,
         string memory blockChain,
-        string memory routerContract
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
+        string memory routerContract,
+        string memory extra
+    ) external onlyAuth returns (bool) {
         return
             _setChainConfig(
                 chainID,
-                Structs.ChainConfig(chainID, blockChain, routerContract)
+                Structs.ChainConfig(chainID, blockChain, routerContract, extra)
             );
     }
 
@@ -315,11 +278,7 @@ contract TheiaRouterConfig is
         uint256 version,
         string memory routerContract,
         string memory underlying
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
+    ) external onlyAuth returns (bool) {
         return
             _setTokenConfig(
                 tokenID,
@@ -335,49 +294,12 @@ contract TheiaRouterConfig is
             );
     }
 
-    function setSwapAndFeeConfig(
-        string memory tokenID,
-        uint256 srcChainID,
-        uint256 dstChainID,
-        uint256 maxSwap,
-        uint256 minSwap,
-        uint256 maxFee,
-        uint256 minFee,
-        uint256 feeRate,
-        uint256 payFrom // 1:from 2:to 0:free
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        return
-            _setSwapConfig(
-                tokenID,
-                Structs.SwapConfig(srcChainID, dstChainID, maxSwap, minSwap)
-            ) &&
-            _setFeeConfig(
-                tokenID,
-                Structs.FeeConfig(
-                    srcChainID,
-                    dstChainID,
-                    maxFee,
-                    minFee,
-                    feeRate,
-                    payFrom
-                )
-            );
-    }
-
     function setSwapConfig(
         string memory tokenID,
         uint256 dstChainID,
         uint256 maxSwap,
         uint256 minSwap
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
+    ) external onlyAuth returns (bool) {
         return
             _setSwapConfig(
                 tokenID,
@@ -388,97 +310,18 @@ contract TheiaRouterConfig is
     function setSwapConfigs(
         string memory tokenID,
         Structs.SwapConfig[] calldata configs
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
+    ) external onlyAuth {
         for (uint256 i = 0; i < configs.length; i++) {
             _setSwapConfig(tokenID, configs[i]);
         }
     }
 
-    function setFeeConfig(
-        string memory tokenID,
-        uint256 srcChainID,
-        uint256 dstChainID,
-        uint256 maxFee,
-        uint256 minFee,
-        uint256 feeRate,
-        uint256 payFrom // 1:from 2:to 0:free
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        return
-            _setFeeConfig(
-                tokenID,
-                Structs.FeeConfig(
-                    srcChainID,
-                    dstChainID,
-                    maxFee,
-                    minFee,
-                    feeRate,
-                    payFrom
-                )
-            );
-    }
-
-    function setFeeConfigs(
-        string memory tokenID,
-        Structs.FeeConfig[] calldata configs
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        for (uint256 i = 0; i < configs.length; i++) {
-            _setFeeConfig(tokenID, configs[i]);
-        }
-    }
-
-    function setMPCPubkey(string memory addr, string memory pubkey) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
+    function setMPCPubkey(
+        string memory addr,
+        string memory pubkey
+    ) external onlyAuth {
         _mpcPubkey[addr] = pubkey;
     }
-
-    // function addChainID(uint256 chainID) external returns (bool) {
-    //     require(
-    //         hasRole(CONFIG_ROLE, msg.sender),
-    //         "RouterConfig: no config role"
-    //     );
-    //     require(!isChainIDExist(chainID));
-    //     _allChainIDs.push(chainID);
-    //     _allChainIDsMap[chainID] = true;
-    //     return true;
-    // }
-
-    // function addTokenID(string memory tokenID) external returns (bool) {
-    //     require(
-    //         hasRole(CONFIG_ROLE, msg.sender),
-    //         "RouterConfig: no config role"
-    //     );
-    //     require(!isTokenIDExist(tokenID));
-    //     _allTokenIDs.push(tokenID);
-    //     _allTokenIDsMap[tokenID] = true;
-    //     return true;
-    // }
-
-    // function setMultichainToken(
-    //     string memory tokenID,
-    //     uint256 chainID,
-    //     string memory token
-    // ) public {
-    //     require(
-    //         hasRole(CONFIG_ROLE, msg.sender),
-    //         "RouterConfig: no config role"
-    //     );
-    //     _setMultichainToken(tokenID, chainID, token);
-    // }
 
     function _c3Fallback(
         bytes4 _selector,
@@ -540,33 +383,6 @@ contract TheiaRouterConfig is
         Structs.SwapConfig[] storage _configs = _allSwapConfigs[tokenID];
         uint256 length = _configs.length;
         Structs.SwapConfig memory _config;
-        for (uint256 i = 0; i < length; ++i) {
-            _config = _configs[i];
-            if (
-                _config.FromChainID == srcChainID &&
-                _config.ToChainID == dstChainID
-            ) {
-                _configs[i] = config;
-                return true;
-            }
-        }
-        _configs.push(config);
-        return true;
-    }
-
-    function _setFeeConfig(
-        string memory tokenID,
-        Structs.FeeConfig memory config
-    ) internal returns (bool) {
-        require(bytes(tokenID).length > 0);
-
-        uint256 srcChainID = config.FromChainID;
-        uint256 dstChainID = config.ToChainID;
-        _feeConfig[tokenID][srcChainID][dstChainID] = config;
-
-        Structs.FeeConfig[] storage _configs = _allFeeConfigs[tokenID];
-        uint256 length = _configs.length;
-        Structs.FeeConfig memory _config;
         for (uint256 i = 0; i < length; ++i) {
             _config = _configs[i];
             if (

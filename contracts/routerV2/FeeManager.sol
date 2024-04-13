@@ -6,14 +6,19 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Governor.sol";
 
-contract FeeManager is Governor {
+abstract contract FeeManager is Governor {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address[] public feeTokenList;
     mapping(address => uint256) public feeTokenIndexMap;
 
-    constructor(address _feeToken, address _gov) Governor(_gov) {
+    constructor(
+        address _feeToken,
+        address _gov,
+        address _c3callerProxy,
+        uint256 _dappID
+    ) Governor(_gov, _c3callerProxy, _dappID) {
         feeTokenList.push(_feeToken);
         feeTokenIndexMap[_feeToken] = 1;
     }
