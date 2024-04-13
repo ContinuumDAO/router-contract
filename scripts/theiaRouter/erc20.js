@@ -20,12 +20,15 @@ async function deploy(args, hre) {
 
     console.log(`npx hardhat verify --network ${networkName} ${theiaERC20.target} ${args.name} ${args.symbol} ${args.decimals} ${args.underlying} ${evn[networkName].TheiaRouter}`);
 
-    return hre.run("verify:verify", {
-        address: theiaERC20.target,
-        contract: "contracts/routerV2/TheiaERC20.sol:TheiaERC20",
-        constructorArguments: [args.name, args.symbol, args.decimals, args.underlying, evn[networkName].TheiaRouter],
-    });
-
+    try {
+        hre.run("verify:verify", {
+            address: theiaERC20.target,
+            contract: "contracts/routerV2/TheiaERC20.sol:TheiaERC20",
+            constructorArguments: [args.name, args.symbol, args.decimals, args.underlying, evn[networkName].TheiaRouter],
+        });
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 task("erc20", "Deploys Theia ERC20 contract")

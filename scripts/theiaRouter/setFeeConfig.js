@@ -2,8 +2,11 @@ const hre = require("hardhat");
 const fs = require("fs");
 const evn = require("../../env.json")
 
+const token = "theiaUSDT"
+const fee = 500
+
 async function main() {
-    const networkName = hre.network.name.toUpperCase()
+    const networkName = hre.network.name
     const chainId = hre.network.config.chainId
     console.log("Deploy Network name=", networkName);
     console.log("Network chain id=", chainId);
@@ -12,11 +15,11 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.getContractAt("TheiaRouterConfig", evn[networkName].TheiaRouterConfig);
-    console.log("TheiaRouterConfig address:", aRouterConfig.target);
+    const TheiaRouter = await hre.ethers.getContractAt("TheiaRouter", evn[networkName.toUpperCase()].TheiaRouter);
+    console.log("TheiaRouter address:", TheiaRouter.target);
 
     const tokens = {}
-    const tokensContents = fs.readFileSync('TOKEN_CONFIG.txt', 'utf-8');
+    const tokensContents = fs.readFileSync('FEE_CONFIG.txt', 'utf-8');
     tokensContents.split(/\r?\n/).forEach(line => {
         if (line.length == 0) {
             return;
@@ -25,7 +28,7 @@ async function main() {
         if (!tokens[args.name]) {
             tokens[args.name] = {}
         }
-        if (args.execChain == networkName) {
+        if (args.chainId == chainId) {
             tokens[args.name][args.chainId] = args;
             console.log("already setConfig", args.name, args.chain, args.chainId);
         }
@@ -39,28 +42,30 @@ async function main() {
             break
         }
         const args = JSON.parse(line);
+        if (args.name != token || args.chainId != chainId) {
+            continue
+        }
         if (!tokens[args.name] || !tokens[args.name][args.chainId]) {
-            let extra = "{\"underlying\":\"" + args.underlying + "\"}"
-            let tx = await aRouterConfig.connect(signer).setTokenConfig(args.name, args.chainId, args.address, args.decimals, 1,
-                args.router, extra)
-            console.log("setTokenConfig:", args.name, args.chain, args.chainId, "Tx:", tx.hash);
+            let feeToken = args.underlying
+            if (feeToken == "0x0000000000000000000000000000000000000000") {
+                feeToken = args.address
+            }
+            await TheiaRouter.connect(signer).addFeeToken(feeToken)
+            await sleep(20000)
+            let tx = await TheiaRouter.connect(signer).setFeeConfig(args.chainId, 1, 1, [feeToken], [fee])
+            console.log("setFeeConfig:", args.name, args.chain, args.chainId, feeToken, "Tx:", tx.hash);
             if (!tokens[args.name]) {
                 tokens[args.name] = {}
             }
             tokens[args.name][args.chainId] = {
                 name: args.name,
-                execChain: networkName,
                 chain: args.chain,
                 chainId: args.chainId,
-                address: args.address,
-                decimals: args.decimals,
-                version: 1,
-                router: args.router,
-                extra: extra,
+                feeToken: feeToken,
+                fee: fee,
                 tx: tx.hash
             }
-            fs.appendFileSync("TOKEN_CONFIG.txt", JSON.stringify(tokens[args.name][args.chainId]) + "\n");
-            await sleep(5000)
+            fs.appendFileSync("FEE_CONFIG.txt", JSON.stringify(tokens[args.name][args.chainId]) + "\n");
         }
     }
 }

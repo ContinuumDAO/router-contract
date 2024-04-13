@@ -12,7 +12,7 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig");
+    const aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig", [evn[networkName.toUpperCase()].C3CallerProxy, 1]);
     await aRouterConfig.waitForDeployment();
 
     console.log('"TheiaRouterConfig":', `"${aRouterConfig.target}",`);
@@ -20,7 +20,7 @@ async function main() {
     await hre.run("verify:verify", {
         address: aRouterConfig.target,
         contract: "contracts/routerV2/TheiaRouterConfig.sol:TheiaRouterConfig",
-        constructorArguments: [],
+        constructorArguments: [evn[networkName.toUpperCase()].C3CallerProxy, 1],
     });
 }
 

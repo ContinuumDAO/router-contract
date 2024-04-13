@@ -4,13 +4,11 @@ require("./scripts/theiaRouter/erc20")
 
 const {
   BSC_TEST,
-  GOERLI,
-  MUMBAI,
   ARB_TEST,
-  OP_GOERLI,
   SONIC,
   SEPOLIA,
-  BLAST_SEP
+  BLAST_SEP,
+  AMOY
 } = require("./env.json")
 
 
@@ -52,26 +50,10 @@ module.exports = {
       gasPrice: BSC_TEST.GASPRICE,
       accounts: [BSC_TEST.DEPLOY_KEY]
     },
-    goerli: {
-      url: GOERLI.URL,
-      chainId: 5,
-      accounts: [GOERLI.DEPLOY_KEY]
-    },
-    mumbai: {
-      url: MUMBAI.URL,
-      chainId: 80001,
-      accounts: [MUMBAI.DEPLOY_KEY]
-    },
     arb_test: {
       url: ARB_TEST.URL,
       chainId: 421614,
       accounts: [ARB_TEST.DEPLOY_KEY]
-    },
-    op_goerli: {
-      url: OP_GOERLI.URL,
-      gasPrice: OP_GOERLI.GASPRICE,
-      chainId: 420,
-      accounts: [OP_GOERLI.DEPLOY_KEY]
     },
     sonic: {
       url: SONIC.URL,
@@ -83,27 +65,24 @@ module.exports = {
       chainId: 11155111,
       accounts: [SEPOLIA.DEPLOY_KEY]
     },
-    blast: {
-      url: "https://rpc.blast.io",
-      chainId: 81457,
-      accounts: [SEPOLIA.DEPLOY_KEY],
-      gasPrice: 1000000000,
-    },
     blast_sep: {
       url: BLAST_SEP.URL,
       chainId: 168587773,
       accounts: [BLAST_SEP.DEPLOY_KEY],
       gasPrice: 1000000000,
     },
+    amoy: {
+      url: AMOY.URL,
+      chainId: 80002,
+      accounts: [AMOY.DEPLOY_KEY]
+    }
   },
   etherscan: {
     apiKey: {
       bscTestnet: BSC_TEST.API_KEY,
-      goerli: GOERLI.API_KEY,
       sepolia: SEPOLIA.API_KEY,
-      polygonMumbai: MUMBAI.API_KEY,
       arbitrumSepolia: ARB_TEST.API_KEY,
-      optimisticGoerli: OP_GOERLI.API_KEY,
+      sonic: SONIC.API_KEY,
     },
     customChains: [
       {
@@ -112,7 +91,6 @@ module.exports = {
         urls: {
           apiURL: SONIC.URL,
           browserURL: "https://public-sonic.fantom.network",
-          apiKey: SONIC.API_KEY
         }
       }
     ]
