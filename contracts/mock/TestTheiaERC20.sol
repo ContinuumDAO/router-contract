@@ -4,10 +4,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../routerV2/TheiaERC20FeeConfig.sol";
 import "../routerV2/TheiaERC20.sol";
 
-contract TestTheiaERC20 is IERC20, TheiaERC20FeeConfig, TheiaERC20 {
+contract TestTheiaERC20 is IERC20, TheiaERC20 {
     constructor(
         string memory _name,
         string memory _symbol,

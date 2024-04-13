@@ -35,7 +35,6 @@ describe("TheiaRouter", function () {
             _owner.address, c3CallerProxy.target, 1);
 
         await swapIDKeeper.addSupportedCaller(routerV2.target)
-        await routerV2.addOperator(c3Caller.target)
 
         owner = _owner
         otherAccount = _otherAccount
@@ -95,7 +94,7 @@ describe("TheiaRouter", function () {
         await deployC3Caller()
         await deployRouterV2()
         erc20Token = await deployC3ERC20("theiaETH", "theiaETH", 18, weth.target, routerV2.target)
-        underlyingToken = await deployC3ERC20("theiaUSDC", "theiaUSDC", 18, usdc.target, routerV2.target)
+        underlyingToken = await deployC3ERC20("theiaUSDC", "theiaUSDC", 6, usdc.target, routerV2.target)
         theiaToken = await deployC3ERC20("theiaToken", "theiaToken", 18, "0x0000000000000000000000000000000000000000", owner.address)
         // await theiaToken.initVault(routerV2.target)
 
@@ -116,6 +115,22 @@ describe("TheiaRouter", function () {
             expect(await erc20Token.owner()).to.equal(routerV2.target)
 
             expect(await routerV2.gov()).to.equal(owner.address)
+        });
+    });
+
+    describe("TheiaRouterConfig", function () {
+        it("add del", async function () {
+            await expect(routerV2.addFeeToken(usdc.target)).to.emit(routerV2, "AddFeeToken").withArgs(usdc.target)
+
+            await expect(routerV2.delFeeToken(usdc.target)).to.emit(routerV2, "DelFeeToken").withArgs(usdc.target)
+        });
+
+        it("setFeeConfig", async function () {
+            await routerV2.setFeeConfig(chainID, 0, 1, [usdc.target], [500])
+
+            expect(await routerV2.getFeeConfig(1, 250, usdc.target)).to.equal(0)
+
+            expect(await routerV2.getFeeConfig(chainID, 250, usdc.target)).to.equal(500)
         });
     });
 
@@ -154,46 +169,50 @@ describe("TheiaRouter", function () {
 
             await registerAAA()
 
-            console.log(await routerV2.queryFee(usdc.target, 250))
+            await usdc.transfer(otherAccount, 5000000)
+            expect(await usdc.balanceOf(otherAccount.address)).to.equal(5000000)
+            await usdc.connect(otherAccount).approve(routerV2, 5000000)
+
+            await routerV2.setFeeConfig(chainID, 0, 1, [usdc.target], [500])
+
+            // console.log(await routerV2.queryFee(usdc.target, 250))
+
+            await theiaToken.connect(otherAccount).approve(routerV2.target, amount)
 
             await expect(routerV2.connect(otherAccount).swapOutAuto("AAA", amount.toString(), routerV2.target, otherAccount.address, usdc.target, 250))
-                .to.revertedWithoutReason()
+                .to.emit(routerV2, "LogSwapOut").withArgs(theiaToken.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 5000000, swapID, calldata)
+                .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
 
-            // await expect(routerV2.connect(otherAccount).swapOutAuto(theiaToken.target, amount.toString(), routerV2.target, otherAccount.address, theiaToken.target, 18, 250))
-            //     .to.emit(routerV2, "LogSwapOut").withArgs(theiaToken.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
-            //     .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
+            expect(await usdc.balanceOf(otherAccount.address)).to.equal(0)
+            expect(await usdc.balanceOf(routerV2.target)).to.equal(5000000)
 
 
-            // await expect(c3CallerProxy.execute("1", uuid, routerV2.target, chainID.toString(), "sourceTxHash", "", calldata))
-            //     .to.emit(c3Caller, "LogExecCall").withArgs("1", routerV2.target, true, uuid, chainID, "sourceTxHash", calldata, "0x0000000000000000000000000000000000000000000000000000000000000001")
-            //     .to.emit(routerV2, "LogSwapIn").withArgs(theiaToken.target, otherAccount.address, swapID, amount.toString(), chainID, chainID, "sourceTxHash")
-
-            // expect(await theiaToken.balanceOf(otherAccount.address)).to.equal(amount)
-            // // await expect(routerV2.swapInAuto(swapID, erc20Token.target, otherAccount.address, amount.toString()))
-            // //     .to.be.rejectedWith("FeeConfig: Invalid chainID");
+            
         });
 
-        // it("Fallback", async function () {
-        //     let amount = web3.utils.toNumber("1000000000000000000")
-        //     await theiaToken.mint(otherAccount.address, amount)
+        it("Fallback", async function () {
+            let amount = web3.utils.toNumber("1000000000000000000")
+            await theiaToken.mint(otherAccount.address, amount)
 
-        //     let swapID = await swapIDKeeper.calcSwapID(routerV2.target, theiaToken.target, otherAccount.address, amount.toString(), otherAccount.address, "250")
-        //     let calldata = await theiaCallData.genSwapInAutoCallData(theiaToken.target, amount.toString(), otherAccount.address, swapID, 18, theiaToken.target)
+            let swapID = await swapIDKeeper.calcSwapID(routerV2.target, theiaToken.target, otherAccount.address, amount.toString(), otherAccount.address, "250")
+            let calldata = await theiaCallData.genSwapInAutoCallData(theiaToken.target, amount.toString(), otherAccount.address, swapID, 18, theiaToken.target)
 
-        //     await expect(routerV2.connect(otherAccount).swapOutAuto(theiaToken.target, amount.toString(), routerV2.target, otherAccount.address, theiaToken.target, 18, 250))
-        //         .to.emit(routerV2, "LogSwapOut").withArgs(theiaToken.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
+            await registerAAA()
 
-        //     let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", theiaToken.target.toLowerCase(), "250", calldata)
-        //     let fallbackdata = "0xb121f51d00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000c404b97db9d9233bded7b9898c2c07a128ae0da6308be64ea4448a0917784a1c1217a95cd70000000000000000000000005322471a7e37ac2b8902cfcba84d266b37d811a000000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000de0b6b3a764000000000000000000000000000000000000000000000000000000000000000000120000000000000000000000005322471a7e37ac2b8902cfcba84d266b37d811a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
-        //     // call the wrong to contract
-        //     await expect(c3CallerProxy.execute("2", uuid, routerV2.target, chainID.toString(), "sourceTxHash", fallbackdata, calldata))
-        //         .to.rejectedWith("C3Caller: dappID dismatch");
+            await expect(routerV2.connect(otherAccount).swapOutAuto("AAA", amount.toString(), routerV2.target, otherAccount.address, usdc.target, 250))
+                .to.emit(routerV2, "LogSwapOut").withArgs(theiaToken.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
 
-        //     // await expect(c3CallerProxy.c3Fallback("1", uuid, routerV2.target, chainID.toString(), "failTxHash", fallbackdata, "0x"))
-        //     //     .to.emit(c3Caller, "LogExecFallback").withArgs("1", routerV2.target, true, uuid, chainID, "failTxHash", "0x", fallbackdata, "0x0000000000000000000000000000000000000000000000000000000000000001")
-        //     //     .emit(routerV2, "LogSwapFallback").withArgs(swapID, theiaToken.target, otherAccount.address, amount.toString(), "0x04b97db9", "0x" + calldata.substring(10), "0x")
+            let uuid = await c3SwapIDKeeper.calcCallerUUID(c3Caller.target, "1", theiaToken.target.toLowerCase(), "250", calldata)
+            let fallbackdata ="0xb121f51d00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000c4" + calldata.substring(2) + "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+            // call the wrong to contract
+            await expect(c3CallerProxy.execute("2", uuid, routerV2.target, chainID.toString(), "sourceTxHash", fallbackdata, calldata))
+                .to.rejectedWith("C3Caller: dappID dismatch");
 
-        // });
+            await expect(c3CallerProxy.c3Fallback("1", uuid, routerV2.target, chainID.toString(), "failTxHash", fallbackdata, "0x"))
+                .to.emit(c3Caller, "LogExecFallback").withArgs("1", routerV2.target, true, uuid, chainID, "failTxHash", "0x", fallbackdata, "0x0000000000000000000000000000000000000000000000000000000000000001")
+            // .emit(routerV2, "LogSwapFallback").withArgs(swapID, theiaToken.target, otherAccount.address, amount.toString(), "0x04b97db9", "0x" + calldata.substring(10), "0x")
+
+        });
 
         // it("swapOutAuto Underlying", async function () {
         //     let amount = web3.utils.toNumber("1000000000000000000")

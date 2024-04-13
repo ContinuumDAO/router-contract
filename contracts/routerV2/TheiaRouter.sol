@@ -2,6 +2,7 @@
 
 pragma solidity ^0.8.19;
 
+import "./TheiaUtils.sol";
 import "./ISwapIDKeeper.sol";
 import "./ITheiaERC20.sol";
 import "./FeeManager.sol";
@@ -35,9 +36,6 @@ contract TheiaRouter is FeeManager {
     address public constant factory = address(0);
     address public immutable wNATIVE;
 
-    mapping(address => bool) public isOperator;
-    address[] public operators;
-
     address public swapIDKeeper;
     address public theiaConfig;
 
@@ -66,7 +64,6 @@ contract TheiaRouter is FeeManager {
         wNATIVE = _wNATIVE;
         swapIDKeeper = _swapIDKeeper;
         theiaConfig = _theiaConfig;
-        _addOperator(_gov);
     }
 
     receive() external payable {}
@@ -116,14 +113,6 @@ contract TheiaRouter is FeeManager {
         bytes reason
     );
 
-    modifier onlyAuth() {
-        require(
-            isOperator[msg.sender] || isCaller(msg.sender),
-            "TR: AUTH FORBIDDEN"
-        );
-        _;
-    }
-
     modifier chargeDestFee(address _dapp) {
         uint256 _prevGasLeft = gasleft();
         _;
@@ -135,40 +124,6 @@ contract TheiaRouter is FeeManager {
 
     function version() public pure returns (uint) {
         return 1;
-    }
-
-    function _addOperator(address op) internal {
-        require(!isOperator[op], "TR:Operator already exists");
-        isOperator[op] = true;
-        operators.push(op);
-    }
-
-    function addOperator(address _auth) external onlyGov {
-        _addOperator(_auth);
-    }
-
-    function getAllOperators() external view returns (address[] memory) {
-        return operators;
-    }
-
-    function revokeOperator(address _auth) external onlyGov {
-        require(isOperator[_auth], "TR:Operator not found");
-        isOperator[_auth] = false;
-        uint256 length = operators.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (operators[i] == _auth) {
-                operators[i] = operators[length - 1];
-                operators.pop();
-                return;
-            }
-        }
-    }
-
-    function changeVault(
-        address token,
-        address newVault
-    ) external onlyGov returns (bool) {
-        return ITheiaERC20(token).changeVault(newVault);
     }
 
     function changeSwapIDKeeper(address _swapIDKeeper) external onlyGov {
@@ -210,7 +165,8 @@ contract TheiaRouter is FeeManager {
         IERC20(_underlying).safeTransferFrom(msg.sender, token, amount);
         uint256 new_balance = IERC20(_underlying).balanceOf(token);
         require(
-            new_balance >= old_balance && new_balance <= old_balance + amount
+            new_balance >= old_balance && new_balance <= old_balance + amount,
+            "2"
         );
         return new_balance - old_balance;
     }
@@ -226,7 +182,9 @@ contract TheiaRouter is FeeManager {
         IERC20(wNATIVE).safeTransfer(token, msg.value);
         uint256 new_balance = IERC20(wNATIVE).balanceOf(token);
         require(
-            new_balance >= old_balance && new_balance <= old_balance + msg.value
+            new_balance >= old_balance &&
+                new_balance <= old_balance + msg.value,
+            "1"
         );
         return new_balance - old_balance;
     }
@@ -245,7 +203,7 @@ contract TheiaRouter is FeeManager {
                 _recvAmount = _swapOutUnderlying(_token, _amount);
             }
         } else {
-            ITheiaERC20(_token).burn(msg.sender, _amount);
+            theiaToken.burn(msg.sender, _amount);
             _recvAmount = _amount;
         }
         return _recvAmount;
@@ -255,7 +213,7 @@ contract TheiaRouter is FeeManager {
         address _feeToken,
         uint256 _toChainID
     ) public view returns (uint256) {
-        uint256 feeReadable = calcBaseSwapFee(cID(), _toChainID, _feeToken);
+        uint256 feeReadable = getFeeConfig(cID(), _toChainID, _feeToken);
         if (feeReadable > 0) {
             uint256 _swapFee = convertDecimals(
                 feeReadable,
@@ -271,7 +229,7 @@ contract TheiaRouter is FeeManager {
         address _feeToken,
         uint256 _toChainID
     ) internal returns (uint256) {
-        uint256 feeReadable = calcBaseSwapFee(cID(), _toChainID, _feeToken);
+        uint256 feeReadable = getFeeConfig(cID(), _toChainID, _feeToken);
         if (feeReadable > 0) {
             uint256 _swapFee = convertDecimals(
                 feeReadable,
@@ -283,6 +241,36 @@ contract TheiaRouter is FeeManager {
             return _swapFee;
         }
         return 0;
+    }
+
+    // for test
+    function test(
+        string memory _tokenID,
+        uint256 _toChainID,
+        address _addr
+    ) public view returns (address, address, address) {
+        (
+            Structs.TokenConfig memory _fromConfig,
+            Structs.TokenConfig memory _toConfig
+        ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(
+                _tokenID,
+                _toChainID
+            );
+        require(
+            _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
+            "TR:token not support"
+        );
+
+        address _token = TheiaUtils.toAddress(_fromConfig.ContractAddress);
+        // address _token = address(bytes20(bytes(_fromConfig.ContractAddress)));
+        address _recToken = TheiaUtils.toAddress(_toConfig.ContractAddress);
+
+        assert(_token == _addr);
+
+        ITheiaERC20 theiaToken = ITheiaERC20(_token);
+        address _underlying = theiaToken.underlying();
+
+        return (_token, _recToken, _underlying);
     }
 
     function swapOutAuto(
@@ -305,8 +293,8 @@ contract TheiaRouter is FeeManager {
             "TR:token not support"
         );
 
-        address _token = address(bytes20(bytes(_fromConfig.ContractAddress)));
-        address _recToken = address(bytes20(bytes(_toConfig.ContractAddress)));
+        address _token = TheiaUtils.toAddress(_fromConfig.ContractAddress);
+        address _recToken = TheiaUtils.toAddress(_toConfig.ContractAddress);
         uint8 _recDecimals = _toConfig.Decimals;
         checkSwapOut(_token, _to, _receiver, _amount);
         require(_recToken != address(0), "TR:recToken empty");
@@ -565,7 +553,7 @@ contract TheiaRouter is FeeManager {
         uint256 amount,
         uint256 tokenDecimals,
         address fromTokenAddr
-    ) external onlyAuth returns (bool) {
+    ) external onlyGov returns (bool) {
         require(token != address(0), "TR:token empty");
         require(swapID.length > 0, "TR:swapID empty");
         require(to != address(0), "TR:to empty");
@@ -628,7 +616,7 @@ contract TheiaRouter is FeeManager {
         address fromTokenAddr, // use string?
         address dex,
         bytes memory data
-    ) external onlyAuth returns (bool) {
+    ) external onlyGov returns (bool) {
         require(token != address(0), "TR:token empty");
         require(swapID.length > 0, "TR:swapID empty");
         require(to != address(0), "TR:to empty");

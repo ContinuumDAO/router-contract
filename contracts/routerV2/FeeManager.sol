@@ -69,19 +69,22 @@ abstract contract FeeManager is Governor {
         address[] memory feetokens,
         uint256[] memory fee // human readable * 100
     ) external onlyGov {
+        require(srcChainID > 0 || dstChainID > 0, "FM: ChainID empty");
         require(
             payFrom == FROM_CHAIN_PAY || payFrom == TO_CHAIN_PAY,
             "FM: Invalid payFrom"
         );
         require(feetokens.length == fee.length, "FM: Invalid list size");
 
-        if (payFrom == FROM_CHAIN_PAY) {
-            for (uint256 index = 0; index < feetokens.length; index++) {
+        for (uint256 index = 0; index < feetokens.length; index++) {
+            require(
+                feeTokenIndexMap[feetokens[index]] > 0,
+                "FM: token not exist"
+            );
+            if (payFrom == FROM_CHAIN_PAY) {
+                _fromFeeConfigs[block.chainid][feetokens[index]] = fee[index];
+            } else if (payFrom == TO_CHAIN_PAY) {
                 _toFeeConfigs[dstChainID][feetokens[index]] = fee[index];
-            }
-        } else if (payFrom == TO_CHAIN_PAY) {
-            for (uint256 index = 0; index < feetokens.length; index++) {
-                _fromFeeConfigs[srcChainID][feetokens[index]] = fee[index];
             }
         }
     }
@@ -100,13 +103,11 @@ abstract contract FeeManager is Governor {
         address feeToken
     ) public view returns (uint256) {
         require(fromChainID > 0 || toChainID > 0, "FM: Invalid chainID");
-        if (fromChainID == block.chainid) {
-            return getToChainFee(toChainID, feeToken);
-        } else if (toChainID == block.chainid) {
-            return getFromChainFee(toChainID, feeToken);
-        } else {
-            return 0;
+        uint256 fee = getFromChainFee(fromChainID, feeToken);
+        if (fee == 0) {
+            fee = getToChainFee(toChainID, feeToken);
         }
+        return fee;
     }
 
     function getFee(
@@ -117,7 +118,7 @@ abstract contract FeeManager is Governor {
         uint256 amount,
         bool underlying
     ) public view returns (uint256) {
-        uint256 baseFee = calcBaseSwapFee(fromChainID, toChainID, feeToken);
+        uint256 baseFee = getFeeConfig(fromChainID, toChainID, feeToken);
         if (baseFee == 0) return 0;
         else {
             uint256 feeFactor = underlying
@@ -170,14 +171,6 @@ abstract contract FeeManager is Governor {
         } else fee = 1000;
 
         return (fee);
-    }
-
-    function calcBaseSwapFee(
-        uint256 fromChainID,
-        uint256 toChainID,
-        address feeToken
-    ) public view returns (uint256) {
-        return getFeeConfig(fromChainID, toChainID, feeToken);
     }
 
     function withdrawFee(

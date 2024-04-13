@@ -3,7 +3,7 @@
 pragma solidity ^0.8.19;
 
 interface ITheiaERC20 {
-    function decimals() view external returns (uint8);
+    function decimals() external view returns (uint8);
 
     function mint(address to, uint256 amount) external returns (bool);
 
@@ -14,8 +14,6 @@ interface ITheiaERC20 {
     function applyMinter() external;
 
     function revokeMinter(address _auth) external;
-
-    function changeVault(address newVault) external returns (bool);
 
     function depositVault(
         uint256 amount,
@@ -33,9 +31,4 @@ interface ITheiaERC20 {
     function deposit(uint256 amount, address to) external returns (uint256);
 
     function withdraw(uint256 amount, address to) external returns (uint256);
-
-    function getFeeConfig(
-        uint256 fromChainID,
-        uint256 toChainID
-    ) external view returns (uint256, uint256, uint256);
 }
