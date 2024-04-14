@@ -176,6 +176,7 @@ library SafeERC20 {
 
 import "../protocol/C3CallerDapp.sol";
 import "../protocol/IC3Caller.sol";
+import "../routerV2/TheiaUtils.sol";
 
 contract DemoRouter is C3CallerDapp {
     using SafeERC20 for IERC20;
@@ -236,9 +237,7 @@ contract DemoRouter is C3CallerDapp {
         uint256 fromChainID,
         string toChainID,
         uint256 fee,
-        bytes32 swapoutID,
-        string callDapp,
-        bytes data
+        bytes32 swapoutID
     );
     event LogAnySwapInAndExec(
         address indexed dapp,
@@ -378,6 +377,29 @@ contract DemoRouter is C3CallerDapp {
         require(data.length > 0, "C3Call: empty c3 calldata");
     }
 
+    function _buildAndCall(
+        string calldata to,
+        string calldata toChainID,
+        bytes32 swapID,
+        uint256 amount,
+        address token,
+        string calldata receiver
+    ) internal {
+        IC3CallerProxy(c3CallerProxy).c3call(
+            dappID,
+            to,
+            toChainID,
+            abi.encodeWithSignature(
+                "swapInAuto(bytes32,address,address,uint256,uint256)",
+                swapID,
+                token,
+                TheiaUtils.toAddress(receiver),
+                amount,
+                cID()
+            )
+        );
+    }
+
     function _swapOut(
         address from,
         address token,
@@ -395,32 +417,10 @@ contract DemoRouter is C3CallerDapp {
             "",
             bytes("")
         );
-        IC3CallerProxy(c3CallerProxy).c3call(
-            dappID,
-            to,
-            toChainID,
-            abi.encodeWithSignature(
-                "swapInAuto(bytes32,address,address,uint256,uint256)",
-                swapID,
-                token,
-                address(bytes20(bytes(receiver))),
-                amount,
-                cID()
-            )
-        );
 
-        emit LogSwapOut(
-            token,
-            from,
-            to,
-            amount,
-            cID(),
-            toChainID,
-            0,
-            swapID,
-            "",
-            bytes("")
-        );
+        _buildAndCall(to, toChainID, swapID, amount, token, receiver);
+
+        emit LogSwapOut(token, from, to, amount, cID(), toChainID, 0, swapID);
     }
 
     function swapOut(
@@ -441,7 +441,7 @@ contract DemoRouter is C3CallerDapp {
         uint256 amount,
         uint256 fromChainID
     ) internal returns (uint256) {
-        (, , string memory _sourceTx,) = context();
+        (, , string memory _sourceTx) = context();
         emit LogSwapIn(
             token,
             to,
