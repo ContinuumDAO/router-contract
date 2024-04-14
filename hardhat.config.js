@@ -83,6 +83,7 @@ module.exports = {
       sepolia: SEPOLIA.API_KEY,
       arbitrumSepolia: ARB_TEST.API_KEY,
       sonic: SONIC.API_KEY,
+      arb_test: ARB_TEST.API_KEY,
     },
     customChains: [
       {
@@ -91,6 +92,14 @@ module.exports = {
         urls: {
           apiURL: SONIC.URL,
           browserURL: "https://public-sonic.fantom.network",
+        }
+      },
+      {
+        network: "arb_test",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/",
         }
       }
     ]
