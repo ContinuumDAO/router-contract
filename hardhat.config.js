@@ -8,7 +8,8 @@ const {
   SONIC,
   SEPOLIA,
   BLAST_SEP,
-  AMOY
+  AMOY,
+  AERON_TEST
 } = require("./env.json")
 
 
@@ -37,7 +38,7 @@ module.exports = {
       viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 1000,
+        runs: 2000,
       }
     }
   },
@@ -75,6 +76,11 @@ module.exports = {
       url: AMOY.URL,
       chainId: 80002,
       accounts: [AMOY.DEPLOY_KEY]
+    },
+    aeron_test: {
+      url: AERON_TEST.URL,
+      chainId: 462,
+      accounts: [AERON_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {

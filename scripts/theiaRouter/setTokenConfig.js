@@ -39,16 +39,16 @@ async function main() {
             break
         }
         const args = JSON.parse(line);
-        if (!tokens[args.name] || !tokens[args.name][args.chainId]) {
+        if (!tokens[args.symbol] || !tokens[args.symbol][args.chainId]) {
             let extra = "{\"underlying\":\"" + args.underlying + "\"}"
-            let tx = await aRouterConfig.connect(signer).setTokenConfig(args.name, args.chainId, args.address, args.decimals, 1,
+            let tx = await aRouterConfig.connect(signer).setTokenConfig(args.symbol, args.chainId, args.address, args.decimals, 1,
                 args.router, extra)
-            console.log("setTokenConfig:", args.name, args.chain, args.chainId, "Tx:", tx.hash);
-            if (!tokens[args.name]) {
-                tokens[args.name] = {}
+            console.log("setTokenConfig:", args.symbol, args.chain, args.chainId, "Tx:", tx.hash);
+            if (!tokens[args.symbol]) {
+                tokens[args.symbol] = {}
             }
-            tokens[args.name][args.chainId] = {
-                name: args.name,
+            tokens[args.symbol][args.chainId] = {
+                name: args.symbol,
                 execChain: networkName,
                 chain: args.chain,
                 chainId: args.chainId,
@@ -59,7 +59,7 @@ async function main() {
                 extra: extra,
                 tx: tx.hash
             }
-            fs.appendFileSync("TOKEN_CONFIG.txt", JSON.stringify(tokens[args.name][args.chainId]) + "\n");
+            fs.appendFileSync("TOKEN_CONFIG.txt", JSON.stringify(tokens[args.symbol][args.chainId]) + "\n");
             await sleep(5000)
         }
     }

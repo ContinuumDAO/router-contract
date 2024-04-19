@@ -1,6 +1,10 @@
 const hre = require("hardhat");
 const evn = require("../../env.json")
 
+let { join } = require('path')
+let { readFile, writeFile } = require('fs')
+let filePath = join(__dirname, '../../env.json')
+
 async function main() {
     const networkName = hre.network.name
     const chainId = hre.network.config.chainId
@@ -43,6 +47,14 @@ async function main() {
     await c3Caller.addOperator(currentImplAddress)
     await c3Caller.addOperator(c3CallerProxy.target)
 
+    upData(networkName.toUpperCase(), {
+        "C3SwapIDKeeper": c3SwapIDKeeper.target,
+        "C3Caller": c3Caller.target,
+        "C3DappManager": C3DappManager.target,
+        "C3CallerProxy": c3CallerProxy.target,
+        "C3CallerProxyImp": currentImplAddress,
+    })
+
     console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target} ${signer.address}`);
     console.log(`npx hardhat verify --network ${networkName} ${c3Caller.target} ${signer.address} ${c3SwapIDKeeper.target}`);
     console.log(`npx hardhat verify --network ${networkName} ${C3DappManager.target} ${signer.address}`);
@@ -77,3 +89,17 @@ main().catch((error) => {
     console.error(error);
     process.exitCode = 1;
 });
+
+
+function upData(key, obj) {
+    readFile(filePath, 'utf-8', (err, data) => {
+        if (err) throw err
+        let res = JSON.parse(data)
+
+        res[key] = Object.assign(res[key], obj)
+
+        writeFile(filePath, JSON.stringify(res, null, 4), err => {
+            if (err) throw err
+        })
+    })
+}

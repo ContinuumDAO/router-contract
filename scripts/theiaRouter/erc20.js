@@ -18,6 +18,18 @@ async function deploy(args, hre) {
     };
     fs.appendFileSync("ERC20.txt", JSON.stringify(result) + "\n");
 
+    console.log(`INSERT INTO token_config (chain_id, token_name, token_symbol, decimals, address, underlying_token, contract_version, router_address, is_check) VALUES (
+        '${result.chainId}',
+        '${result.name}',
+        '${result.symbol}',
+        ${result.decimals},
+        '${result.address}',
+        '${result.underlying}',
+        'V1',
+        '${result.router}',
+        0
+    );`);
+
     console.log(`npx hardhat verify --network ${networkName} ${theiaERC20.target} ${args.name} ${args.symbol} ${args.decimals} ${args.underlying} ${evn[networkName].TheiaRouter}`);
 
     try {
