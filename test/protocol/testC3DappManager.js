@@ -73,7 +73,7 @@ describe("C3Router", function () {
                 .to.emit(c3DappManager, "SetDAppConfig").withArgs(nextID, otherAccount.address, weth.target, "test1.com", "admin@test1.com");
 
             await expect(c3DappManager.connect(otherAccount).updateDappByGov(nextID, weth.target, 10000000))
-                .to.be.revertedWith("C3Dapp: only MPC");
+                .to.be.revertedWith("C3Dapp: only Gov");
 
         });
 

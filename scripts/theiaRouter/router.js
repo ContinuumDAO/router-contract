@@ -29,7 +29,7 @@ async function main() {
 
 
     const TheiaRouter = await hre.ethers.deployContract("TheiaRouter", [evn[networkName.toUpperCase()].wNATIVE, TheiaSwapIDKeeper.target, aRouterConfig.target,
-        evn[networkName.toUpperCase()].FEE_TOKEN, evn[networkName.toUpperCase()].MPC, evn[networkName.toUpperCase()].C3CallerProxy, 1]);
+    evn[networkName.toUpperCase()].FEE_TOKEN, evn[networkName.toUpperCase()].MPC, evn[networkName.toUpperCase()].C3CallerProxy, 1]);
     await TheiaRouter.waitForDeployment();
     console.log('"TheiaRouter":', `"${TheiaRouter.target}",`);
 
@@ -40,6 +40,12 @@ async function main() {
         "TheiaRouter": TheiaRouter.target,
         "TheiaRouterConfig": aRouterConfig.target
     })
+
+    console.log(`INSERT INTO router_config ( chain_id, router_address, contract_version) VALUES (
+        '${chainId}',
+        '${aRouterConfig.target}',
+        'v1'
+    );`)
 
     // const TheiaSwapIDKeeper = await hre.ethers.getContractAt("TheiaSwapIDKeeper", evn[networkName.toUpperCase()].TheiaSwapIDKeeper);
     // const TheiaRouter = await hre.ethers.getContractAt("TheiaRouter", evn[networkName.toUpperCase()].TheiaRouter);

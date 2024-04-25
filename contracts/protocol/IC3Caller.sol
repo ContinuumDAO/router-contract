@@ -12,8 +12,8 @@ interface IC3CallerProxy {
         returns (
             bytes32 swapID,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
+            // bytes memory reason
         );
 
     function c3call(
@@ -68,8 +68,8 @@ interface IC3Caller {
         returns (
             bytes32 swapID,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
+            // bytes memory reason
         );
 
     function c3call(

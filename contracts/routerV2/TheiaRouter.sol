@@ -7,50 +7,24 @@ import "./ISwapIDKeeper.sol";
 import "./ITheiaERC20.sol";
 import "./FeeManager.sol";
 import "./ITheiaConfig.sol";
+import "./TransferHelper.sol";
+import "./IwNATIVE.sol";
+import "./IRouter.sol";
+import "./TheiaStruct.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-// helper methods for interacting with ERC20 tokens and sending NATIVE that do not consistently return true/false
-library TransferHelper {
-    function safeTransferNative(address to, uint256 value) internal {
-        (bool success, ) = to.call{value: value}(new bytes(0));
-        require(success, "TransferHelper: NATIVE_TRANSFER_FAILED");
-    }
-}
-
-interface IwNATIVE {
-    function deposit() external payable;
-
-    function transfer(address to, uint256 value) external returns (bool);
-
-    function withdraw(uint256) external;
-}
-
-contract TheiaRouter is FeeManager {
+contract TheiaRouter is IRouter, FeeManager {
     using Strings for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    address public constant factory = address(0);
     address public immutable wNATIVE;
 
     address public swapIDKeeper;
     address public theiaConfig;
-
-    bytes4 public FuncSwapInAuto =
-        bytes4(
-            keccak256(
-                "swapInAuto(bytes32,address,address,uint256,uint256,address)"
-            )
-        );
-    bytes4 public FuncSwapInAutoAndCall =
-        bytes4(
-            keccak256(
-                "swapInAutoAndCall(bytes32,address,bool,address,uint256,uint256,address,address,bytes)"
-            )
-        );
 
     constructor(
         address _wNATIVE,
@@ -69,49 +43,6 @@ contract TheiaRouter is FeeManager {
     receive() external payable {}
 
     fallback() external payable {}
-
-    event LogSwapIn(
-        address indexed token,
-        address indexed to,
-        bytes32 indexed swapoutID,
-        uint256 amount,
-        uint256 fromChainID,
-        uint256 toChainID,
-        string sourceTx
-    );
-    // TODO need add feeToken
-    event LogSwapOut(
-        address indexed token,
-        address indexed from,
-        string to,
-        uint256 amount,
-        uint256 fromChainID,
-        uint256 toChainID,
-        uint256 fee,
-        bytes32 swapoutID,
-        bytes data
-    );
-    event LogAnySwapInAndExec(
-        address indexed dapp,
-        address indexed receiver,
-        bytes32 swapID,
-        address token,
-        uint256 amount,
-        uint256 fromChainID,
-        string sourceTx,
-        bool success,
-        bytes result
-    );
-
-    event LogSwapFallback(
-        bytes32 indexed swapID,
-        address indexed token,
-        address indexed receiver,
-        uint256 amount,
-        bytes4 selector,
-        bytes data,
-        bytes reason
-    );
 
     modifier chargeDestFee(address _dapp) {
         uint256 _prevGasLeft = gasleft();
@@ -241,36 +172,6 @@ contract TheiaRouter is FeeManager {
             return _swapFee;
         }
         return 0;
-    }
-
-    // for test
-    function test(
-        string memory _tokenID,
-        uint256 _toChainID,
-        address _addr
-    ) public view returns (address, address, address) {
-        (
-            Structs.TokenConfig memory _fromConfig,
-            Structs.TokenConfig memory _toConfig
-        ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(
-                _tokenID,
-                _toChainID
-            );
-        require(
-            _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
-            "TR:token not support"
-        );
-
-        address _token = TheiaUtils.toAddress(_fromConfig.ContractAddress);
-        // address _token = address(bytes20(bytes(_fromConfig.ContractAddress)));
-        address _recToken = TheiaUtils.toAddress(_toConfig.ContractAddress);
-
-        assert(_token == _addr);
-
-        ITheiaERC20 theiaToken = ITheiaERC20(_token);
-        address _underlying = theiaToken.underlying();
-
-        return (_token, _recToken, _underlying);
     }
 
     function swapOutAuto(
@@ -561,7 +462,7 @@ contract TheiaRouter is FeeManager {
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
         require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
 
-        (, string memory fromChainID, string memory _sourceTx, ) = context();
+        (, string memory fromChainID, string memory _sourceTx) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain invalid");
@@ -623,7 +524,7 @@ contract TheiaRouter is FeeManager {
         require(amount > 0, "TR:amount empty");
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
         require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
-        (, string memory fromChainID, string memory _sourceTx, ) = context();
+        (, string memory fromChainID, string memory _sourceTx) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain is invalid");
@@ -680,7 +581,7 @@ contract TheiaRouter is FeeManager {
         uint256 _amount;
         uint256 _recDecimals;
         address _fromToken;
-        if (_selector == FuncSwapInAutoAndCall) {
+        if (_selector == TheiaStruct.FuncSwapInAutoAndCall) {
             (
                 _swapID,
                 ,
