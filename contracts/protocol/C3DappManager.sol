@@ -158,7 +158,7 @@ contract C3DappManager is Pausable, Ownable {
         string[] calldata _whitelist
     ) external {
         require(
-            feeCurrencies[_feeToken].swapFee > 0,
+            feeCurrencies[_feeToken].swapFee > 0,// TODO no more swapFee
             "C3Dapp: fee token not supported"
         );
         require(bytes(_appDomain).length > 0, "C3Dapp: appDomain empty");
