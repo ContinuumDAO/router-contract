@@ -9,13 +9,13 @@ contract C3Caller is IC3Caller {
         bytes32 swapID;
         string fromChainID;
         string sourceTx;
-        // bytes reason;
+        bytes reason;
     }
 
     Context public override context;
 
-    address public mpc;
-    address public pendingMPC;
+    address public gov;
+    address public pendingGov;
 
     mapping(address => bool) public isOperator;
     address[] public operators;
@@ -23,25 +23,25 @@ contract C3Caller is IC3Caller {
     address public swapIDKeeper;
 
     /// @dev Access control function
-    modifier onlyMPC() {
-        require(msg.sender == mpc, "C3Caller: only MPC");
+    modifier onlyGov() {
+        require(msg.sender == gov, "C3Caller: only Gov");
         _;
     }
 
-    modifier onlyAuth() {
+    modifier onlyOperator() {
         require(isOperator[msg.sender], "C3Caller: AUTH FORBIDDEN");
         _;
     }
 
-    event ChangeMPC(
-        address indexed oldMPC,
-        address indexed newMPC,
+    event ChangeGov(
+        address indexed oldGov,
+        address indexed newGov,
         uint256 timestamp
     );
 
-    event ApplyMPC(
-        address indexed oldMPC,
-        address indexed newMPC,
+    event ApplyGov(
+        address indexed oldGov,
+        address indexed newGov,
         uint256 timestamp
     );
 
@@ -64,11 +64,11 @@ contract C3Caller is IC3Caller {
     event LogExecCall(
         uint256 indexed dappID,
         address indexed to,
-        bool indexed success,
-        bytes32 uuid, // TODO need put in indexed
+        bytes32 indexed uuid,
         string fromChainID,
         string sourceTx,
         bytes data,
+        bool success,
         bytes reasons
     );
 
@@ -84,24 +84,24 @@ contract C3Caller is IC3Caller {
         bytes reasons
     );
 
-    constructor(address _mpc, address _swapIDKeeper) {
-        require(_mpc != address(0));
-        mpc = _mpc;
+    constructor(address _gov, address _swapIDKeeper) {
+        require(_gov != address(0));
+        gov = _gov;
         swapIDKeeper = _swapIDKeeper;
-        _addOperator(_mpc);
-        emit ApplyMPC(address(0), _mpc, block.timestamp);
+        _addOperator(_gov);
+        emit ApplyGov(address(0), _gov, block.timestamp);
     }
 
-    function changeMPC(address _mpc) external onlyMPC {
-        pendingMPC = _mpc;
-        emit ChangeMPC(mpc, _mpc, block.timestamp);
+    function changeGov(address _gov) external onlyGov {
+        pendingGov = _gov;
+        emit ChangeGov(gov, _gov, block.timestamp);
     }
 
-    function applyMPC() external {
-        require(msg.sender == pendingMPC);
-        emit ApplyMPC(mpc, pendingMPC, block.timestamp);
-        mpc = pendingMPC;
-        pendingMPC = address(0);
+    function applyGov() external {
+        require(msg.sender == pendingGov);
+        emit ApplyGov(gov, pendingGov, block.timestamp);
+        gov = pendingGov;
+        pendingGov = address(0);
     }
 
     function _addOperator(address op) internal {
@@ -111,7 +111,7 @@ contract C3Caller is IC3Caller {
         operators.push(op);
     }
 
-    function addOperator(address _auth) external onlyMPC {
+    function addOperator(address _auth) external onlyGov {
         _addOperator(_auth);
     }
 
@@ -119,7 +119,7 @@ contract C3Caller is IC3Caller {
         return operators;
     }
 
-    function revokeOperator(address _auth) external onlyMPC {
+    function revokeOperator(address _auth) external onlyGov {
         require(isOperator[_auth], "C3Caller: Operator not found");
         isOperator[_auth] = false;
         uint256 length = operators.length;
@@ -194,7 +194,7 @@ contract C3Caller is IC3Caller {
         string calldata _sourceTx,
         string calldata _fallback,
         bytes calldata _data
-    ) external override onlyAuth {
+    ) external override onlyOperator {
         require(_data.length > 0, "C3Caller: empty calldata");
         // check dappID
         require(IC3Dapp(_to).dappID() == _dappID, "C3Caller: dappID dismatch");
@@ -206,8 +206,8 @@ contract C3Caller is IC3Caller {
         context = Context({
             swapID: _uuid,
             fromChainID: _fromChainID,
-            sourceTx: _sourceTx
-            // reason: ""
+            sourceTx: _sourceTx,
+            reason: ""
         });
 
         (bool success, bytes memory result) = _to.call(_data);
@@ -215,18 +215,18 @@ contract C3Caller is IC3Caller {
         context = Context({
             swapID: "",
             fromChainID: "",
-            sourceTx: ""
-            // reason: ""
+            sourceTx: "",
+            reason: ""
         });
 
         emit LogExecCall(
             _dappID,
             _to,
-            success,
             _uuid,
             _fromChainID,
             _sourceTx,
             _data,
+            success,
             result
         );
         (bool ok, uint rs) = toUint(result);
@@ -247,21 +247,6 @@ contract C3Caller is IC3Caller {
         }
     }
 
-    // TODO test code
-    function getFallbackCallData(
-        uint256 _dappID,
-        bytes memory _data,
-        bytes memory result
-    ) public pure returns (bytes memory) {
-        return
-            abi.encodeWithSelector(
-                IC3Dapp.c3Fallback.selector,
-                _dappID,
-                _data,
-                result
-            );
-    }
-
     function c3Fallback(
         uint256 _dappID,
         bytes32 _uuid,
@@ -270,7 +255,7 @@ contract C3Caller is IC3Caller {
         string calldata _sourceTx,
         bytes calldata _data,
         bytes calldata _reason
-    ) external override onlyAuth {
+    ) external override onlyOperator {
         require(_data.length > 0, "C3Caller: empty calldata");
         require(
             !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_uuid),
@@ -280,34 +265,34 @@ contract C3Caller is IC3Caller {
         context = Context({
             swapID: _uuid,
             fromChainID: _fromChainID,
-            sourceTx: _sourceTx
-            // reason: _reason
+            sourceTx: _sourceTx,
+            reason: _reason
         });
 
-        (bool success, bytes memory result) = _to.call(_data);
+        (bool _success, bytes memory _result) = _to.call(_data);
 
         context = Context({
             swapID: "",
             fromChainID: "",
-            sourceTx: ""
-            // reason: ""
+            sourceTx: "",
+            reason: ""
         });
 
         emit LogExecFallback(
             _dappID,
             _to,
-            success,
+            _success,
             _uuid,
             _fromChainID,
             _sourceTx,
             _reason,
             _data,
-            result
+            _result
         );
 
-        (bool ok, uint rs) = toUint(result);
-        // ool rs = abi.decode(result, (bool));
-        if (success && ok && rs == 1) {
+        // TODO return bool is good?
+        (bool ok, uint rs) = toUint(_result);
+        if (_success && ok && rs == 1) {
             ISwapIDKeeper(swapIDKeeper).registerSwapin(_uuid);
         }
     }

@@ -270,7 +270,7 @@ contract TheiaRouter is IRouter, FeeManager {
         require(toTheiaToken.underlying() != address(0), "TR:underlying empty");
         uint256 _swapFee = _payFee(_feeToken, _toChainID);
 
-        uint256 _old_amount = _balanceOfSelf(toTheiaToken.underlying());
+        uint256 _old_amount = _balanceOf(toTheiaToken.underlying());
         bool success;
         bytes memory result;
         ITheiaERC20 theiaToken = ITheiaERC20(_fromToken);
@@ -306,7 +306,7 @@ contract TheiaRouter is IRouter, FeeManager {
             (success, result) = _dexAddr.call(_data);
         }
 
-        uint256 amount = _balanceOfSelf(toTheiaToken.underlying());
+        uint256 amount = _balanceOf(toTheiaToken.underlying());
         if (success) {
             require(amount - _old_amount > 0, "TR:nothing received");
         }
@@ -462,7 +462,7 @@ contract TheiaRouter is IRouter, FeeManager {
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
         require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
 
-        (, string memory fromChainID, string memory _sourceTx) = context();
+        (, string memory fromChainID, string memory _sourceTx, ) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain invalid");
@@ -524,7 +524,7 @@ contract TheiaRouter is IRouter, FeeManager {
         require(amount > 0, "TR:amount empty");
         require(tokenDecimals > 0, "TR:tokenDecimals empty");
         require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
-        (, string memory fromChainID, string memory _sourceTx) = context();
+        (, string memory fromChainID, string memory _sourceTx, ) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "TR:sourceChain is invalid");
@@ -544,7 +544,7 @@ contract TheiaRouter is IRouter, FeeManager {
         );
         address _underlying = theiaToken.underlying();
 
-        // uint256 _old_amount = _balanceOfSelf(_underlying);
+        // uint256 _old_amount = _balanceOf(_underlying);
 
         bool success;
         bytes memory result;
@@ -567,7 +567,7 @@ contract TheiaRouter is IRouter, FeeManager {
             (success, result) = dex.call(data);
         }
         // TODO should move asset to user address
-        // uint256 _amount = _balanceOfSelf(_underlying);
+        // uint256 _amount = _balanceOf(_underlying);
         return success;
     }
 
@@ -734,7 +734,7 @@ contract TheiaRouter is IRouter, FeeManager {
         }
     }
 
-    function _balanceOfSelf(
+    function _balanceOf(
         address receiveToken
     ) internal view returns (uint256) {
         return IERC20(receiveToken).balanceOf(address(this));
