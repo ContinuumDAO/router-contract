@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 interface IC3CallerProxy {
     function isExecutor(address sender) external returns (bool);

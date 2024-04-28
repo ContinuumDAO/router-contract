@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "./IC3Caller.sol";
 import "./ISwapIDKeeper.sol";
+import "./C3GovClient.sol";
 
-contract C3Caller is IC3Caller {
+contract C3Caller is IC3Caller, C3GovClient {
     struct Context {
         bytes32 swapID;
         string fromChainID;
@@ -14,36 +15,7 @@ contract C3Caller is IC3Caller {
 
     Context public override context;
 
-    address public gov;
-    address public pendingGov;
-
-    mapping(address => bool) public isOperator;
-    address[] public operators;
-
     address public swapIDKeeper;
-
-    /// @dev Access control function
-    modifier onlyGov() {
-        require(msg.sender == gov, "C3Caller: only Gov");
-        _;
-    }
-
-    modifier onlyOperator() {
-        require(isOperator[msg.sender], "C3Caller: AUTH FORBIDDEN");
-        _;
-    }
-
-    event ChangeGov(
-        address indexed oldGov,
-        address indexed newGov,
-        uint256 timestamp
-    );
-
-    event ApplyGov(
-        address indexed oldGov,
-        address indexed newGov,
-        uint256 timestamp
-    );
 
     event LogC3Call(
         uint256 indexed dappID,
@@ -84,52 +56,9 @@ contract C3Caller is IC3Caller {
         bytes reasons
     );
 
-    constructor(address _gov, address _swapIDKeeper) {
-        require(_gov != address(0));
-        gov = _gov;
+    constructor(address _gov, address _swapIDKeeper)  {
+        initGov(_gov);
         swapIDKeeper = _swapIDKeeper;
-        _addOperator(_gov);
-        emit ApplyGov(address(0), _gov, block.timestamp);
-    }
-
-    function changeGov(address _gov) external onlyGov {
-        pendingGov = _gov;
-        emit ChangeGov(gov, _gov, block.timestamp);
-    }
-
-    function applyGov() external {
-        require(msg.sender == pendingGov);
-        emit ApplyGov(gov, pendingGov, block.timestamp);
-        gov = pendingGov;
-        pendingGov = address(0);
-    }
-
-    function _addOperator(address op) internal {
-        require(op != address(0), "C3Caller: Operator is address(0)");
-        require(!isOperator[op], "C3Caller: Operator already exists");
-        isOperator[op] = true;
-        operators.push(op);
-    }
-
-    function addOperator(address _auth) external onlyGov {
-        _addOperator(_auth);
-    }
-
-    function getAllOperators() external view returns (address[] memory) {
-        return operators;
-    }
-
-    function revokeOperator(address _auth) external onlyGov {
-        require(isOperator[_auth], "C3Caller: Operator not found");
-        isOperator[_auth] = false;
-        uint256 length = operators.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (operators[i] == _auth) {
-                operators[i] = operators[length - 1];
-                operators.pop();
-                return;
-            }
-        }
     }
 
     function c3call(
@@ -290,7 +219,6 @@ contract C3Caller is IC3Caller {
             _result
         );
 
-        // TODO return bool is good?
         (bool ok, uint rs) = toUint(_result);
         if (_success && ok && rs == 1) {
             ISwapIDKeeper(swapIDKeeper).registerSwapin(_uuid);

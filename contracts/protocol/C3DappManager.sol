@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
+import "./C3GovClient.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract C3DappManager is Pausable, Ownable {
+contract C3DappManager is C3GovClient, Pausable {
     // Dapp config
     struct DappConfig {
         uint256 id;
@@ -17,8 +17,6 @@ contract C3DappManager is Pausable, Ownable {
         uint256 swapFee;
         uint256 callPerByteFee;
     }
-    address public gov;
-    address public pendingGov;
 
     uint256 public dappID;
 
@@ -33,16 +31,6 @@ contract C3DappManager is Pausable, Ownable {
 
     mapping(address => uint256) private fees;
 
-    event ChangeGov(
-        address indexed oldGov,
-        address indexed newGov,
-        uint256 timestamp
-    );
-    event ApplyGov(
-        address indexed oldGov,
-        address indexed newGov,
-        uint256 timestamp
-    );
     event SetDAppConfig(
         uint256 indexed dappID,
         address indexed appAdmin,
@@ -82,34 +70,15 @@ contract C3DappManager is Pausable, Ownable {
     );
 
     constructor(address _gov) {
-        require(_gov != address(0));
-        gov = _gov;
-        _transferOwnership(gov);
+        initGov(_gov);
     }
 
-    modifier onlyGov() {
-        require(msg.sender == gov, "C3Dapp: only Gov");
-        _;
-    }
-
-    function pause() public onlyOwner {
+    function pause() public onlyGov {
         _pause();
     }
 
-    function unpause() public onlyOwner {
+    function unpause() public onlyGov {
         _unpause();
-    }
-
-    function changeGov(address _gov) external onlyGov {
-        pendingGov = _gov;
-        emit ChangeGov(gov, _gov, block.timestamp);
-    }
-
-    function applyGov() external {
-        require(msg.sender == pendingGov);
-        emit ApplyGov(gov, pendingGov, block.timestamp);
-        gov = pendingGov;
-        pendingGov = address(0);
     }
 
     function setBlacklists(uint256 _dappID, bool _flag) external onlyGov {
@@ -158,11 +127,11 @@ contract C3DappManager is Pausable, Ownable {
         string[] calldata _whitelist
     ) external {
         require(
-            feeCurrencies[_feeToken].swapFee > 0,// TODO no more swapFee
-            "C3Dapp: fee token not supported"
+            feeCurrencies[_feeToken].swapFee > 0, // TODO no more swapFee
+            "C3M: fee token not supported"
         );
-        require(bytes(_appDomain).length > 0, "C3Dapp: appDomain empty");
-        require(bytes(_email).length > 0, "C3Dapp: email empty");
+        require(bytes(_appDomain).length > 0, "C3M: appDomain empty");
+        require(bytes(_email).length > 0, "C3M: email empty");
 
         dappID++;
         DappConfig storage config = dappConfig[dappID];
@@ -182,10 +151,7 @@ contract C3DappManager is Pausable, Ownable {
         string[] memory _whitelist
     ) internal {
         for (uint256 i = 0; i < _whitelist.length; i++) {
-            require(
-                c3DappAddr[_whitelist[i]] == 0,
-                "C3Dapp: addr already exist"
-            );
+            require(c3DappAddr[_whitelist[i]] == 0, "C3M: addr already exist");
             c3DappAddr[_whitelist[i]] = _subscribeID;
         }
         emit SetDAppAddr(_subscribeID, _whitelist);
@@ -194,10 +160,10 @@ contract C3DappManager is Pausable, Ownable {
     function addDappAddr(uint256 _dappID, string[] memory _whitelist) external {
         DappConfig memory config = dappConfig[_dappID];
 
-        require(config.appAdmin != address(0), "C3Dapp: app not exist");
+        require(config.appAdmin != address(0), "C3M: app not exist");
         require(
             msg.sender == gov || msg.sender == config.appAdmin,
-            "C3Dapp: forbid"
+            "C3M: forbid"
         );
 
         _setDappAddrlist(_dappID, _whitelist);
@@ -209,16 +175,16 @@ contract C3DappManager is Pausable, Ownable {
     ) external {
         DappConfig memory config = dappConfig[_dappID];
 
-        require(config.appAdmin != address(0), "C3Dapp: app not exist");
+        require(config.appAdmin != address(0), "C3M: app not exist");
         require(
             msg.sender == gov || msg.sender == config.appAdmin,
-            "C3Dapp: forbid"
+            "C3M: forbid"
         );
 
         for (uint256 i = 0; i < _whitelist.length; i++) {
             require(
                 c3DappAddr[_whitelist[i]] == _dappID,
-                "C3Dapp: addr not exist"
+                "C3M: addr not exist"
             );
             c3DappAddr[_whitelist[i]] = 0;
         }
@@ -233,14 +199,14 @@ contract C3DappManager is Pausable, Ownable {
     ) external {
         DappConfig memory config = dappConfig[_dappID];
 
-        require(config.appAdmin != address(0), "C3Dapp: app not exist");
+        require(config.appAdmin != address(0), "C3M: app not exist");
         require(
             msg.sender == gov || msg.sender == config.appAdmin,
-            "C3Dapp: forbid"
+            "C3M: forbid"
         );
         require(
             feeCurrencies[_feeToken].swapFee > 0,
-            "C3Dapp: fee token not supported"
+            "C3M: fee token not supported"
         );
 
         config.feeToken = _feeToken;
@@ -251,10 +217,10 @@ contract C3DappManager is Pausable, Ownable {
     function resetAdmin(uint256 _dappID, address _newAdmin) external {
         DappConfig storage config = dappConfig[_dappID];
 
-        require(config.appAdmin != address(0), "C3Dapp: app not exist");
+        require(config.appAdmin != address(0), "C3M: app not exist");
         require(
             msg.sender == gov || msg.sender == config.appAdmin,
-            "C3Dapp: forbid"
+            "C3M: forbid"
         );
         config.appAdmin = _newAdmin;
     }
@@ -266,10 +232,10 @@ contract C3DappManager is Pausable, Ownable {
     ) external onlyGov {
         DappConfig storage config = dappConfig[_dappID];
 
-        require(config.appAdmin != address(0), "C3Dapp: app not exist");
+        require(config.appAdmin != address(0), "C3M: app not exist");
         require(
             feeCurrencies[_feeToken].swapFee > 0,
-            "C3Dapp: fee token not supported"
+            "C3M: fee token not supported"
         );
 
         config.feeToken = _feeToken;
@@ -284,11 +250,11 @@ contract C3DappManager is Pausable, Ownable {
         uint256 _amount
     ) external {
         DappConfig memory config = dappConfig[_dappID];
-        require(config.id > 0, "C3Dapp: dapp not exist");
-        require(config.appAdmin == msg.sender, "C3Dapp: forbidden");
+        require(config.id > 0, "C3M: dapp not exist");
+        require(config.appAdmin == msg.sender, "C3M: forbidden");
         require(
             feeCurrencies[_token].swapFee > 0,
-            "C3Dapp: fee token not supported"
+            "C3M: fee token not supported"
         );
         uint256 old_balance = IERC20(_token).balanceOf(address(this));
         IERC20(_token).transferFrom(msg.sender, address(this), _amount);
@@ -309,17 +275,17 @@ contract C3DappManager is Pausable, Ownable {
     ) external {
         require(
             dappStakePool[_dappID][_token] >= _amount,
-            "C3Dapp: insufficient amount for dapp"
+            "C3M: insufficient amount for dapp"
         );
         require(
             IERC20(_token).balanceOf(address(this)) >= _amount,
-            "C3Dapp: insufficient amount for request"
+            "C3M: insufficient amount for request"
         );
         DappConfig memory config = dappConfig[_dappID];
-        require(msg.sender == config.appAdmin, "C3Dapp: forbid");
+        require(msg.sender == config.appAdmin, "C3M: forbid");
         require(
             IERC20(_token).transfer(msg.sender, _amount),
-            "C3Dapp: transfer not successful"
+            "C3M: transfer not successful"
         );
         dappStakePool[_dappID][_token] -= _amount;
         emit Withdraw(_dappID, _token, _amount, dappStakePool[_dappID][_token]);
@@ -329,11 +295,11 @@ contract C3DappManager is Pausable, Ownable {
         uint256[] calldata _dappIDs,
         address[] calldata _tokens,
         uint256[] calldata _amounts
-    ) external onlyGov {
+    ) external onlyOperator {
         require(
             _dappIDs.length == _tokens.length &&
                 _dappIDs.length == _amounts.length,
-            "C3Dapp: length mismatch"
+            "C3M: length mismatch"
         );
 
         for (uint256 index = 0; index < _dappIDs.length; index++) {

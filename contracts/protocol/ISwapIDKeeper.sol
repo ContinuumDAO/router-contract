@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 interface ISwapIDKeeper {
     function registerSwapin(bytes32 uuid) external;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "../protocol/IC3Caller.sol";
 import "../protocol/C3CallerProxy.sol";
@@ -30,7 +30,7 @@ contract C3CallerProxyUpgrade is C3CallerProxy, IC3CallerProxy2 {
         string calldata _to,
         string calldata _toChainID,
         bytes calldata _data
-    ) external override onlyAuth {
+    ) external override onlyGov {
         IC3Caller(c3callerWithVersion[_version]).c3call(
             _dappID,
             msg.sender,
