@@ -4,16 +4,21 @@ pragma solidity ^0.8.19;
 import "./IC3Caller.sol";
 import "./ISwapIDKeeper.sol";
 import "./C3GovClient.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 
-contract C3Caller is IC3Caller, C3GovClient {
-    struct Context {
+contract C3Caller is IC3Caller, C3GovClient, Pausable {
+    using Address for address;
+    using Address for address payable;
+
+    struct C3Context {
         bytes32 swapID;
         string fromChainID;
         string sourceTx;
         bytes reason;
     }
 
-    Context public override context;
+    C3Context public override context;
 
     address public swapIDKeeper;
 
@@ -61,13 +66,21 @@ contract C3Caller is IC3Caller, C3GovClient {
         swapIDKeeper = _swapIDKeeper;
     }
 
+    function pause() external onlyOperator {
+        _pause();
+    }
+
+    function unpause() external onlyOperator {
+        _unpause();
+    }
+
     function c3call(
         uint256 _dappID,
         address _caller,
         string calldata _to,
         string calldata _toChainID,
         bytes calldata _data
-    ) external override {
+    ) external override whenNotPaused {
         require(_dappID > 0, "C3Caller: empty dappID");
         require(bytes(_to).length > 0, "C3Caller: empty _to");
         require(bytes(_toChainID).length > 0, "C3Caller: empty toChainID");
@@ -87,7 +100,7 @@ contract C3Caller is IC3Caller, C3GovClient {
         string[] calldata _to,
         string[] calldata _toChainIDs,
         bytes calldata _data
-    ) external override {
+    ) external override whenNotPaused {
         require(_dappID > 0, "C3Caller: empty dappID");
         require(_to.length > 0, "C3Caller: empty _to");
         require(_toChainIDs.length > 0, "C3Caller: empty toChainID");
@@ -121,16 +134,18 @@ contract C3Caller is IC3Caller, C3GovClient {
     ) external override onlyOperator {
         require(_message.data.length > 0, "C3Caller: empty calldata");
         // check dappID
+        // TODO check to address is in whitelist config of C3DappManager
         require(
             IC3Dapp(_message.to).dappID() == _dappID,
             "C3Caller: dappID dismatch"
         );
+
         require(
             !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_message.uuid),
             "C3Caller: already completed"
         );
 
-        context = Context({
+        context = C3Context({
             swapID: _message.uuid,
             fromChainID: _message.fromChainID,
             sourceTx: _message.sourceTx,
@@ -139,7 +154,7 @@ contract C3Caller is IC3Caller, C3GovClient {
 
         (bool success, bytes memory result) = _message.to.call(_message.data);
 
-        context = Context({
+        context = C3Context({
             swapID: "",
             fromChainID: "",
             sourceTx: "",
@@ -184,7 +199,7 @@ contract C3Caller is IC3Caller, C3GovClient {
             "C3Caller: already completed"
         );
 
-        context = Context({
+        context = C3Context({
             swapID: _message.uuid,
             fromChainID: _message.fromChainID,
             sourceTx: _message.sourceTx,
@@ -193,7 +208,7 @@ contract C3Caller is IC3Caller, C3GovClient {
 
         (bool _success, bytes memory _result) = _message.to.call(_message.data);
 
-        context = Context({
+        context = C3Context({
             swapID: "",
             fromChainID: "",
             sourceTx: "",
