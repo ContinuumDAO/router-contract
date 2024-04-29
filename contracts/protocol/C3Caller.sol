@@ -56,7 +56,7 @@ contract C3Caller is IC3Caller, C3GovClient {
         bytes reasons
     );
 
-    constructor(address _gov, address _swapIDKeeper)  {
+    constructor(address _gov, address _swapIDKeeper) {
         initGov(_gov);
         swapIDKeeper = _swapIDKeeper;
     }
@@ -117,29 +117,27 @@ contract C3Caller is IC3Caller, C3GovClient {
 
     function execute(
         uint256 _dappID,
-        bytes32 _uuid,
-        address _to,
-        string calldata _fromChainID,
-        string calldata _sourceTx,
-        string calldata _fallback,
-        bytes calldata _data
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external override onlyOperator {
-        require(_data.length > 0, "C3Caller: empty calldata");
+        require(_message.data.length > 0, "C3Caller: empty calldata");
         // check dappID
-        require(IC3Dapp(_to).dappID() == _dappID, "C3Caller: dappID dismatch");
         require(
-            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_uuid),
+            IC3Dapp(_message.to).dappID() == _dappID,
+            "C3Caller: dappID dismatch"
+        );
+        require(
+            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_message.uuid),
             "C3Caller: already completed"
         );
 
         context = Context({
-            swapID: _uuid,
-            fromChainID: _fromChainID,
-            sourceTx: _sourceTx,
+            swapID: _message.uuid,
+            fromChainID: _message.fromChainID,
+            sourceTx: _message.sourceTx,
             reason: ""
         });
 
-        (bool success, bytes memory result) = _to.call(_data);
+        (bool success, bytes memory result) = _message.to.call(_message.data);
 
         context = Context({
             swapID: "",
@@ -150,26 +148,26 @@ contract C3Caller is IC3Caller, C3GovClient {
 
         emit LogExecCall(
             _dappID,
-            _to,
-            _uuid,
-            _fromChainID,
-            _sourceTx,
-            _data,
+            _message.to,
+            _message.uuid,
+            _message.fromChainID,
+            _message.sourceTx,
+            _message.data,
             success,
             result
         );
         (bool ok, uint rs) = toUint(result);
         if (success && ok && rs == 1) {
-            ISwapIDKeeper(swapIDKeeper).registerSwapin(_uuid);
+            ISwapIDKeeper(swapIDKeeper).registerSwapin(_message.uuid);
         } else {
             emit LogFallbackCall(
                 _dappID,
-                _uuid,
-                _fallback,
+                _message.uuid,
+                _message.fallbackTo,
                 abi.encodeWithSelector(
                     IC3Dapp.c3Fallback.selector,
                     _dappID,
-                    _data,
+                    _message.data,
                     result
                 )
             );
@@ -178,27 +176,22 @@ contract C3Caller is IC3Caller, C3GovClient {
 
     function c3Fallback(
         uint256 _dappID,
-        bytes32 _uuid,
-        address _to,
-        string calldata _fromChainID,
-        string calldata _sourceTx,
-        bytes calldata _data,
-        bytes calldata _reason
+        C3CallerStructLib.C3EvmFallbackMessage calldata _message
     ) external override onlyOperator {
-        require(_data.length > 0, "C3Caller: empty calldata");
+        require(_message.data.length > 0, "C3Caller: empty calldata");
         require(
-            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_uuid),
+            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_message.uuid),
             "C3Caller: already completed"
         );
 
         context = Context({
-            swapID: _uuid,
-            fromChainID: _fromChainID,
-            sourceTx: _sourceTx,
-            reason: _reason
+            swapID: _message.uuid,
+            fromChainID: _message.fromChainID,
+            sourceTx: _message.sourceTx,
+            reason: _message.reason
         });
 
-        (bool _success, bytes memory _result) = _to.call(_data);
+        (bool _success, bytes memory _result) = _message.to.call(_message.data);
 
         context = Context({
             swapID: "",
@@ -209,19 +202,19 @@ contract C3Caller is IC3Caller, C3GovClient {
 
         emit LogExecFallback(
             _dappID,
-            _to,
+            _message.to,
             _success,
-            _uuid,
-            _fromChainID,
-            _sourceTx,
-            _reason,
-            _data,
+            _message.uuid,
+            _message.fromChainID,
+            _message.sourceTx,
+            _message.reason,
+            _message.data,
             _result
         );
 
         (bool ok, uint rs) = toUint(_result);
         if (_success && ok && rs == 1) {
-            ISwapIDKeeper(swapIDKeeper).registerSwapin(_uuid);
+            ISwapIDKeeper(swapIDKeeper).registerSwapin(_message.uuid);
         }
     }
 

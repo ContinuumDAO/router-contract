@@ -77,41 +77,15 @@ contract C3CallerProxy is
 
     function execute(
         uint256 _dappID,
-        bytes32 _swapID,
-        address _to,
-        string calldata _fromChainID,
-        string calldata _sourceTx,
-        string calldata _fallback,
-        bytes calldata _data
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external override onlyOperator {
-        IC3Caller(c3caller).execute(
-            _dappID,
-            _swapID,
-            _to,
-            _fromChainID,
-            _sourceTx,
-            _fallback,
-            _data
-        );
+        IC3Caller(c3caller).execute(_dappID, _message);
     }
 
     function c3Fallback(
         uint256 _dappID,
-        bytes32 _swapID,
-        address _to,
-        string calldata _failChainID,
-        string calldata _failTx,
-        bytes calldata _data,
-        bytes calldata _reason
+        C3CallerStructLib.C3EvmFallbackMessage calldata _message
     ) external override onlyOperator {
-        IC3Caller(c3caller).c3Fallback(
-            _dappID,
-            _swapID,
-            _to,
-            _failChainID,
-            _failTx,
-            _data,
-            _reason
-        );
+        IC3Caller(c3caller).c3Fallback(_dappID, _message);
     }
 }
