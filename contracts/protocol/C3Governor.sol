@@ -141,4 +141,8 @@ contract C3Governor is C3GovClient {
         }
         return tempAddress;
     }
+
+    function version() public pure returns (uint256) {
+        return (1);
+    }
 }
