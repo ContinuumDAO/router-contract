@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 interface IRouter {
-  
     event LogSwapIn(
         address indexed token,
         address indexed to,
@@ -13,6 +12,15 @@ interface IRouter {
         uint256 toChainID,
         string sourceTx
     );
+
+    event LogSwapInPending(
+        address indexed token,
+        address indexed to,
+        bytes32 indexed swapoutID,
+        uint256 amount,
+        uint256 feeRate
+    );
+
     // TODO need add feeToken
     event LogSwapOut(
         address indexed token,
@@ -46,4 +54,14 @@ interface IRouter {
         bytes data,
         bytes reason
     );
+
+    struct PendingCross {
+        address token;
+        address to;
+        uint256 amount;
+        uint256 tokenDecimals;
+        address fromTokenAddr;
+        uint256 fromChainID;
+        string sourceTx;
+    }
 }

@@ -4,8 +4,10 @@ pragma solidity ^0.8.19;
 import "./C3GovClient.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract C3DappManager is C3GovClient, Pausable {
+    using SafeERC20 for IERC20;
     // Dapp config
     struct DappConfig {
         uint256 id;
@@ -13,21 +15,17 @@ contract C3DappManager is C3GovClient, Pausable {
         address feeToken; // token address for fee token
         uint256 discount; // discount
     }
-    struct FeeConfig {
-        uint256 swapFee;
-        uint256 callPerByteFee;
-    }
-
     uint256 public dappID;
 
     mapping(uint256 => DappConfig) private dappConfig;
     mapping(string => uint256) private c3DappAddr;
     mapping(uint256 => bool) private appBlacklist;
 
-    mapping(address => FeeConfig) public feeCurrencies;
+    // key is asset address, value is callPerByteFee
+    mapping(address => uint256) public feeCurrencies;
     mapping(uint256 => mapping(address => uint256)) public dappStakePool;
 
-    mapping(string => mapping(address => FeeConfig)) public speChainFees;
+    mapping(string => mapping(address => uint256)) public speChainFees;
 
     mapping(address => uint256) private fees;
 
@@ -45,7 +43,6 @@ contract C3DappManager is C3GovClient, Pausable {
     event SetFeeConfig(
         address indexed token,
         string chain,
-        uint256 swapFee,
         uint256 callPerByteFee
     );
 
@@ -88,36 +85,26 @@ contract C3DappManager is C3GovClient, Pausable {
 
     function setFeeCurrencies(
         address[] calldata _tokens,
-        uint256[] calldata _swapfee,
         uint256[] calldata _callfee
     ) external onlyGov {
         for (uint256 index = 0; index < _tokens.length; index++) {
-            feeCurrencies[_tokens[index]] = FeeConfig(
-                _swapfee[index],
-                _callfee[index]
-            );
-            emit SetFeeConfig(
-                _tokens[index],
-                "0",
-                _swapfee[index],
-                _callfee[index]
-            );
+            feeCurrencies[_tokens[index]] = _callfee[index];
+            emit SetFeeConfig(_tokens[index], "0", _callfee[index]);
         }
     }
 
     function disableFeeCurrency(address _token) external onlyGov {
         delete feeCurrencies[_token];
-        emit SetFeeConfig(_token, "0", 0, 0);
+        emit SetFeeConfig(_token, "0", 0);
     }
 
     function setSpeFeeConfigByChain(
         address _token,
         string calldata _chain,
-        uint256 _fee,
         uint256 _callfee
     ) external onlyGov {
-        speChainFees[_chain][_token] = FeeConfig(_fee, _callfee);
-        emit SetFeeConfig(_token, _chain, _fee, _callfee);
+        speChainFees[_chain][_token] = _callfee;
+        emit SetFeeConfig(_token, _chain, _callfee);
     }
 
     function initDappConfig(
@@ -126,10 +113,7 @@ contract C3DappManager is C3GovClient, Pausable {
         string calldata _email,
         string[] calldata _whitelist
     ) external {
-        require(
-            feeCurrencies[_feeToken].swapFee > 0, // TODO no more swapFee
-            "C3M: fee token not supported"
-        );
+        require(feeCurrencies[_feeToken] > 0, "C3M: fee token not supported");
         require(bytes(_appDomain).length > 0, "C3M: appDomain empty");
         require(bytes(_email).length > 0, "C3M: email empty");
 
@@ -204,10 +188,7 @@ contract C3DappManager is C3GovClient, Pausable {
             msg.sender == gov || msg.sender == config.appAdmin,
             "C3M: forbid"
         );
-        require(
-            feeCurrencies[_feeToken].swapFee > 0,
-            "C3M: fee token not supported"
-        );
+        require(feeCurrencies[_feeToken] > 0, "C3M: fee token not supported");
 
         config.feeToken = _feeToken;
 
@@ -219,7 +200,9 @@ contract C3DappManager is C3GovClient, Pausable {
 
         require(config.appAdmin != address(0), "C3M: app not exist");
         require(
-            msg.sender == gov || msg.sender == config.appAdmin,
+            msg.sender == gov ||
+                isOperator[msg.sender] ||
+                msg.sender == config.appAdmin,
             "C3M: forbid"
         );
         config.appAdmin = _newAdmin;
@@ -229,14 +212,11 @@ contract C3DappManager is C3GovClient, Pausable {
         uint256 _dappID,
         address _feeToken,
         uint256 _discount
-    ) external onlyGov {
+    ) external onlyOperator {
         DappConfig storage config = dappConfig[_dappID];
 
         require(config.appAdmin != address(0), "C3M: app not exist");
-        require(
-            feeCurrencies[_feeToken].swapFee > 0,
-            "C3M: fee token not supported"
-        );
+        require(feeCurrencies[_feeToken] > 0, "C3M: fee token not supported");
 
         config.feeToken = _feeToken;
         config.discount = _discount;
@@ -252,12 +232,9 @@ contract C3DappManager is C3GovClient, Pausable {
         DappConfig memory config = dappConfig[_dappID];
         require(config.id > 0, "C3M: dapp not exist");
         require(config.appAdmin == msg.sender, "C3M: forbidden");
-        require(
-            feeCurrencies[_token].swapFee > 0,
-            "C3M: fee token not supported"
-        );
+        require(feeCurrencies[_token] > 0, "C3M: fee token not supported");
         uint256 old_balance = IERC20(_token).balanceOf(address(this));
-        IERC20(_token).transferFrom(msg.sender, address(this), _amount);
+        IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
         uint256 new_balance = IERC20(_token).balanceOf(address(this));
         require(
             new_balance >= old_balance && new_balance <= old_balance + _amount
@@ -283,10 +260,7 @@ contract C3DappManager is C3GovClient, Pausable {
         );
         DappConfig memory config = dappConfig[_dappID];
         require(msg.sender == config.appAdmin, "C3M: forbid");
-        require(
-            IERC20(_token).transfer(msg.sender, _amount),
-            "C3M: transfer not successful"
-        );
+        IERC20(_token).safeTransfer(msg.sender, _amount);
         dappStakePool[_dappID][_token] -= _amount;
         emit Withdraw(_dappID, _token, _amount, dappStakePool[_dappID][_token]);
     }
@@ -324,21 +298,20 @@ contract C3DappManager is C3GovClient, Pausable {
     }
 
     function withdrawFees(address[] calldata _tokens) external onlyGov {
-        for (uint256 index = 0; index < _tokens.length; index++) {
-            if (fees[_tokens[index]] > 0) {
-                IERC20(_tokens[index]).transfer(gov, fees[_tokens[index]]);
-                fees[_tokens[index]] = 0;
-            }
-        }
+        _withdraw(_tokens, gov);
     }
 
     function withdrawFeesTo(
         address[] calldata _tokens,
         address to
-    ) external onlyGov {
+    ) external onlyOperator {
+        _withdraw(_tokens, to);
+    }
+
+    function _withdraw(address[] calldata _tokens, address to) internal {
         for (uint256 index = 0; index < _tokens.length; index++) {
             if (fees[_tokens[index]] > 0) {
-                IERC20(_tokens[index]).transfer(to, fees[_tokens[index]]);
+                IERC20(_tokens[index]).safeTransfer(to, fees[_tokens[index]]);
                 fees[_tokens[index]] = 0;
             }
         }

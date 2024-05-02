@@ -38,9 +38,9 @@ contract DAppDemo is C3CallerDapp {
     }
 
     function _c3Fallback(
-        bytes4 selector,
-        bytes calldata data,
-        bytes calldata reason
+        bytes4 /*selector*/,
+        bytes calldata /*data*/,
+        bytes calldata /*reason*/
     ) internal virtual override returns (bool) {
         return true;
     }

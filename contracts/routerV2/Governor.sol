@@ -42,8 +42,7 @@ abstract contract Governor is C3CallerDapp {
         return _oldGov;
     }
 
-    function changeGov(address newGov) external {
-        require(msg.sender == gov(), "Gov FORBIDDEN");
+    function changeGov(address newGov) external onlyGov {
         require(newGov != address(0), "newGov is empty");
         _oldGov = gov();
         _newGov = newGov;
@@ -56,8 +55,7 @@ abstract contract Governor is C3CallerDapp {
         );
     }
 
-    function setDelay(uint _delay) external {
-        require(msg.sender == gov(), "Gov FORBIDDEN");
+    function setDelay(uint _delay) external onlyGov {
         delay = _delay;
     }
 }

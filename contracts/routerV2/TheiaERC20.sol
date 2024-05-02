@@ -133,6 +133,15 @@ contract TheiaERC20 is IERC20, ITheiaERC20 {
         // Use init to allow for CREATE2 accross all chains
         _init = true;
 
+        if (_underlying != address(0)) {
+            uint256 _underlying_decimals = IERC20Extended(underlying)
+                .decimals();
+            require(
+                _decimals == _underlying_decimals,
+                "TheiaToken: decimals dismatch"
+            );
+        }
+
         router = _router;
         isMinter[_router] = true;
         minters.push(_router);

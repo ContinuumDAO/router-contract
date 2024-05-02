@@ -324,10 +324,10 @@ contract TheiaRouterConfig is
     }
 
     function _c3Fallback(
-        bytes4 _selector,
-        bytes calldata _data,
-        bytes calldata _reason
-    ) internal override returns (bool) {
+        bytes4 /*_selector*/,
+        bytes calldata /*_data*/,
+        bytes calldata /*_reason*/
+    ) internal override pure returns (bool) {
         return true;
     }
 

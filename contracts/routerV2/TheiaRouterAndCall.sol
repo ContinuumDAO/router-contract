@@ -16,19 +16,15 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract TheiaRouter is IRouter, FeeManager {
+contract TheiaRouterAndCall is IRouter, FeeManager {
     using Strings for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     address public immutable wNATIVE;
-    address public immutable NATIVE =
-        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     address public swapIDKeeper;
     address public theiaConfig;
-
-    mapping(bytes32 => PendingCross) public pendings;
 
     constructor(
         address _wNATIVE,
@@ -83,10 +79,10 @@ contract TheiaRouter is IRouter, FeeManager {
         address receiver,
         uint256 amount
     ) internal pure {
-        require(token != address(0), "Theia:from empty");
-        require(to != address(0), "Theia:to empty");
-        require(receiver != address(0), "Theia:receiver empty");
-        require(amount > 0, "Theia:empty");
+        require(token != address(0), "TR:from empty");
+        require(to != address(0), "TR:to empty");
+        require(receiver != address(0), "TR:receiver empty");
+        require(amount > 0, "TR:empty");
     }
 
     // need approve to router first
@@ -95,22 +91,22 @@ contract TheiaRouter is IRouter, FeeManager {
         uint256 amount
     ) internal returns (uint256) {
         address _underlying = ITheiaERC20(token).underlying();
-        require(_underlying != address(0), "Theia:no underlying");
+        require(_underlying != address(0), "TR:no underlying");
         uint256 old_balance = IERC20(_underlying).balanceOf(token);
         IERC20(_underlying).safeTransferFrom(msg.sender, token, amount);
         uint256 new_balance = IERC20(_underlying).balanceOf(token);
         require(
             new_balance >= old_balance && new_balance <= old_balance + amount,
-            "Theia:get wrong"
+            "2"
         );
         return new_balance - old_balance;
     }
 
     function _swapOutNative(address token) internal returns (uint256) {
-        require(wNATIVE != address(0), "Theia:zero wNATIVE");
+        require(wNATIVE != address(0), "TR:zero wNATIVE");
         require(
             ITheiaERC20(token).underlying() == wNATIVE,
-            "Theia:underlying is not wNATIVE"
+            "TR:underlying is not wNATIVE"
         );
         uint256 old_balance = IERC20(wNATIVE).balanceOf(token);
         IwNATIVE(wNATIVE).deposit{value: msg.value}();
@@ -119,7 +115,7 @@ contract TheiaRouter is IRouter, FeeManager {
         require(
             new_balance >= old_balance &&
                 new_balance <= old_balance + msg.value,
-            "Theia:get wrong"
+            "1"
         );
         return new_balance - old_balance;
     }
@@ -165,14 +161,30 @@ contract TheiaRouter is IRouter, FeeManager {
 
     function queryFee(
         address _theiaToken,
-        uint256 _amount
+        uint256 _amount,
+        address _feeToken,
+        uint256 _toChainID
     ) public view returns (uint256) {
-        (uint256 _liquidity, uint256 _decimals) = _getLiquidity(_theiaToken);
-        uint256 _feeRate = 0;
-        if (_decimals > 0) {
-            _feeRate = getFeeFactor(_liquidity, _amount);
+        uint256 _feeReadable = getFeeConfig(cID(), _toChainID, _feeToken);
+        uint256 _swapFee = 0;
+        if (_feeReadable > 0) {
+            _swapFee = convertDecimals(
+                _feeReadable,
+                2,
+                ITheiaERC20(_feeToken).decimals()
+            );
+
+            (uint256 _liquidity, uint256 _decimals) = _getLiquidity(
+                _theiaToken
+            );
+            // TODO need this?
+            require(_amount <= _liquidity, "TR: not enough liquidity");
+            if (_decimals > 0) {
+                uint256 feeFactor = getFeeFactor(_liquidity, _amount);
+                _swapFee = (_swapFee * feeFactor) / 1000;
+            }
         }
-        return _feeRate;
+        return _swapFee;
     }
 
     function _calcAndPay(
@@ -210,16 +222,16 @@ contract TheiaRouter is IRouter, FeeManager {
             );
         require(
             _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
-            "Theia:token not support"
+            "TR:token not support"
         );
 
         address _token = TheiaUtils.toAddress(_fromConfig.ContractAddress);
         address _recToken = TheiaUtils.toAddress(_toConfig.ContractAddress);
         uint8 _recDecimals = _toConfig.Decimals;
         checkSwapOut(_token, _to, _receiver, _amount);
-        require(_recToken != address(0), "Theia:recToken empty");
+        require(_recToken != address(0), "TR:recToken empty");
         uint256 _recvAmount = _getRevAmount(_token, _amount);
-        require(_recvAmount > 0, "Theia:nothing to cross");
+        require(_recvAmount > 0, "TR:nothing to cross");
 
         uint256 _swapFee = _calcAndPay(_feeToken, _toChainID);
 
@@ -239,11 +251,11 @@ contract TheiaRouter is IRouter, FeeManager {
                 ITheiaERC20(_token).decimals(),
                 _recDecimals
             );
-            require(_toAmount > 0, "Theia:wrong Decimals");
+            require(_toAmount > 0, "TR:wrong Decimals");
         }
 
-        bytes memory _data = abi.encodeWithSelector(
-            TheiaStruct.FuncSwapInAuto,
+        bytes memory _data = abi.encodeWithSignature(
+            "swapInAuto(bytes32,address,address,uint256,uint256,address)",
             swapID,
             _recToken,
             _receiver,
@@ -267,107 +279,192 @@ contract TheiaRouter is IRouter, FeeManager {
         );
     }
 
-    // TODO is it a good for user just get less token?
-    function payExtraAndClaim(
-        bytes32 swapID,
-        address feeToken,
-        uint256 amount
+    // TODO add min recvAmount
+    function callAndSwapOut(
+        address _fromToken,
+        uint256 _amount,
+        address _to,
+        address _toToken,
+        address _receiver,
+        address _recToken,
+        uint8 _recDecimals,
+        address _feeToken,
+        uint256 _toChainID,
+        address _dexAddr,
+        bytes calldata _data
     ) external payable {
-        require(pendings[swapID].to == msg.sender, "Theia:pending not exist");
-        PendingCross memory pc = pendings[swapID];
-        uint256 baseFee = getFromChainFee(pc.fromChainID, feeToken);
-        require(baseFee > 0, "Theia:config error");
-        uint256 feeRate = queryFee(pc.token, pc.amount);
-        if (feeRate > 0) {
-            uint256 fee = (baseFee * feeRate) / 1000;
-            require(fee >= amount, "Theia:fee not enough");
-            if (feeToken == NATIVE) {
-                require(msg.value >= fee, "Theia:native not enough");
-                if (msg.value > fee) {
-                    TransferHelper.safeTransferNative(
-                        msg.sender,
-                        msg.value - fee
-                    );
-                }
+        checkSwapOut(_fromToken, _to, _receiver, _amount);
+        require(_toToken != address(0), "TR:toToken empty");
+        require(_dexAddr != address(0), "TR:dexAddr empty");
+        require(_recToken != address(0), "TR:recToken empty");
+        ITheiaERC20 toTheiaToken = ITheiaERC20(_toToken);
+        require(toTheiaToken.underlying() != address(0), "TR:underlying empty");
+        uint256 _swapFee = _calcAndPay(_feeToken, _toChainID);
+
+        uint256 _old_amount = _balanceOf(toTheiaToken.underlying());
+        bool success;
+        bytes memory result;
+        ITheiaERC20 theiaToken = ITheiaERC20(_fromToken);
+        address _underlying = theiaToken.underlying();
+        if (
+            _underlying != address(0) &&
+            IERC20(_fromToken).balanceOf(msg.sender) < _amount
+        ) {
+            if (_underlying == wNATIVE) {
+                require(msg.value >= _amount, "TR:balance not enough");
+                (success, result) = _dexAddr.call{value: msg.value}(_data);
             } else {
-                IERC20(feeToken).safeTransferFrom(
+                require(
+                    IERC20(_underlying).balanceOf(msg.sender) >= _amount,
+                    "TR:balance not enough"
+                );
+                IERC20(_underlying).safeTransferFrom(
                     msg.sender,
                     address(this),
-                    fee
+                    _amount
                 );
+                IERC20(_underlying).approve(_dexAddr, _amount);
+                (success, result) = _dexAddr.call(_data);
             }
-        }
-        uint256 recvAmount = _registerAndMint(
-            swapID,
-            pc.token,
-            pc.to,
-            pc.amount,
-            pc.fromChainID,
-            pc.sourceTx
-        );
-        _swapAuto(pc.token, pc.to, recvAmount);
-    }
-
-    // TODO fallback if pending
-
-    function swapInAuto(
-        bytes32 swapID,
-        address token,
-        address to,
-        uint256 amount,
-        uint256 tokenDecimals,
-        address fromTokenAddr
-    ) external onlyGov returns (bool) {
-        require(token != address(0), "Theia:token empty");
-        require(swapID.length > 0, "Theia:swapID empty");
-        require(to != address(0), "Theia:to empty");
-        require(amount > 0, "Theia:amount empty");
-        require(tokenDecimals > 0, "Theia:tokenDecimals empty");
-        require(fromTokenAddr != address(0), "Theia:fromTokenAddr empty");
-
-        (, string memory fromChainID, string memory _sourceTx, ) = context();
-
-        (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
-        require(ok, "Theia:sourceChain invalid");
-
-        require(
-            ITheiaERC20(token).decimals() == tokenDecimals,
-            "Theia:tokenDecimals dismatch"
-        );
-
-        uint256 feeRate = queryFee(token, amount);
-        if (feeRate > 0) {
-            // TODO need to pay if have allownance
+        } else {
             require(
-                pendings[swapID].token == address(0),
-                "Theia:already pending"
+                IERC20(_fromToken).balanceOf(msg.sender) >= _amount,
+                "TR:balance not enough"
             );
-            PendingCross memory pc = PendingCross(
-                token,
-                to,
-                amount,
-                tokenDecimals,
-                fromTokenAddr,
-                sourceChainID,
-                _sourceTx
-            );
-            pendings[swapID] = pc;
-            emit LogSwapInPending(token, to, swapID, amount, feeRate);
-            return true;
+            ITheiaERC20(_fromToken).burn(msg.sender, _amount);
+            ITheiaERC20(_fromToken).mint(address(this), _amount);
+            IERC20(_fromToken).approve(_dexAddr, _amount);
+            (success, result) = _dexAddr.call(_data);
         }
 
-        uint256 recvAmount = _registerAndMint(
-            swapID,
-            token,
-            to,
-            amount,
-            sourceChainID,
-            _sourceTx
+        uint256 amount = _balanceOf(toTheiaToken.underlying());
+        if (success) {
+            require(amount - _old_amount > 0, "TR:nothing received");
+        }
+
+        uint256 _toAmount = amount - _old_amount;
+
+        require(_toAmount > 0, "TR:nothing to cross");
+        IERC20(toTheiaToken.underlying()).safeTransferFrom(
+            address(this),
+            _toToken,
+            _toAmount
         );
-        return _swapAuto(token, to, recvAmount);
+
+        if (toTheiaToken.decimals() != _recDecimals) {
+            _toAmount = convertDecimals(
+                _toAmount,
+                toTheiaToken.decimals(),
+                _recDecimals
+            );
+            require(_toAmount > 0, "TR:wrong Decimals");
+        }
+
+        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
+            _fromToken,
+            msg.sender,
+            _amount,
+            _receiver,
+            _toChainID
+        );
+
+        bytes memory _call_data = abi.encodeWithSignature(
+            "swapInAuto(bytes32,address,address,uint256,uint256,address)",
+            _swapID,
+            _recToken,
+            _receiver,
+            _toAmount,
+            _recDecimals,
+            _toToken
+        );
+
+        c3call(_to.toHexString(), _toChainID.toString(), _call_data);
+
+        emit LogSwapOut(
+            _toToken,
+            msg.sender,
+            _receiver.toHexString(),
+            amount,
+            cID(),
+            _toChainID,
+            _swapFee,
+            _swapID,
+            _call_data
+        );
     }
 
-    function _registerAndMint(
+    // TODO add min recvAmount
+    function swapOutAndCall(
+        address _token,
+        uint256 _amount,
+        address _to,
+        address _receiver,
+        address _recToken,
+        uint8 _recDecimals,
+        address _feeToken,
+        uint256 _toChainID,
+        bool _native,
+        address _dex,
+        bytes calldata _data
+    ) external payable {
+        checkSwapOut(_token, _to, _receiver, _amount);
+        require(_dex != address(0), "TR:dex empty");
+        require(_data.length > 0, "TR:data empty");
+        require(_recToken != address(0), "TR:recToken empty");
+        require(_recDecimals > 0, "TR:recDecimals empty");
+
+        uint256 _swapFee = _calcAndPay(_feeToken, _toChainID);
+
+        uint256 _recvAmount = _getRevAmount(_token, _amount);
+
+        uint256 _toAmount = _recvAmount;
+        require(_toAmount > 0, "TR:nothing to cross");
+        ITheiaERC20 toTheiaToken = ITheiaERC20(_token);
+        if (toTheiaToken.decimals() != _recDecimals) {
+            _toAmount = convertDecimals(
+                _toAmount,
+                toTheiaToken.decimals(),
+                _recDecimals
+            );
+            require(_toAmount > 0, "TR: wrong Decimals");
+        }
+
+        bytes32 _swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
+            _token,
+            msg.sender,
+            _amount,
+            _receiver,
+            _toChainID
+        );
+
+        bytes memory data = abi.encodeWithSignature(
+            "swapInAutoAndCall(bytes32,address,bool,address,uint256,uint256,address,address,bytes)",
+            _swapID,
+            _recToken,
+            _native,
+            _receiver,
+            _toAmount,
+            _recDecimals,
+            _token,
+            _dex,
+            _data
+        );
+        c3call(_to.toHexString(), _toChainID.toString(), data);
+
+        emit LogSwapOut(
+            _token,
+            msg.sender,
+            _receiver.toHexString(),
+            _amount,
+            cID(),
+            _toChainID,
+            _swapFee,
+            _swapID,
+            data
+        );
+    }
+
+    function _swapIn(
         bytes32 swapID,
         address token,
         address to,
@@ -381,6 +478,42 @@ contract TheiaRouter is IRouter, FeeManager {
         return amount;
     }
 
+    function swapInAuto(
+        bytes32 swapID,
+        address token,
+        address to,
+        uint256 amount,
+        uint256 tokenDecimals,
+        address fromTokenAddr
+    ) external onlyGov returns (bool) {
+        require(token != address(0), "TR:token empty");
+        require(swapID.length > 0, "TR:swapID empty");
+        require(to != address(0), "TR:to empty");
+        require(amount > 0, "TR:amount empty");
+        require(tokenDecimals > 0, "TR:tokenDecimals empty");
+        require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
+
+        (, string memory fromChainID, string memory _sourceTx, ) = context();
+
+        (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
+        require(ok, "TR:sourceChain invalid");
+
+        require(
+            ITheiaERC20(token).decimals() == tokenDecimals,
+            "TR:tokenDecimals dismatch"
+        );
+
+        uint256 recvAmount = _swapIn(
+            swapID,
+            token,
+            to,
+            amount,
+            sourceChainID,
+            _sourceTx
+        );
+        return _swapAuto(token, to, recvAmount);
+    }
+
     function _swapAuto(
         address token,
         address to,
@@ -392,7 +525,7 @@ contract TheiaRouter is IRouter, FeeManager {
             // TODO is it allowed to just mint veToken if underlying is insufficient?
             require(
                 IERC20(_underlying).balanceOf(token) >= recvAmount,
-                "Theia:insufficient balance"
+                "TR:insufficient balance"
             );
             if (_underlying == wNATIVE) {
                 theiaToken.withdrawVault(to, recvAmount, address(this));
@@ -405,6 +538,70 @@ contract TheiaRouter is IRouter, FeeManager {
         return true;
     }
 
+    function swapInAutoAndCall(
+        bytes32 swapID,
+        address token,
+        bool native,
+        address to,
+        uint256 amount,
+        uint256 tokenDecimals,
+        address fromTokenAddr, // use string?
+        address dex,
+        bytes memory data
+    ) external onlyGov returns (bool) {
+        require(token != address(0), "TR:token empty");
+        require(swapID.length > 0, "TR:swapID empty");
+        require(to != address(0), "TR:to empty");
+        require(amount > 0, "TR:amount empty");
+        require(tokenDecimals > 0, "TR:tokenDecimals empty");
+        require(fromTokenAddr != address(0), "TR:fromTokenAddr empty");
+        (, string memory fromChainID, string memory _sourceTx, ) = context();
+
+        (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
+        require(ok, "TR:sourceChain is invalid");
+
+        ITheiaERC20 theiaToken = ITheiaERC20(token);
+        require(
+            theiaToken.decimals() == tokenDecimals,
+            "TR:tokenDecimals dismatch"
+        );
+        uint256 recvAmount = _swapIn(
+            swapID,
+            token,
+            to,
+            amount,
+            sourceChainID,
+            _sourceTx
+        );
+        address _underlying = theiaToken.underlying();
+
+        // uint256 _old_amount = _balanceOf(_underlying);
+
+        bool success;
+        bytes memory result;
+        if (
+            _underlying != address(0) &&
+            IERC20(_underlying).balanceOf(token) >= recvAmount
+        ) {
+            theiaToken.withdrawVault(to, recvAmount, address(this));
+            if (_underlying == wNATIVE && native) {
+                IwNATIVE(wNATIVE).withdraw(recvAmount);
+                (success, result) = dex.call{value: recvAmount}(data);
+            } else {
+                IERC20(_underlying).safeApprove(dex, recvAmount);
+                (success, result) = dex.call(data);
+            }
+        } else {
+            theiaToken.burn(to, recvAmount);
+            theiaToken.mint(address(this), recvAmount);
+            IERC20(token).safeApprove(dex, recvAmount);
+            (success, result) = dex.call(data);
+        }
+        // TODO should move asset to user address
+        // uint256 _amount = _balanceOf(_underlying);
+        return success;
+    }
+
     function _c3Fallback(
         bytes4 _selector,
         bytes calldata _data,
@@ -415,14 +612,42 @@ contract TheiaRouter is IRouter, FeeManager {
         uint256 _amount;
         uint256 _recDecimals;
         address _fromToken;
-        (_swapID, , _receiver, _amount, _recDecimals, _fromToken) = abi.decode(
-            _data,
-            (bytes32, address, address, uint256, uint256, address)
-        );
+        if (_selector == TheiaStruct.FuncSwapInAutoAndCall) {
+            (
+                _swapID,
+                ,
+                ,
+                _receiver,
+                _amount,
+                _recDecimals,
+                _fromToken,
+                ,
+
+            ) = abi.decode(
+                _data,
+                (
+                    bytes32,
+                    address,
+                    bool,
+                    address,
+                    uint256,
+                    uint256,
+                    address,
+                    address,
+                    bytes
+                )
+            );
+        } else {
+            (_swapID, , _receiver, _amount, _recDecimals, _fromToken) = abi
+                .decode(
+                    _data,
+                    (bytes32, address, address, uint256, uint256, address)
+                );
+        }
 
         require(
             ISwapIDKeeper(swapIDKeeper).isSwapoutIDExist(_swapID),
-            "Theia:swapId not exists"
+            "TR:swapId not exists"
         );
         ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
 
@@ -434,7 +659,7 @@ contract TheiaRouter is IRouter, FeeManager {
                 ITheiaERC20(_fromToken).decimals()
             );
         }
-        require(_toAmount > 0, "Theia:recAmount convert err");
+        require(_toAmount > 0, "TR:recAmount convert err");
 
         ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
 
@@ -454,10 +679,10 @@ contract TheiaRouter is IRouter, FeeManager {
         address token,
         address to
     ) external payable returns (uint256) {
-        require(wNATIVE != address(0), "Theia:zero wNATIVE");
+        require(wNATIVE != address(0), "TR:zero wNATIVE");
         require(
             ITheiaERC20(token).underlying() == wNATIVE,
-            "Theia:underlying is not wNATIVE"
+            "TR:underlying is not wNATIVE"
         );
         IwNATIVE(wNATIVE).deposit{value: msg.value}();
         assert(IwNATIVE(wNATIVE).transfer(token, msg.value));
@@ -470,10 +695,10 @@ contract TheiaRouter is IRouter, FeeManager {
         uint256 amount,
         address to
     ) external returns (uint256) {
-        require(wNATIVE != address(0), "Theia:zero wNATIVE");
+        require(wNATIVE != address(0), "TR:zero wNATIVE");
         require(
             ITheiaERC20(token).underlying() == wNATIVE,
-            "Theia:underlying is not wNATIVE"
+            "TR:underlying is not wNATIVE"
         );
 
         uint256 old_balance = IERC20(wNATIVE).balanceOf(address(this));

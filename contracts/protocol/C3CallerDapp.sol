@@ -7,14 +7,6 @@ abstract contract C3CallerDapp is IC3Dapp {
     address public c3CallerProxy;
     uint256 public dappID;
 
-    modifier onlyExecutor() {
-        require(
-            IC3CallerProxy(c3CallerProxy).isExecutor(msg.sender),
-            "C3CallerDapp: onlyExecutor"
-        );
-        _;
-    }
-
     modifier onlyCaller() {
         require(
             IC3CallerProxy(c3CallerProxy).isCaller(msg.sender),

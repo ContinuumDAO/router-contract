@@ -89,7 +89,7 @@ abstract contract FeeManager is Governor {
         }
     }
 
-    function payFee(address feeToken, uint256 fee) internal {
+    function _payFee(address feeToken, uint256 fee) internal {
         require(feeTokenIndexMap[feeToken] > 0, "FM: feeToekn not exist");
         require(
             IERC20(feeToken).transferFrom(msg.sender, address(this), fee),

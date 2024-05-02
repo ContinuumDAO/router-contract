@@ -51,6 +51,7 @@ contract C3CallerProxy is
         return IC3Caller(c3caller).context();
     }
 
+    // called by dapp
     function c3call(
         uint256 _dappID,
         string calldata _to,
@@ -59,7 +60,7 @@ contract C3CallerProxy is
     ) external override {
         IC3Caller(c3caller).c3call(_dappID, msg.sender, _to, _toChainID, _data);
     }
-
+    // called by dapp
     function c3broadcast(
         uint256 _dappID,
         string[] calldata _to,
@@ -75,6 +76,7 @@ contract C3CallerProxy is
         );
     }
 
+    // called by mpc network
     function execute(
         uint256 _dappID,
         C3CallerStructLib.C3EvmMessage calldata _message
@@ -82,6 +84,7 @@ contract C3CallerProxy is
         IC3Caller(c3caller).execute(_dappID, _message);
     }
 
+    // called by mpc network
     function c3Fallback(
         uint256 _dappID,
         C3CallerStructLib.C3EvmFallbackMessage calldata _message

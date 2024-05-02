@@ -59,7 +59,7 @@ contract CToken is ERC20, C3CallerDapp {
     function _c3Fallback(
         bytes4 selector,
         bytes calldata data_,
-        bytes calldata reason_
+        bytes calldata /*reason_*/
     ) internal override returns (bool) {
         (address to, uint256 amount) = abi.decode(data_, (address, uint256));
         require(to != address(0), "empty to");

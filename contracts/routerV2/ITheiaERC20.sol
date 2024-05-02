@@ -32,3 +32,7 @@ interface ITheiaERC20 {
 
     function withdraw(uint256 amount, address to) external returns (uint256);
 }
+
+interface IERC20Extended {
+    function decimals() external view returns (uint8);
+}
