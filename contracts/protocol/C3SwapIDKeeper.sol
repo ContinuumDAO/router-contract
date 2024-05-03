@@ -32,10 +32,7 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
     }
 
     modifier checkCompletion(bytes32 uuid) {
-        require(
-            !completedSwapin[uuid],
-            "C3SwapIDKeeper: uuid is completed"
-        );
+        require(!completedSwapin[uuid], "C3SwapIDKeeper: uuid is completed");
         _;
     }
 
@@ -121,35 +118,6 @@ contract C3SwapIDKeeper is ISwapIDKeeper {
         require(!this.isSwapoutIDExist(uuid), "uuid already exist");
         swapoutNonce[uuid] = currentSwapoutNonce;
         return uuid;
-    }
-
-    function calcSwapID(
-        address token,
-        address from,
-        string calldata to,
-        uint256 amount,
-        string calldata toChainID,
-        address sender,
-        string calldata dapp,
-        bytes calldata data
-    ) public view returns (bytes32) {
-        uint256 nonce = currentSwapoutNonce + 1;
-        return
-            keccak256(
-                abi.encode(
-                    address(this),
-                    sender,
-                    block.chainid,
-                    token,
-                    from,
-                    to,
-                    amount,
-                    nonce,
-                    toChainID,
-                    dapp,
-                    data
-                )
-            );
     }
 
     function genUUID(

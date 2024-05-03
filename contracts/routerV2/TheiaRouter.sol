@@ -22,13 +22,9 @@ contract TheiaRouter is IRouter, FeeManager {
     using SafeMath for uint256;
 
     address public immutable wNATIVE;
-    address public immutable NATIVE =
-        0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     address public swapIDKeeper;
     address public theiaConfig;
-
-    mapping(bytes32 => PendingCross) public pendings;
 
     constructor(
         address _wNATIVE,
@@ -163,14 +159,14 @@ contract TheiaRouter is IRouter, FeeManager {
         return (liquidity, decimals);
     }
 
-    function queryFee(
+    function queryLiquidityFeeRate(
         address _theiaToken,
         uint256 _amount
     ) public view returns (uint256) {
         (uint256 _liquidity, uint256 _decimals) = _getLiquidity(_theiaToken);
         uint256 _feeRate = 0;
         if (_decimals > 0) {
-            _feeRate = getFeeFactor(_liquidity, _amount);
+            _feeRate = _getFeeFactor(_liquidity, _amount);
         }
         return _feeRate;
     }
@@ -179,7 +175,7 @@ contract TheiaRouter is IRouter, FeeManager {
         address _feeToken,
         uint256 _toChainID
     ) internal returns (uint256) {
-        uint256 feeReadable = getFeeConfig(cID(), _toChainID, _feeToken);
+        uint256 feeReadable = getGasFee(cID(), _toChainID, _feeToken);
         if (feeReadable > 0) {
             uint256 _swapFee = convertDecimals(
                 feeReadable,
@@ -242,6 +238,7 @@ contract TheiaRouter is IRouter, FeeManager {
             require(_toAmount > 0, "Theia:wrong Decimals");
         }
 
+        // FIXME 
         bytes memory _data = abi.encodeWithSelector(
             TheiaStruct.FuncSwapInAuto,
             swapID,
@@ -267,55 +264,14 @@ contract TheiaRouter is IRouter, FeeManager {
         );
     }
 
-    // TODO is it a good for user just get less token?
-    function payExtraAndClaim(
-        bytes32 swapID,
-        address feeToken,
-        uint256 amount
-    ) external payable {
-        require(pendings[swapID].to == msg.sender, "Theia:pending not exist");
-        PendingCross memory pc = pendings[swapID];
-        uint256 baseFee = getFromChainFee(pc.fromChainID, feeToken);
-        require(baseFee > 0, "Theia:config error");
-        uint256 feeRate = queryFee(pc.token, pc.amount);
-        if (feeRate > 0) {
-            uint256 fee = (baseFee * feeRate) / 1000;
-            require(fee >= amount, "Theia:fee not enough");
-            if (feeToken == NATIVE) {
-                require(msg.value >= fee, "Theia:native not enough");
-                if (msg.value > fee) {
-                    TransferHelper.safeTransferNative(
-                        msg.sender,
-                        msg.value - fee
-                    );
-                }
-            } else {
-                IERC20(feeToken).safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    fee
-                );
-            }
-        }
-        uint256 recvAmount = _registerAndMint(
-            swapID,
-            pc.token,
-            pc.to,
-            pc.amount,
-            pc.fromChainID,
-            pc.sourceTx
-        );
-        _swapAuto(pc.token, pc.to, recvAmount);
-    }
-
-    // TODO fallback if pending
-
     function swapInAuto(
         bytes32 swapID,
         address token,
         address to,
         uint256 amount,
         uint256 tokenDecimals,
+        uint256 feePaid,
+        address feeToken,
         address fromTokenAddr
     ) external onlyGov returns (bool) {
         require(token != address(0), "Theia:token empty");
@@ -335,25 +291,13 @@ contract TheiaRouter is IRouter, FeeManager {
             "Theia:tokenDecimals dismatch"
         );
 
-        uint256 feeRate = queryFee(token, amount);
+        uint256 feeRate = queryLiquidityFeeRate(token, amount);
         if (feeRate > 0) {
-            // TODO need to pay if have allownance
-            require(
-                pendings[swapID].token == address(0),
-                "Theia:already pending"
-            );
-            PendingCross memory pc = PendingCross(
-                token,
-                to,
-                amount,
-                tokenDecimals,
-                fromTokenAddr,
-                sourceChainID,
-                _sourceTx
-            );
-            pendings[swapID] = pc;
-            emit LogSwapInPending(token, to, swapID, amount, feeRate);
-            return true;
+            // TODO getLiquidityFee
+            uint256 baseFee = getFromChainFee(sourceChainID, feeToken);
+            require(baseFee > 0, "Theia:config error");
+            uint256 fee = (baseFee * feeRate) / 1000;
+            require(feePaid >= fee, "Theia:not cover liquidity fee");
         }
 
         uint256 recvAmount = _registerAndMint(

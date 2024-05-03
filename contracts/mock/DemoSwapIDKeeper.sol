@@ -123,9 +123,9 @@ contract DemoSwapIDKeeper {
         address from,
         string calldata to,
         uint256 amount,
-        string calldata toChainID,
-        string calldata dapp,
-        bytes calldata data
+        string calldata /*toChainID*/,
+        string calldata /*dapp*/,
+        bytes calldata /*data*/
     ) public view returns (bytes32) {
         uint256 nonce = currentSwapoutNonce + 1;
         return

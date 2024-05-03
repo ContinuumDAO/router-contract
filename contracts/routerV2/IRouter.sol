@@ -54,14 +54,4 @@ interface IRouter {
         bytes data,
         bytes reason
     );
-
-    struct PendingCross {
-        address token;
-        address to;
-        uint256 amount;
-        uint256 tokenDecimals;
-        address fromTokenAddr;
-        uint256 fromChainID;
-        string sourceTx;
-    }
 }

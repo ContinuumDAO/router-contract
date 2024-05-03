@@ -5,8 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Governor.sol";
+import "./IFeeManager.sol";
 
-abstract contract FeeManager is Governor {
+abstract contract FeeManager is Governor, IFeeManager {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -97,7 +98,7 @@ abstract contract FeeManager is Governor {
         );
     }
 
-    function getFeeConfig(
+    function getGasFee(
         uint256 fromChainID,
         uint256 toChainID,
         address feeToken
@@ -110,7 +111,7 @@ abstract contract FeeManager is Governor {
         return fee;
     }
 
-    function getFee(
+    function getLiquidityFee(
         address feeToken,
         uint256 fromChainID,
         uint256 toChainID,
@@ -118,17 +119,24 @@ abstract contract FeeManager is Governor {
         uint256 amount,
         bool underlying
     ) public view returns (uint256) {
-        uint256 baseFee = getFeeConfig(fromChainID, toChainID, feeToken);
+        uint256 baseFee = getGasFee(fromChainID, toChainID, feeToken);
         if (baseFee == 0) return 0;
         else {
             uint256 feeFactor = underlying
-                ? getFeeFactor(liquidity, amount)
+                ? _getFeeFactor(liquidity, amount)
                 : 1000;
             return ((baseFee * feeFactor) / 1000);
         }
     }
 
-    function getFeeFactor(
+    function getLiquidityFeeFactor(
+        uint256 liquidity,
+        uint256 amount
+    ) external pure returns (uint256 feeRate) {
+        return _getFeeFactor(liquidity, amount);
+    }
+
+    function _getFeeFactor(
         uint256 liquidity,
         uint256 amount
     ) internal pure returns (uint256 fee) {
