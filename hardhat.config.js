@@ -10,7 +10,8 @@ const {
   BLAST_SEP,
   AMOY,
   AERON_TEST,
-  MANTA_TEST
+  MANTA_TEST,
+  LINEA_SEPOLIA
 } = require("./env.json")
 
 
@@ -83,11 +84,16 @@ module.exports = {
       chainId: 462,
       accounts: [AERON_TEST.DEPLOY_KEY]
     },
-    manta_test:{
+    manta_test: {
       url: MANTA_TEST.URL,
       chainId: 3441006,
       accounts: [MANTA_TEST.DEPLOY_KEY]
-    }
+    },
+    linea_sepolia: {
+      url: LINEA_SEPOLIA.URL,
+      chainId: 59141,
+      accounts: [LINEA_SEPOLIA.DEPLOY_KEY]
+    },
   },
   etherscan: {
     apiKey: {

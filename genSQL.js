@@ -19,7 +19,7 @@ tokensContents.split(/\r?\n/).forEach(line => {
         '${args.chainId}',
         '${args.name}',
         '${args.symbol}',
-        ${args.decimals},
+         ${args.decimals},
         '${args.address}',
         '${args.underlying}',
         'V1',

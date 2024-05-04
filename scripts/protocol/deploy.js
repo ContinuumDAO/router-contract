@@ -19,14 +19,17 @@ async function main() {
 
     const c3SwapIDKeeper = await hre.ethers.deployContract("contracts/protocol/C3SwapIDKeeper.sol:C3SwapIDKeeper", [evn[networkName.toUpperCase()].MPC]);
     await c3SwapIDKeeper.waitForDeployment();
+    // const c3SwapIDKeeper = await hre.ethers.getContractAt("contracts/protocol/C3SwapIDKeeper.sol:C3SwapIDKeeper", evn[networkName.toUpperCase()].C3SwapIDKeeper);
     console.log('"C3SwapIDKeeper":', `"${c3SwapIDKeeper.target}",`);
 
     const c3Caller = await hre.ethers.deployContract("contracts/protocol/C3Caller.sol:C3Caller", [evn[networkName.toUpperCase()].MPC, c3SwapIDKeeper.target]);
     await c3Caller.waitForDeployment();
+    // const c3Caller = await hre.ethers.getContractAt("contracts/protocol/C3Caller.sol:C3Caller", evn[networkName.toUpperCase()].C3Caller);
     console.log('"C3Caller":', `"${c3Caller.target}",`);
 
     const C3DappManager = await hre.ethers.deployContract("C3DappManager", [evn[networkName.toUpperCase()].MPC]);
     await C3DappManager.waitForDeployment();
+    // const C3DappManager = await hre.ethers.getContractAt("C3DappManager", evn[networkName.toUpperCase()].C3DappManager);
     console.log('"C3DappManager":', `"${C3DappManager.target}",`);
 
     const C3CallerProxy = await hre.ethers.getContractFactory("C3CallerProxy");
