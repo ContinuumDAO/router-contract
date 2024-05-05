@@ -28,7 +28,7 @@ async function main() {
     console.log(`
         INSERT INTO chain_config (chain_id, initial_height, confirmations, extra, chain_symbol)
         VALUES
-            (${chainId}, '0', 2, '{"eip1559":true}', '${networkName}');
+            (${chainId}, '0', 2, '{"eip1559":false}', '${networkName}');
         `)
 
     console.log("Scaner SQL:");

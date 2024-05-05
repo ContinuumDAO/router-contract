@@ -40,6 +40,7 @@ npx hardhat erc20 --network blast_sep theiaUSDT tUSDT 18 0x000000000000000000000
 npx hardhat erc20 --network blast_sep theiaCTM tCtm 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network aeron_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network linea_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network vanguard theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network bsc_test
@@ -49,6 +50,13 @@ npx hardhat run scripts/theiaRouter/setTokenConfig.js --network sepolia
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network blast_sep
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network aeron_test
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network linea_sepolia
+npx hardhat run scripts/theiaRouter/setTokenConfig.js --network vanguard
 
 npx hardhat run scripts/theiaRouter/setFeeConfig.js --network linea_sepolia
+npx hardhat run scripts/theiaRouter/setFeeConfig.js --network vanguard
+
+npx hardhat run scripts/theiaRouter/genSQL.js --network vanguard
+
+npx hardhat run scripts/mock/deployMultiCall.js --network vanguard
 ```
+

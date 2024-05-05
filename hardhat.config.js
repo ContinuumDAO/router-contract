@@ -11,7 +11,8 @@ const {
   AMOY,
   AERON_TEST,
   MANTA_TEST,
-  LINEA_SEPOLIA
+  LINEA_SEPOLIA,
+  VANGUARD
 } = require("./env.json")
 
 
@@ -94,6 +95,11 @@ module.exports = {
       chainId: 59141,
       accounts: [LINEA_SEPOLIA.DEPLOY_KEY]
     },
+    vanguard: {
+      url: VANGUARD.URL,
+      chainId: 78600,
+      accounts: [VANGUARD.DEPLOY_KEY]
+    }
   },
   etherscan: {
     apiKey: {
