@@ -21,17 +21,16 @@ interface IRouter {
         uint256 feeRate
     );
 
-    // TODO need add feeToken
     event LogSwapOut(
         address indexed token,
         address indexed from,
-        string to,
+        bytes32 indexed swapoutID,
         uint256 amount,
         uint256 fromChainID,
         uint256 toChainID,
         uint256 fee,
-        bytes32 swapoutID,
-        bytes data
+        address feeToken,
+        string to
     );
     event LogAnySwapInAndExec(
         address indexed dapp,

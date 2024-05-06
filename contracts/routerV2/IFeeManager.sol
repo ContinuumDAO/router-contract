@@ -11,5 +11,7 @@ interface IFeeManager {
     function getLiquidityFeeFactor(
         uint256 liquidity,
         uint256 amount
-    ) external pure returns (uint256);
+    ) external returns (uint256);
+
+    function getBaseLiquidityFee(address feeToken) external returns (uint256);
 }

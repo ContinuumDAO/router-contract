@@ -190,12 +190,13 @@ contract TheiaRouter is IRouter, FeeManager {
     }
 
     function swapOutAuto(
-        string memory _tokenID,
-        uint256 _amount,
         address _to,
         address _receiver,
-        address _feeToken,
-        uint256 _toChainID
+        uint256 _amount,
+        uint256 _feeAmount,
+        uint256 _toChainID,
+        string memory _tokenID,
+        string memory _feeTokenID
     ) external payable {
         (
             Structs.TokenConfig memory _fromConfig,
@@ -209,6 +210,18 @@ contract TheiaRouter is IRouter, FeeManager {
             "Theia:token not support"
         );
 
+        (
+            Structs.TokenConfig memory _fromFeeConfig,
+            Structs.TokenConfig memory _toFeeConfig
+        ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(
+                _feeTokenID,
+                _toChainID
+            );
+        require(
+            _fromFeeConfig.Decimals > 0 && _toFeeConfig.Decimals > 0,
+            "Theia:token not support"
+        );
+
         address _token = TheiaUtils.toAddress(_fromConfig.ContractAddress);
         address _recToken = TheiaUtils.toAddress(_toConfig.ContractAddress);
         uint8 _recDecimals = _toConfig.Decimals;
@@ -217,7 +230,11 @@ contract TheiaRouter is IRouter, FeeManager {
         uint256 _recvAmount = _getRevAmount(_token, _amount);
         require(_recvAmount > 0, "Theia:nothing to cross");
 
+        address _feeToken = TheiaUtils.toAddress(
+            _fromFeeConfig.ContractAddress
+        );
         uint256 _swapFee = _calcAndPay(_feeToken, _toChainID);
+        require(_feeAmount >= _swapFee, "Theia:fee not enough");
 
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
             _token,
@@ -238,7 +255,19 @@ contract TheiaRouter is IRouter, FeeManager {
             require(_toAmount > 0, "Theia:wrong Decimals");
         }
 
-        // FIXME 
+        uint256 _liquidityFee = _feeAmount - _swapFee;
+        if (
+            _liquidityFee > 0 &&
+            ITheiaERC20(_feeToken).decimals() != _toFeeConfig.Decimals
+        ) {
+            _liquidityFee = convertDecimals(
+                _liquidityFee,
+                ITheiaERC20(_feeToken).decimals(),
+                _toFeeConfig.Decimals
+            );
+            require(_liquidityFee > 0, "Theia:wrong Decimals");
+        }
+
         bytes memory _data = abi.encodeWithSelector(
             TheiaStruct.FuncSwapInAuto,
             swapID,
@@ -246,6 +275,8 @@ contract TheiaRouter is IRouter, FeeManager {
             _receiver,
             _toAmount,
             _recDecimals,
+            _liquidityFee,
+            _feeToken,
             _token
         );
 
@@ -254,13 +285,13 @@ contract TheiaRouter is IRouter, FeeManager {
         emit LogSwapOut(
             _token,
             msg.sender,
-            _receiver.toHexString(),
+            swapID,
             _recvAmount,
             cID(),
             _toChainID,
             _swapFee,
-            swapID,
-            _data
+            _feeToken,
+            _receiver.toHexString()
         );
     }
 
@@ -293,8 +324,7 @@ contract TheiaRouter is IRouter, FeeManager {
 
         uint256 feeRate = queryLiquidityFeeRate(token, amount);
         if (feeRate > 0) {
-            // TODO getLiquidityFee
-            uint256 baseFee = getFromChainFee(sourceChainID, feeToken);
+            uint256 baseFee = getBaseLiquidityFee(feeToken);
             require(baseFee > 0, "Theia:config error");
             uint256 fee = (baseFee * feeRate) / 1000;
             require(feePaid >= fee, "Theia:not cover liquidity fee");
