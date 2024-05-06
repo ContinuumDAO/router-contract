@@ -14,6 +14,20 @@ contract FeeManager is GovernDapp, IFeeManager {
     address[] public feeTokenList;
     mapping(address => uint256) public feeTokenIndexMap;
 
+    mapping(address => FeeParams) public feeParams;
+
+    struct FeeParams {
+        uint256 basePrice; // price in wei per gwei of relevent gasFee
+        uint256 lowGas; // price in gwei
+        uint256 normalGas;
+        uint256 highGas;
+        uint256 veryHighGas;
+        uint256 lowGasFee; // price in gwei corresponding to lowGas
+        uint256 normalGasFee; // price in gwei corresponding to normalGas
+        uint256 highGasFee;
+        uint256 veryHighGasFee;
+    }
+
     constructor(
         address _feeToken,
         address _gov,
@@ -109,7 +123,7 @@ contract FeeManager is GovernDapp, IFeeManager {
         }
     }
 
-    function getGasFee(
+    function getFee(
         uint256 fromChainID,
         uint256 toChainID,
         address feeToken
@@ -130,7 +144,7 @@ contract FeeManager is GovernDapp, IFeeManager {
         uint256 amount,
         bool underlying
     ) public view returns (uint256) {
-        uint256 baseFee = getGasFee(fromChainID, toChainID, feeToken);
+        uint256 baseFee = getFee(fromChainID, toChainID, feeToken);
         if (baseFee == 0) return 0;
         else {
             uint256 feeFactor = underlying
@@ -224,5 +238,48 @@ contract FeeManager is GovernDapp, IFeeManager {
         bytes calldata /*_reason*/
     ) internal pure override returns (bool) {
         return true;
+    }
+
+    function setFeeTokenParams(
+        address _feeToken,
+        FeeParams memory fee
+    ) external onlyGov {
+        feeParams[_feeToken] = fee;
+    }
+
+    function getFeeTokenParams(
+        address _feeToken
+    ) public view returns (FeeParams memory) {
+        return (feeParams[_feeToken]);
+    }
+
+    function getGasFee(
+        uint256 toChainId,
+        address feeToken
+    ) public view returns (uint256) {
+        if (feeParams[feeToken].basePrice == 0) {
+            return 0;
+        }
+
+        uint256 gasPrice;
+        assembly {
+            gasPrice := gasprice()
+        }
+
+        if (toChainId == 1) {
+            if (gasPrice < feeParams[feeToken].lowGas) {
+                return (feeParams[feeToken].basePrice *
+                    feeParams[feeToken].lowGasFee);
+            } else if (gasPrice < feeParams[feeToken].normalGas) {
+                return (feeParams[feeToken].basePrice *
+                    feeParams[feeToken].normalGasFee);
+            } else if (gasPrice < feeParams[feeToken].highGas) {
+                return (feeParams[feeToken].basePrice *
+                    feeParams[feeToken].highGasFee);
+            } else {
+                return (feeParams[feeToken].basePrice *
+                    feeParams[feeToken].veryHighGasFee);
+            }
+        } else return (0); // only bother with Ethereum gas fees
     }
 }

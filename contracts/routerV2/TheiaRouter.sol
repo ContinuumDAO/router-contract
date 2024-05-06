@@ -181,7 +181,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         address _feeToken,
         uint256 _toChainID
     ) internal returns (uint256) {
-        uint256 feeReadable = IFeeManager(feeManager).getGasFee(
+        uint256 feeReadable = IFeeManager(feeManager).getFee(
             cID(),
             _toChainID,
             _feeToken

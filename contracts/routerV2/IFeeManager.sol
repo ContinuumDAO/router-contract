@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 interface IFeeManager {
-    function getGasFee(
+    function getFee(
         uint256 fromChainID,
         uint256 toChainID,
         address feeToken
