@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../protocol/C3CallerDapp.sol";
 
-abstract contract Governor is C3CallerDapp {
+abstract contract GovernDapp is C3CallerDapp {
     // delay for timelock functions
     uint public delay = 2 days;
 

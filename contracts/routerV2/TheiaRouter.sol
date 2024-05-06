@@ -5,18 +5,19 @@ pragma solidity ^0.8.19;
 import "./TheiaUtils.sol";
 import "./ISwapIDKeeper.sol";
 import "./ITheiaERC20.sol";
-import "./FeeManager.sol";
+import "./IFeeManager.sol";
 import "./ITheiaConfig.sol";
 import "./TransferHelper.sol";
 import "./IwNATIVE.sol";
 import "./IRouter.sol";
+import "./GovernDapp.sol";
 import "./TheiaStruct.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract TheiaRouter is IRouter, FeeManager {
+contract TheiaRouter is IRouter, GovernDapp {
     using Strings for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
@@ -25,19 +26,21 @@ contract TheiaRouter is IRouter, FeeManager {
 
     address public swapIDKeeper;
     address public theiaConfig;
+    address public feeManager;
 
     constructor(
         address _wNATIVE,
         address _swapIDKeeper,
         address _theiaConfig,
-        address _feeToken,
+        address _feeManager,
         address _gov,
         address _c3callerProxy,
         uint256 _dappID
-    ) FeeManager(_feeToken, _gov, _c3callerProxy, _dappID) {
+    ) GovernDapp(_gov, _c3callerProxy, _dappID) {
         wNATIVE = _wNATIVE;
         swapIDKeeper = _swapIDKeeper;
         theiaConfig = _theiaConfig;
+        feeManager = _feeManager;
     }
 
     receive() external payable {}
@@ -162,11 +165,14 @@ contract TheiaRouter is IRouter, FeeManager {
     function queryLiquidityFeeRate(
         address _theiaToken,
         uint256 _amount
-    ) public view returns (uint256) {
+    ) public returns (uint256) {
         (uint256 _liquidity, uint256 _decimals) = _getLiquidity(_theiaToken);
         uint256 _feeRate = 0;
         if (_decimals > 0) {
-            _feeRate = _getFeeFactor(_liquidity, _amount);
+            _feeRate = IFeeManager(feeManager).getLiquidityFeeFactor(
+                _liquidity,
+                _amount
+            );
         }
         return _feeRate;
     }
@@ -175,7 +181,11 @@ contract TheiaRouter is IRouter, FeeManager {
         address _feeToken,
         uint256 _toChainID
     ) internal returns (uint256) {
-        uint256 feeReadable = getGasFee(cID(), _toChainID, _feeToken);
+        uint256 feeReadable = IFeeManager(feeManager).getGasFee(
+            cID(),
+            _toChainID,
+            _feeToken
+        );
         if (feeReadable > 0) {
             uint256 _swapFee = convertDecimals(
                 feeReadable,
@@ -324,7 +334,9 @@ contract TheiaRouter is IRouter, FeeManager {
 
         uint256 feeRate = queryLiquidityFeeRate(token, amount);
         if (feeRate > 0) {
-            uint256 baseFee = getBaseLiquidityFee(feeToken);
+            uint256 baseFee = IFeeManager(feeManager).getBaseLiquidityFee(
+                feeToken
+            );
             require(baseFee > 0, "Theia:config error");
             uint256 fee = (baseFee * feeRate) / 1000;
             require(feePaid >= fee, "Theia:not cover liquidity fee");
@@ -377,6 +389,10 @@ contract TheiaRouter is IRouter, FeeManager {
             }
         }
         return true;
+    }
+
+    function _payFee(address feeToken, uint256 fee) internal {
+        IERC20(feeToken).safeTransferFrom(msg.sender, address(this), fee);
     }
 
     function _c3Fallback(

@@ -4,10 +4,10 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./Governor.sol";
+import "./GovernDapp.sol";
 import "./IFeeManager.sol";
 
-abstract contract FeeManager is Governor, IFeeManager {
+contract FeeManager is GovernDapp, IFeeManager {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -19,7 +19,7 @@ abstract contract FeeManager is Governor, IFeeManager {
         address _gov,
         address _c3callerProxy,
         uint256 _dappID
-    ) Governor(_gov, _c3callerProxy, _dappID) {
+    ) GovernDapp(_gov, _c3callerProxy, _dappID) {
         feeTokenList.push(_feeToken);
         feeTokenIndexMap[_feeToken] = 1;
     }
@@ -107,14 +107,6 @@ abstract contract FeeManager is Governor, IFeeManager {
                 _toFeeConfigs[dstChainID][feetokens[index]] = fee[index];
             }
         }
-    }
-
-    function _payFee(address feeToken, uint256 fee) internal {
-        require(feeTokenIndexMap[feeToken] > 0, "FM: feeToekn not exist");
-        require(
-            IERC20(feeToken).transferFrom(msg.sender, address(this), fee),
-            "FM: Fee payment failed"
-        );
     }
 
     function getGasFee(
@@ -224,5 +216,13 @@ abstract contract FeeManager is Governor, IFeeManager {
         address feeToken
     ) public view returns (uint256) {
         return _toFeeConfigs[toChainID][feeToken];
+    }
+
+    function _c3Fallback(
+        bytes4 /*_selector*/,
+        bytes calldata /*_data*/,
+        bytes calldata /*_reason*/
+    ) internal pure override returns (bool) {
+        return true;
     }
 }
