@@ -27,7 +27,7 @@ contract C3CallerProxy is
 
     function _authorizeUpgrade(
         address newImplementation
-    ) internal override onlyOwner {}
+    ) internal override onlyOperator {}
 
     function isExecutor(address sender) external view override returns (bool) {
         return isOperator[sender];
