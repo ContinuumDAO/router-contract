@@ -12,7 +12,8 @@ const {
   AERON_TEST,
   MANTA_TEST,
   LINEA_SEPOLIA,
-  VANGUARD
+  VANGUARD,
+  HUMANODE_TEST
 } = require("./env.json")
 
 
@@ -99,6 +100,11 @@ module.exports = {
       url: VANGUARD.URL,
       chainId: 78600,
       accounts: [VANGUARD.DEPLOY_KEY]
+    },
+    humanode_test: {
+      url: HUMANODE_TEST.URL,
+      chainId: 14853,
+      accounts: [HUMANODE_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {

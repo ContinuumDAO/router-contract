@@ -49,7 +49,7 @@ async function main() {
     console.log(`
         INSERT INTO chain_config (chain_id, initial_height, confirmations, extra, chain_symbol, icon, chain_type, uri)
         VALUES
-        ('${chainId}', '0', 2, '{}', '${networkName}', '', 'evm', '${evn[networkName.toUpperCase()].URL}');
+        ('${chainId}', '0', 2, '{"multicall":"","symbol":"","decimals":18,"explorer":""}', '${networkName}', '', 'evm', '${evn[networkName.toUpperCase()].URL}');
     `)
     console.log(`
         INSERT INTO fee_config (from_chain_id, to_chain_id, token_symbol, fixed_fee, fee_ccy, source_chain)
