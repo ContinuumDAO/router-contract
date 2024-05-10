@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-contract C3GovClient {
-    bool _init = false;
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+contract C3GovClient is Initializable {
     address public gov;
     address public pendingGov;
     mapping(address => bool) public isOperator;
@@ -32,11 +33,9 @@ contract C3GovClient {
         _;
     }
 
-    function initGov(address _gov) internal {
-        require(!_init);
+    function initGov(address _gov) internal initializer {
         gov = _gov;
         emit ApplyGov(address(0), _gov, block.timestamp);
-        _init = true;
     }
 
     function changeGov(address _gov) external onlyGov {
@@ -46,9 +45,9 @@ contract C3GovClient {
 
     function applyGov() external {
         require(pendingGov != address(0), "C3Gov: empty pendingGov");
-        emit ApplyGov(gov, pendingGov, block.timestamp);
         gov = pendingGov;
         pendingGov = address(0);
+        emit ApplyGov(gov, pendingGov, block.timestamp);
     }
 
     function _addOperator(address op) internal {

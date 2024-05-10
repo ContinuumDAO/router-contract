@@ -13,4 +13,5 @@ artifacts
 # Environment
 env.json
 *.txt
+output
 

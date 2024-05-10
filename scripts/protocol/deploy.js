@@ -1,9 +1,9 @@
 const hre = require("hardhat");
-const evn = require("../../env.json")
+const evn = require("../../output/env.json")
 
 let { join } = require('path')
 let { readFile, writeFile } = require('fs')
-let filePath = join(__dirname, '../../env.json')
+let filePath = join(__dirname, '../../output/env.json')
 
 async function main() {
     const networkName = hre.network.name
@@ -17,65 +17,81 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const c3SwapIDKeeper = await hre.ethers.deployContract("contracts/protocol/C3SwapIDKeeper.sol:C3SwapIDKeeper", [evn[networkName.toUpperCase()].MPC]);
-    await c3SwapIDKeeper.waitForDeployment();
-    console.log('"C3SwapIDKeeper":', `"${c3SwapIDKeeper.target}",`);
+    let c3SwapIDKeeper = evn[networkName.toUpperCase()].C3UUIDKeeper
+    if (!c3SwapIDKeeper) {
+        c3SwapIDKeeper = await hre.ethers.deployContract("contracts/protocol/C3UUIDKeeper.sol:C3UUIDKeeper", []);
+        await c3SwapIDKeeper.waitForDeployment();
+        console.log('"C3UUIDKeeper":', `"${c3SwapIDKeeper.target}",`);
+    }
 
-    const c3Caller = await hre.ethers.deployContract("contracts/protocol/C3Caller.sol:C3Caller", [evn[networkName.toUpperCase()].MPC, c3SwapIDKeeper.target]);
-    await c3Caller.waitForDeployment();
+    let c3Caller = evn[networkName.toUpperCase()].C3Caller
+    if (!c3Caller) {
+        c3Caller = await hre.ethers.deployContract("contracts/protocol/C3Caller.sol:C3Caller", [c3SwapIDKeeper.target]);
+        await c3Caller.waitForDeployment();
+    }
     console.log('"C3Caller":', `"${c3Caller.target}",`);
 
-    const C3DappManager = await hre.ethers.deployContract("C3DappManager", [evn[networkName.toUpperCase()].MPC]);
-    await C3DappManager.waitForDeployment();
-    console.log('"C3DappManager":', `"${C3DappManager.target}",`);
+    let c3DappManager = evn[networkName.toUpperCase()].C3DappManager
+    if (!c3DappManager) {
+        c3DappManager = await hre.ethers.deployContract("C3DappManager", []);
+        await c3DappManager.waitForDeployment();
+    }
+    console.log('"C3DappManager":', `"${c3DappManager.target}",`);
 
-    const C3CallerProxy = await hre.ethers.getContractFactory("C3CallerProxy");
-    const c3CallerProxy = await hre.upgrades.deployProxy(
-        C3CallerProxy,
-        [evn[networkName.toUpperCase()].MPC, c3Caller.target],
-        { initializer: 'initialize', kind: 'uups' }
-    );
-
-    await c3CallerProxy.waitForDeployment();
+    let c3CallerProxy = evn[networkName.toUpperCase()].C3CallerProxy
+    if (!c3CallerProxy) {
+        const C3CallerProxy = await hre.ethers.getContractFactory("C3CallerProxy");
+        c3CallerProxy = await hre.upgrades.deployProxy(
+            C3CallerProxy,
+            [c3Caller.target],
+            { initializer: 'initialize', kind: 'uups' }
+        );
+        await c3CallerProxy.waitForDeployment();
+    }
     console.log('"C3CallerProxy":', `"${c3CallerProxy.target}",`);
 
     const currentImplAddress = await hre.upgrades.erc1967.getImplementationAddress(c3CallerProxy.target);
     console.log('"C3CallerProxyImp":', `"${currentImplAddress}",`);
 
-    await c3SwapIDKeeper.addSupportedCaller(c3Caller.target)
-    // add c3CallerProxy to Operator
-    await c3Caller.addOperator(currentImplAddress)
-    await c3Caller.addOperator(c3CallerProxy.target)
-
     upData(networkName.toUpperCase(), {
-        "C3SwapIDKeeper": c3SwapIDKeeper.target,
+        "C3UUIDKeeper": c3SwapIDKeeper.target,
         "C3Caller": c3Caller.target,
-        "C3DappManager": C3DappManager.target,
+        "C3DappManager": c3DappManager.target,
         "C3CallerProxy": c3CallerProxy.target,
         "C3CallerProxyImp": currentImplAddress,
     })
 
-    console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target} ${signer.address}`);
-    console.log(`npx hardhat verify --network ${networkName} ${c3Caller.target} ${signer.address} ${c3SwapIDKeeper.target}`);
-    console.log(`npx hardhat verify --network ${networkName} ${C3DappManager.target} ${signer.address}`);
-    console.log(`npx hardhat verify --network ${networkName} ${currentImplAddress} ${signer.address}`);
+    await c3SwapIDKeeper.addOperator(c3Caller.target)
+    // add c3CallerProxy to Operator
+    await c3Caller.addOperator(currentImplAddress)
+    // await c3Caller.addOperator(c3CallerProxy.target)
+
+    for (let index = 0; index < evn.mpcList.length; index++) {
+        const element = evn.mpcList[index];
+        await c3Caller.addOperator(element.addr)
+    }
+
+    console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target}`);
+    console.log(`npx hardhat verify --network ${networkName} ${c3Caller.target} ${c3SwapIDKeeper.target}`);
+    console.log(`npx hardhat verify --network ${networkName} ${c3DappManager.target} `);
+    console.log(`npx hardhat verify --network ${networkName} ${currentImplAddress}`);
 
     await hre.run("verify:verify", {
         address: c3SwapIDKeeper.target,
-        contract: "contracts/protocol/C3SwapIDKeeper.sol:C3SwapIDKeeper",
-        constructorArguments: [evn[networkName.toUpperCase()].MPC],
+        contract: "contracts/protocol/C3UUIDKeeper.sol:C3UUIDKeeper",
+        constructorArguments: [],
     });
 
     await hre.run("verify:verify", {
         address: c3Caller.target,
         contract: "contracts/protocol/C3Caller.sol:C3Caller",
-        constructorArguments: [evn[networkName.toUpperCase()].MPC, c3SwapIDKeeper.target],
+        constructorArguments: [c3SwapIDKeeper.target],
     });
 
     await hre.run("verify:verify", {
-        address: C3DappManager.target,
+        address: c3DappManager.target,
         contract: "contracts/protocol/C3DappManager.sol:C3DappManager",
-        constructorArguments: [evn[networkName.toUpperCase()].MPC],
+        constructorArguments: [],
     });
 
     await hre.run("verify:verify", {

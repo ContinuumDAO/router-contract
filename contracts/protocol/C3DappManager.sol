@@ -66,8 +66,8 @@ contract C3DappManager is C3GovClient, Pausable {
         uint256 left
     );
 
-    constructor(address _gov) {
-        initGov(_gov);
+    constructor() {
+        initGov(msg.sender);
     }
 
     function pause() public onlyGov {

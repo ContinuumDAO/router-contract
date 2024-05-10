@@ -16,13 +16,12 @@ contract C3CallerProxy is
 {
     address public c3caller;
 
-    function initialize(address _gov, address _c3caller) public initializer {
-        initGov(_gov);
+    function initialize(address _c3caller) public initializer {
+        initGov(msg.sender);
         c3caller = _c3caller;
         __UUPSUpgradeable_init();
         __Ownable_init();
         transferOwnership(msg.sender);
-        emit ApplyGov(address(0), _gov, block.timestamp);
     }
 
     function _authorizeUpgrade(

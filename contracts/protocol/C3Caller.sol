@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./IC3Caller.sol";
-import "./ISwapIDKeeper.sol";
+import "./IUUIDKeeper.sol";
 import "./C3GovClient.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -20,7 +20,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
 
     C3Context public override context;
 
-    address public swapIDKeeper;
+    address public uuidKeeper;
 
     event LogC3Call(
         uint256 indexed dappID,
@@ -61,9 +61,9 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         bytes reasons
     );
 
-    constructor(address _gov, address _swapIDKeeper) {
-        initGov(_gov);
-        swapIDKeeper = _swapIDKeeper;
+    constructor(address _swapIDKeeper) {
+        initGov(msg.sender);
+        uuidKeeper = _swapIDKeeper;
     }
 
     function pause() external onlyOperator {
@@ -85,7 +85,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         require(bytes(_to).length > 0, "C3Caller: empty _to");
         require(bytes(_toChainID).length > 0, "C3Caller: empty toChainID");
         require(_data.length > 0, "C3Caller: empty calldata");
-        bytes32 _uuid = ISwapIDKeeper(swapIDKeeper).genUUID(
+        bytes32 _uuid = IUUIDKeeper(uuidKeeper).genUUID(
             _dappID,
             _to,
             _toChainID,
@@ -111,7 +111,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         );
 
         for (uint256 i = 0; i < _toChainIDs.length; i++) {
-            bytes32 _uuid = ISwapIDKeeper(swapIDKeeper).genUUID(
+            bytes32 _uuid = IUUIDKeeper(uuidKeeper).genUUID(
                 _dappID,
                 _to[i],
                 _toChainIDs[i],
@@ -141,7 +141,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         );
 
         require(
-            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_message.uuid),
+            !IUUIDKeeper(uuidKeeper).isCompleted(_message.uuid),
             "C3Caller: already completed"
         );
 
@@ -173,7 +173,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         );
         (bool ok, uint rs) = toUint(result);
         if (success && ok && rs == 1) {
-            ISwapIDKeeper(swapIDKeeper).registerSwapin(_message.uuid);
+            IUUIDKeeper(uuidKeeper).registerUUID(_message.uuid);
         } else {
             emit LogFallbackCall(
                 _dappID,
@@ -195,7 +195,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
     ) external override onlyOperator {
         require(_message.data.length > 0, "C3Caller: empty calldata");
         require(
-            !ISwapIDKeeper(swapIDKeeper).isSwapCompleted(_message.uuid),
+            !IUUIDKeeper(uuidKeeper).isCompleted(_message.uuid),
             "C3Caller: already completed"
         );
 
@@ -229,7 +229,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
 
         (bool ok, uint rs) = toUint(_result);
         if (_success && ok && rs == 1) {
-            ISwapIDKeeper(swapIDKeeper).registerSwapin(_message.uuid);
+            IUUIDKeeper(uuidKeeper).registerUUID(_message.uuid);
         }
     }
 
