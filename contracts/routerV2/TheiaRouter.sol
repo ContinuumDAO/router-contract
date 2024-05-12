@@ -199,110 +199,149 @@ contract TheiaRouter is IRouter, GovernDapp {
         return 0;
     }
 
-    function swapOutAuto(
-        address _to,
-        address _receiver,
-        uint256 _amount,
-        uint256 _feeAmount,
-        uint256 _toChainID,
-        string memory _tokenID,
-        string memory _feeTokenID
-    ) external payable {
+    function getTokenInfo(
+        uint256 _chainID,
+        string memory _tokenID
+    ) internal view returns (TokenInfo memory) {
         (
             Structs.TokenConfig memory _fromConfig,
             Structs.TokenConfig memory _toConfig
-        ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(
-                _tokenID,
-                _toChainID
-            );
+        ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(_tokenID, _chainID);
         require(
             _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
             "Theia:token not support"
         );
 
-        (
-            Structs.TokenConfig memory _fromFeeConfig,
-            Structs.TokenConfig memory _toFeeConfig
-        ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(
-                _feeTokenID,
-                _toChainID
-            );
-        require(
-            _fromFeeConfig.Decimals > 0 && _toFeeConfig.Decimals > 0,
-            "Theia:token not support"
-        );
-
         address _token = TheiaUtils.toAddress(_fromConfig.ContractAddress);
-        address _recToken = TheiaUtils.toAddress(_toConfig.ContractAddress);
-        uint8 _recDecimals = _toConfig.Decimals;
-        checkSwapOut(_token, _to, _receiver, _amount);
-        require(_recToken != address(0), "Theia:recToken empty");
-        uint256 _recvAmount = _getRevAmount(_token, _amount);
+        address _token2 = TheiaUtils.toAddress(_toConfig.ContractAddress);
+
+        require(_token2 != address(0), "Theia:recToken empty");
+        return
+            TokenInfo(
+                _token,
+                _fromConfig.Decimals,
+                _token2,
+                _toConfig.Decimals
+            );
+    }
+
+    struct TheiaCrossAuto {
+        address target;
+        address receiver;
+        uint256 amount;
+        uint256 feeAmount;
+        uint256 toChainID;
+        string tokenID;
+        string feeTokenID;
+    }
+
+    struct TokenInfo {
+        address addr;
+        uint8 decimals;
+        address toChainAddr;
+        uint8 toChainDecimals;
+    }
+
+    function swapOutAuto(
+        // address _to,
+        // address _receiver,
+        // uint256 _amount,
+        // uint256 _feeAmount,
+        // uint256 _toChainID,
+        // string memory _tokenID,
+        // string memory _feeTokenID
+        TheiaCrossAuto memory tc
+    ) external payable {
+        TokenInfo memory t = getTokenInfo(tc.toChainID, tc.tokenID);
+        checkSwapOut(t.addr, tc.target, tc.receiver, tc.amount);
+
+        uint256 _recvAmount = _getRevAmount(t.addr, tc.amount);
         require(_recvAmount > 0, "Theia:nothing to cross");
 
-        address _feeToken = TheiaUtils.toAddress(
-            _fromFeeConfig.ContractAddress
-        );
-        uint256 _swapFee = _calcAndPay(_feeToken, _toChainID);
-        require(_feeAmount >= _swapFee, "Theia:fee not enough");
-
         bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
-            _token,
-            msg.sender,
-            _recvAmount,
-            _receiver,
-            _toChainID
+            ISwapIDKeeper.SwapEvmData(
+                t.addr,
+                msg.sender,
+                _recvAmount,
+                tc.receiver,
+                tc.toChainID
+            )
         );
 
-        uint256 _toAmount = _recvAmount;
+        TokenInfo memory f = getTokenInfo(tc.toChainID, tc.feeTokenID);
 
-        if (ITheiaERC20(_token).decimals() != _recDecimals) {
-            _toAmount = convertDecimals(
-                _toAmount,
-                ITheiaERC20(_token).decimals(),
-                _recDecimals
+        uint256 _swapFee = _calcAndPay(f.addr, tc.toChainID);
+        require(tc.feeAmount >= _swapFee, "Theia:fee not enough");
+
+        {
+            bytes memory _data = genCallData(
+                swapID,
+                _recvAmount,
+                _swapFee,
+                tc,
+                t,
+                f
             );
-            require(_toAmount > 0, "Theia:wrong Decimals");
+            c3call(tc.target.toHexString(), tc.toChainID.toString(), _data);
         }
-
-        uint256 _liquidityFee = _feeAmount - _swapFee;
-        if (
-            _liquidityFee > 0 &&
-            ITheiaERC20(_feeToken).decimals() != _toFeeConfig.Decimals
-        ) {
-            _liquidityFee = convertDecimals(
-                _liquidityFee,
-                ITheiaERC20(_feeToken).decimals(),
-                _toFeeConfig.Decimals
-            );
-            require(_liquidityFee > 0, "Theia:wrong Decimals");
-        }
-
-        bytes memory _data = abi.encodeWithSelector(
-            TheiaStruct.FuncSwapInAuto,
-            swapID,
-            _recToken,
-            _receiver,
-            _toAmount,
-            _recDecimals,
-            _liquidityFee,
-            _feeToken,
-            _token
-        );
-
-        c3call(_to.toHexString(), _toChainID.toString(), _data);
 
         emit LogSwapOut(
-            _token,
+            t.addr,
             msg.sender,
             swapID,
             _recvAmount,
             cID(),
-            _toChainID,
+            tc.toChainID,
             _swapFee,
-            _feeToken,
-            _receiver.toHexString()
+            f.addr,
+            tc.receiver
         );
+    }
+
+    function genCallData(
+        bytes32 _swapID,
+        uint256 _recvAmount,
+        uint256 _swapFee,
+        TheiaCrossAuto memory tc,
+        TokenInfo memory t,
+        TokenInfo memory fee
+    ) internal view returns (bytes memory) {
+        uint256 _toAmount = _recvAmount;
+
+        if (ITheiaERC20(t.addr).decimals() != t.toChainDecimals) {
+            _toAmount = convertDecimals(
+                _toAmount,
+                ITheiaERC20(t.addr).decimals(),
+                t.toChainDecimals
+            );
+            require(_toAmount > 0, "Theia:wrong Decimals");
+        }
+
+        uint256 _liquidityFee = tc.feeAmount - _swapFee;
+        if (
+            _liquidityFee > 0 &&
+            ITheiaERC20(fee.addr).decimals() != fee.toChainDecimals
+        ) {
+            _liquidityFee = convertDecimals(
+                _liquidityFee,
+                ITheiaERC20(fee.addr).decimals(),
+                fee.toChainDecimals
+            );
+            require(_liquidityFee > 0, "Theia:wrong Decimals");
+        }
+
+        return
+            abi.encodeWithSelector(
+                TheiaStruct.FuncSwapInAuto,
+                _swapID,
+                t.toChainAddr,
+                tc.receiver,
+                _toAmount,
+                t.toChainDecimals,
+                _liquidityFee,
+                fee.toChainAddr,
+                t.addr
+            );
     }
 
     function swapInAuto(
@@ -396,7 +435,7 @@ contract TheiaRouter is IRouter, GovernDapp {
     }
 
     function _c3Fallback(
-        bytes4 _selector,
+        bytes4 /*_selector*/,
         bytes calldata _data,
         bytes calldata _reason
     ) internal override returns (bool) {
@@ -433,8 +472,6 @@ contract TheiaRouter is IRouter, GovernDapp {
             _fromToken,
             _receiver,
             _toAmount,
-            _selector,
-            _data,
             _reason
         );
         return _swapAuto(_fromToken, _receiver, _toAmount);

@@ -30,7 +30,7 @@ interface IRouter {
         uint256 toChainID,
         uint256 fee,
         address feeToken,
-        string to
+        address to
     );
     event LogAnySwapInAndExec(
         address indexed dapp,
@@ -49,8 +49,6 @@ interface IRouter {
         address indexed token,
         address indexed receiver,
         uint256 amount,
-        bytes4 selector,
-        bytes data,
         bytes reason
     );
 }

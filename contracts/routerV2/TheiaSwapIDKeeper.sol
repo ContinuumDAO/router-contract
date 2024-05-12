@@ -99,23 +99,19 @@ contract TheiaSwapIDKeeper is ISwapIDKeeper {
     }
 
     function registerSwapoutEvm(
-        address token,
-        address from,
-        uint256 amount,
-        address receiver,
-        uint256 toChainID
+        SwapEvmData memory data
     ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
         swapID = keccak256(
             abi.encode(
                 address(this),
                 msg.sender,
                 block.chainid,
-                token,
-                from,
-                receiver,
-                amount,
+                data.token,
+                data.from,
+                data.receiver,
+                data.amount,
                 currentSwapoutNonce,
-                toChainID
+                data.toChainID
             )
         );
         require(
@@ -152,23 +148,19 @@ contract TheiaSwapIDKeeper is ISwapIDKeeper {
     }
 
     function registerSwapoutNonEvm(
-        address token,
-        address from,
-        uint256 amount,
-        string calldata receiver,
-        string calldata toChainID
+        SwapNonEvmData memory data
     ) external onlyAuth autoIncreaseSwapoutNonce returns (bytes32 swapID) {
         swapID = keccak256(
             abi.encode(
                 address(this),
                 msg.sender,
                 block.chainid,
-                token,
-                from,
-                receiver,
-                amount,
+                data.token,
+                data.from,
+                data.receiver,
+                data.amount,
                 currentSwapoutNonce,
-                toChainID
+                data.toChainID
             )
         );
         require(

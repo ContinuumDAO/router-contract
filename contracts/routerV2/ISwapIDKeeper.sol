@@ -2,24 +2,32 @@
 pragma solidity ^0.8.19;
 
 interface ISwapIDKeeper {
+    struct SwapEvmData {
+        address token;
+        address from;
+        uint256 amount;
+        address receiver;
+        uint256 toChainID;
+    }
+
+    struct SwapNonEvmData {
+        address token;
+        address from;
+        uint256 amount;
+        string receiver;
+        string toChainID;
+    }
+
     function registerSwapin(bytes32 swapID) external;
 
     function isSwapoutIDExist(bytes32 swapoutID) external view returns (bool);
 
     function registerSwapoutEvm(
-        address token,
-        address from,
-        uint256 amount,
-        address receiver,
-        uint256 toChainID
+        SwapEvmData memory data
     ) external returns (bytes32 swapID);
 
     function registerSwapoutNonEvm(
-        address token,
-        address from,
-        uint256 amount,
-        string calldata receiver,
-        string calldata toChainID
+        SwapNonEvmData memory data
     ) external returns (bytes32 swapID);
 
     function isSwapCompleted(bytes32 swapID) external view returns (bool);
