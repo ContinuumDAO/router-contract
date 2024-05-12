@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const evn = require("../../env.json")
+const evn = require("../../output/env.json")
 
 async function main() {
     const networkName = hre.network.name
@@ -26,6 +26,7 @@ async function main() {
 
     console.log("C3CallerProxy getAllOperators:", await c3CallerProxy.getAllOperators());
 
+    
 }
 
 main().catch((error) => {

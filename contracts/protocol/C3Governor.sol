@@ -23,14 +23,15 @@ contract C3Governor is C3GovClient {
 
     mapping(bytes32 => Proposal) internal proposal;
 
-    constructor(address _gov) {
-        initGov(_gov);
+    constructor() {
+        initGov(msg.sender);
     }
 
     function chainID() internal view returns (uint256) {
         return block.chainid;
     }
 
+    // TODO gen nonce
     function sendParams(bytes memory _data, bytes32 _nonce) external onlyGov {
         require(_data.length > 0, "C3Governor: No data to sendParams");
 
