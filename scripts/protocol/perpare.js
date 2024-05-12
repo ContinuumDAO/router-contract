@@ -13,7 +13,7 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const c3SwapIDKeeper = await hre.ethers.getContractAt("contracts/protocol/C3SwapIDKeeper.sol:C3SwapIDKeeper", evn[networkName.toUpperCase()].C3SwapIDKeeper);
+    const c3SwapIDKeeper = await hre.ethers.getContractAt("contracts/protocol/C3UUIDKeeper.sol:C3UUIDKeeper", evn[networkName.toUpperCase()].C3SwapIDKeeper);
     const c3Caller = await hre.ethers.getContractAt("contracts/protocol/C3Caller.sol:C3Caller", evn[networkName.toUpperCase()].C3Caller);
     const C3DappManager = await hre.ethers.getContractAt("C3DappManager", evn[networkName.toUpperCase()].C3DappManager);
     const c3CallerProxy = await hre.ethers.getContractAt("C3CallerProxy", evn[networkName.toUpperCase()].C3CallerProxy);

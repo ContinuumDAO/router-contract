@@ -17,7 +17,7 @@ async function main() {
     let c3caller = new web3.eth.Contract(C3CallerABI);
     let calldata = c3caller.methods.addOperator(signer.address).encodeABI()
 
-    console.log(govProposalData.methods.genProposalData(97, evn["BSC_TEST"].C3CallerProxy, calldata).encodeABI().substring(10))
+    console.log(govProposalData.methods.genProposalData(421614, evn["ARB_TEST"].C3CallerProxy, calldata).encodeABI().substring(10))
 
 }
 

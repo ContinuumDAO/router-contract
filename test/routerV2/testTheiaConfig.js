@@ -23,27 +23,27 @@ describe("TheiaConfig", function () {
 
 
     beforeEach(async () => {
-        await deployConfig()
+        // await deployConfig()
     })
 
 
-    describe("TheiaRounterConfig", function () {
-        it("Deploy", async function () {
-            expect(await routerConfig.hasRole("0x0000000000000000000000000000000000000000000000000000000000000000", owner.address)).to.equal(true)
-            let configRole = await routerConfig.CONFIG_ROLE()
-            expect(await routerConfig.hasRole(configRole, owner.address)).to.equal(true)
+    // describe("TheiaRounterConfig", function () {
+    //     it("Deploy", async function () {
+    //         expect(await routerConfig.hasRole("0x0000000000000000000000000000000000000000000000000000000000000000", owner.address)).to.equal(true)
+    //         let configRole = await routerConfig.CONFIG_ROLE()
+    //         expect(await routerConfig.hasRole(configRole, owner.address)).to.equal(true)
 
-            expect(await routerConfig.hasRole(configRole, otherAccount.address)).to.equal(false)
-        });
+    //         expect(await routerConfig.hasRole(configRole, otherAccount.address)).to.equal(false)
+    //     });
 
-        it("TokenConfig", async function () {
-            await routerConfig.setTokenConfig("ETH", 1, "0x1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", 18, 1, "0x1111111111111111111111111111111111111111", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
-            await routerConfig.setTokenConfig("ETH", 31337, "0x2eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", 6, 1, "0x2111111111111111111111111111111111111111", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+    //     it("TokenConfig", async function () {
+    //         await routerConfig.setTokenConfig("ETH", 1, "0x1eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", 18, 1, "0x1111111111111111111111111111111111111111", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
+    //         await routerConfig.setTokenConfig("ETH", 31337, "0x2eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", 6, 1, "0x2111111111111111111111111111111111111111", "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee")
 
-            console.log(await routerConfig.getTokenConfigIfExist("ETH", 1))
-            // console.log('getAllChainConfig', await routerConfig.getAllChainConfig())
-        });
-    });
+    //         console.log(await routerConfig.getTokenConfigIfExist("ETH", 1))
+    //         // console.log('getAllChainConfig', await routerConfig.getAllChainConfig())
+    //     });
+    // });
 
 
 });

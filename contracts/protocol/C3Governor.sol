@@ -14,10 +14,11 @@ contract C3Governor is C3GovClient {
 
     event NewProposal(bytes32 indexed uuid);
 
+    // TODO add isGov bool
     event C3GovernorLog(
         bytes32 indexed nonce,
         uint256 indexed toChainID,
-        string indexed to,
+        string to,
         bytes toData
     );
 
@@ -76,12 +77,23 @@ contract C3Governor is C3GovClient {
         _c3gov(_nonce, offset);
     }
 
+    function getProposalData(
+        bytes32 _nonce,
+        uint256 offset
+    ) external view returns (bytes memory, bool) {
+        return (
+            proposal[_nonce].proposalData[offset],
+            proposal[_nonce].failed[offset]
+        );
+    }
+
     function _c3gov(bytes32 _nonce, uint256 offset) internal {
         uint256 chainId;
         string memory target;
         bytes memory remoteData;
 
         bytes memory rawData = proposal[_nonce].proposalData[offset];
+        // TODO add flag which config using gov to send or operator
         (chainId, target, remoteData) = abi.decode(
             rawData,
             (uint256, string, bytes)
@@ -94,8 +106,8 @@ contract C3Governor is C3GovClient {
                 proposal[_nonce].failed[offset] = true;
             }
         } else {
-            emit C3GovernorLog(_nonce, chainId, target, remoteData);
             proposal[_nonce].failed[offset] = true;
+            emit C3GovernorLog(_nonce, chainId, target, remoteData);
         }
     }
 
