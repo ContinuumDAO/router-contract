@@ -9,7 +9,11 @@ const {
   SEPOLIA,
   BLAST_SEP,
   AMOY,
-  AERON_TEST
+  AERON_TEST,
+  MANTA_TEST,
+  LINEA_SEPOLIA,
+  VANGUARD,
+  HUMANODE_TEST
 } = require("./env.json")
 
 
@@ -81,6 +85,26 @@ module.exports = {
       url: AERON_TEST.URL,
       chainId: 462,
       accounts: [AERON_TEST.DEPLOY_KEY]
+    },
+    manta_test: {
+      url: MANTA_TEST.URL,
+      chainId: 3441006,
+      accounts: [MANTA_TEST.DEPLOY_KEY]
+    },
+    linea_sepolia: {
+      url: LINEA_SEPOLIA.URL,
+      chainId: 59141,
+      accounts: [LINEA_SEPOLIA.DEPLOY_KEY]
+    },
+    vanguard: {
+      url: VANGUARD.URL,
+      chainId: 78600,
+      accounts: [VANGUARD.DEPLOY_KEY]
+    },
+    humanode_test: {
+      url: HUMANODE_TEST.URL,
+      chainId: 14853,
+      accounts: [HUMANODE_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {

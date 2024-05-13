@@ -2,7 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const evn = require("../../env.json")
 
-const token = "theiaUSDT"
+const FeeTokenSymbol = "theiaUSDT"
 const fee = 500
 
 async function main() {
@@ -42,7 +42,7 @@ async function main() {
             break
         }
         const args = JSON.parse(line);
-        if (args.name != token || args.chainId != chainId) {
+        if (args.name != FeeTokenSymbol || args.chainId != chainId) {
             continue
         }
         if (!tokens[args.name] || !tokens[args.name][args.chainId]) {
