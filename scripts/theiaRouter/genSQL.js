@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const evn = require("../../env.json")
+const evn = require("../../output/env.json")
 
 const fs = require("fs");
 
@@ -15,9 +15,10 @@ async function main() {
     console.log(`
         INSERT INTO caller_config (id, chain_id, address, contract_type, contract_version)
         VALUES
-            (${number * 3}, ${chainId}, '${evn[networkName.toUpperCase()].C3Caller}', 'C3Caller', 'V1'),
-            (${number * 3 + 1}, ${chainId}, '${evn[networkName.toUpperCase()].C3CallerProxy}', 'C3CallerProxy', 'V1'),
-            (${number * 3 + 2}, ${chainId}, '${evn[networkName.toUpperCase()].C3CallerProxyImp}', 'C3CallerProxyImp', 'V1');
+            (${number * 4}, ${chainId}, '${evn[networkName.toUpperCase()].C3Caller}', 'C3Caller', 'V1'),
+            (${number * 4 + 1}, ${chainId}, '${evn[networkName.toUpperCase()].C3CallerProxy}', 'C3CallerProxy', 'V1'),
+            (${number * 4 + 2}, ${chainId}, '${evn[networkName.toUpperCase()].C3CallerProxyImp}', 'C3CallerProxyImp', 'V1'),
+            (${number * 4 + 3}, ${chainId}, '${evn[networkName.toUpperCase()].C3Governor}', 'C3Governor', 'V1');
     `)
     console.log(`
         INSERT INTO caller_mpc (config_id, caller_address, mpc_address, status)
