@@ -32,7 +32,7 @@ contract TheiaRouterGov is
     constructor(
         address _c3callerProxy,
         uint256 _dappID
-    ) TheiaRouterConfig(_c3callerProxy, _dappID) {}
+    ) TheiaRouterConfig(address(0), _c3callerProxy, _dappID) {}
 
     function setChainConfigGov(
         uint256 chainID,

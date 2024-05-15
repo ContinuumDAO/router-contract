@@ -3,13 +3,13 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Multicall.sol";
-import "../protocol/C3CallerDapp.sol";
+import "./GovernDapp.sol";
 import "./ITheiaConfig.sol";
 
 contract TheiaRouterConfig is
     AccessControl,
     Multicall,
-    C3CallerDapp,
+    GovernDapp,
     ITheiaConfig
 {
     uint256 public constant CONFIG_VERSION = 1;
@@ -49,17 +49,18 @@ contract TheiaRouterConfig is
     }
 
     constructor(
+        address _gov,
         address _c3callerProxy,
         uint256 _dappID
-    ) C3CallerDapp(_c3callerProxy, _dappID) {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(CONFIG_ROLE, msg.sender);
+    ) GovernDapp(_gov, _c3callerProxy, _dappID) {
+        _grantRole(DEFAULT_ADMIN_ROLE, _gov);
+        _grantRole(CONFIG_ROLE, _gov);
     }
 
     function cID() public view returns (uint) {
         return block.chainid;
     }
-    
+
     function getAllChainIDs() external view returns (uint256[] memory) {
         return _allChainIDs;
     }
@@ -327,7 +328,7 @@ contract TheiaRouterConfig is
         bytes4 /*_selector*/,
         bytes calldata /*_data*/,
         bytes calldata /*_reason*/
-    ) internal override pure returns (bool) {
+    ) internal pure override returns (bool) {
         return true;
     }
 

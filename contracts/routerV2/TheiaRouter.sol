@@ -3,7 +3,7 @@
 pragma solidity ^0.8.19;
 
 import "./TheiaUtils.sol";
-import "./ISwapIDKeeper.sol";
+import "./ITheiaUUIDKeeper.sol";
 import "./ITheiaERC20.sol";
 import "./IFeeManager.sol";
 import "./ITheiaConfig.sol";
@@ -24,13 +24,13 @@ contract TheiaRouter is IRouter, GovernDapp {
 
     address public immutable wNATIVE;
 
-    address public swapIDKeeper;
+    address public uuidKeeper;
     address public theiaConfig;
     address public feeManager;
 
     constructor(
         address _wNATIVE,
-        address _swapIDKeeper,
+        address _uuidKeeper,
         address _theiaConfig,
         address _feeManager,
         address _gov,
@@ -38,7 +38,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         uint256 _dappID
     ) GovernDapp(_gov, _c3callerProxy, _dappID) {
         wNATIVE = _wNATIVE;
-        swapIDKeeper = _swapIDKeeper;
+        uuidKeeper = _uuidKeeper;
         theiaConfig = _theiaConfig;
         feeManager = _feeManager;
     }
@@ -60,8 +60,8 @@ contract TheiaRouter is IRouter, GovernDapp {
         return 1;
     }
 
-    function changeSwapIDKeeper(address _swapIDKeeper) external onlyGov {
-        swapIDKeeper = _swapIDKeeper;
+    function changeSwapIDKeeper(address _uuidKeeper) external onlyGov {
+        uuidKeeper = _uuidKeeper;
     }
 
     function setMinter(address token, address _auth) external onlyGov {
@@ -76,7 +76,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         return ITheiaERC20(token).revokeMinter(_auth);
     }
 
-    function checkSwapOut(
+    function checkParams(
         address token,
         address to,
         address receiver,
@@ -89,7 +89,7 @@ contract TheiaRouter is IRouter, GovernDapp {
     }
 
     // need approve to router first
-    function _swapOutUnderlying(
+    function _transferUnderlying(
         address token,
         uint256 amount
     ) internal returns (uint256) {
@@ -105,7 +105,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         return new_balance - old_balance;
     }
 
-    function _swapOutNative(address token) internal returns (uint256) {
+    function _transferNative(address token) internal returns (uint256) {
         require(wNATIVE != address(0), "Theia:zero wNATIVE");
         require(
             ITheiaERC20(token).underlying() == wNATIVE,
@@ -132,9 +132,9 @@ contract TheiaRouter is IRouter, GovernDapp {
         uint256 _recvAmount = 0;
         if (_underlying != address(0)) {
             if (_underlying == wNATIVE && msg.value >= _amount) {
-                _recvAmount = _swapOutNative(_token);
+                _recvAmount = _transferNative(_token);
             } else {
-                _recvAmount = _swapOutUnderlying(_token, _amount);
+                _recvAmount = _transferUnderlying(_token, _amount);
             }
         } else {
             theiaToken.burn(msg.sender, _amount);
@@ -242,24 +242,15 @@ contract TheiaRouter is IRouter, GovernDapp {
         uint8 toChainDecimals;
     }
 
-    function swapOutAuto(
-        // address _to,
-        // address _receiver,
-        // uint256 _amount,
-        // uint256 _feeAmount,
-        // uint256 _toChainID,
-        // string memory _tokenID,
-        // string memory _feeTokenID
-        TheiaCrossAuto memory tc
-    ) external payable {
+    function theiaCrossEvm(TheiaCrossAuto memory tc) external payable {
         TokenInfo memory t = getTokenInfo(tc.toChainID, tc.tokenID);
-        checkSwapOut(t.addr, tc.target, tc.receiver, tc.amount);
+        checkParams(t.addr, tc.target, tc.receiver, tc.amount);
 
         uint256 _recvAmount = _getRevAmount(t.addr, tc.amount);
         require(_recvAmount > 0, "Theia:nothing to cross");
 
-        bytes32 swapID = ISwapIDKeeper(swapIDKeeper).registerSwapoutEvm(
-            ISwapIDKeeper.SwapEvmData(
+        bytes32 uuid = ITheiaUUIDKeeper(uuidKeeper).genUUIDEvm(
+            ITheiaUUIDKeeper.EvmData(
                 t.addr,
                 msg.sender,
                 _recvAmount,
@@ -275,7 +266,7 @@ contract TheiaRouter is IRouter, GovernDapp {
 
         {
             bytes memory _data = genCallData(
-                swapID,
+                uuid,
                 _recvAmount,
                 _swapFee,
                 tc,
@@ -288,7 +279,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         emit LogSwapOut(
             t.addr,
             msg.sender,
-            swapID,
+            uuid,
             _recvAmount,
             cID(),
             tc.toChainID,
@@ -299,7 +290,7 @@ contract TheiaRouter is IRouter, GovernDapp {
     }
 
     function genCallData(
-        bytes32 _swapID,
+        bytes32 _uuid,
         uint256 _recvAmount,
         uint256 _swapFee,
         TheiaCrossAuto memory tc,
@@ -333,7 +324,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         return
             abi.encodeWithSelector(
                 TheiaStruct.FuncSwapInAuto,
-                _swapID,
+                _uuid,
                 t.toChainAddr,
                 tc.receiver,
                 _toAmount,
@@ -344,8 +335,8 @@ contract TheiaRouter is IRouter, GovernDapp {
             );
     }
 
-    function swapInAuto(
-        bytes32 swapID,
+    function theiaVaultAuto(
+        bytes32 uuid,
         address token,
         address to,
         uint256 amount,
@@ -355,7 +346,7 @@ contract TheiaRouter is IRouter, GovernDapp {
         address fromTokenAddr
     ) external onlyGov returns (bool) {
         require(token != address(0), "Theia:token empty");
-        require(swapID.length > 0, "Theia:swapID empty");
+        require(uuid.length > 0, "Theia:uuid empty");
         require(to != address(0), "Theia:to empty");
         require(amount > 0, "Theia:amount empty");
         require(tokenDecimals > 0, "Theia:tokenDecimals empty");
@@ -382,31 +373,31 @@ contract TheiaRouter is IRouter, GovernDapp {
         }
 
         uint256 recvAmount = _registerAndMint(
-            swapID,
+            uuid,
             token,
             to,
             amount,
             sourceChainID,
             _sourceTx
         );
-        return _swapAuto(token, to, recvAmount);
+        return _transferVault(token, to, recvAmount);
     }
 
     function _registerAndMint(
-        bytes32 swapID,
+        bytes32 uuid,
         address token,
         address to,
         uint256 amount,
         uint256 fromChainID,
         string memory sourceTx
     ) internal returns (uint256) {
-        ISwapIDKeeper(swapIDKeeper).registerSwapin(swapID);
+        ITheiaUUIDKeeper(uuidKeeper).registerUUID(uuid);
         ITheiaERC20(token).mint(to, amount);
-        emit LogSwapIn(token, to, swapID, amount, fromChainID, cID(), sourceTx);
+        emit LogSwapIn(token, to, uuid, amount, fromChainID, cID(), sourceTx);
         return amount;
     }
 
-    function _swapAuto(
+    function _transferVault(
         address token,
         address to,
         uint256 recvAmount
@@ -439,21 +430,21 @@ contract TheiaRouter is IRouter, GovernDapp {
         bytes calldata _data,
         bytes calldata _reason
     ) internal override returns (bool) {
-        bytes32 _swapID;
+        bytes32 _uuid;
         address _receiver;
         uint256 _amount;
         uint256 _recDecimals;
         address _fromToken;
-        (_swapID, , _receiver, _amount, _recDecimals, _fromToken) = abi.decode(
+        (_uuid, , _receiver, _amount, _recDecimals, _fromToken) = abi.decode(
             _data,
             (bytes32, address, address, uint256, uint256, address)
         );
 
         require(
-            ISwapIDKeeper(swapIDKeeper).isSwapoutIDExist(_swapID),
-            "Theia:swapId not exists"
+            ITheiaUUIDKeeper(uuidKeeper).isExist(_uuid),
+            "Theia:uuid not exists"
         );
-        ISwapIDKeeper(swapIDKeeper).registerSwapin(_swapID);
+        ITheiaUUIDKeeper(uuidKeeper).registerUUID(_uuid);
 
         uint256 _toAmount = _amount;
         if (ITheiaERC20(_fromToken).decimals() != _recDecimals) {
@@ -467,14 +458,8 @@ contract TheiaRouter is IRouter, GovernDapp {
 
         ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
 
-        emit LogSwapFallback(
-            _swapID,
-            _fromToken,
-            _receiver,
-            _toAmount,
-            _reason
-        );
-        return _swapAuto(_fromToken, _receiver, _toAmount);
+        emit LogSwapFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
+        return _transferVault(_fromToken, _receiver, _toAmount);
     }
 
     function depositNative(
