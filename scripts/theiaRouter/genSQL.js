@@ -20,11 +20,12 @@ async function main() {
             (${number * 4 + 2}, ${chainId}, '${evn[networkName.toUpperCase()].C3CallerProxyImp}', 'C3CallerProxyImp', 'V1'),
             (${number * 4 + 3}, ${chainId}, '${evn[networkName.toUpperCase()].C3Governor}', 'C3Governor', 'V1');
     `)
+
     console.log(`
         INSERT INTO caller_mpc (config_id, caller_address, mpc_address, status)
             VALUES
-        (${number * 3 + 1}, '${evn[networkName.toUpperCase()].C3CallerProxy}','${evn[networkName.toUpperCase()].MPC}', 'INACTIVE'),
-        (${number * 3 + 1}, '${evn[networkName.toUpperCase()].C3CallerProxy}','0xEef3d3678E1E739C6522EEC209Bede0197791339', 'ACTIVE');
+        (${number * 4 + 1}, '${evn[networkName.toUpperCase()].C3CallerProxy}','0x5d0725Add79feD3f0E61851b3C4704148Ef9c7eA', 'ACTIVE'),
+        (${number * 4 + 1}, '${evn[networkName.toUpperCase()].C3CallerProxy}','0xEef3d3678E1E739C6522EEC209Bede0197791339', 'INACTIVE');
     `)
     console.log(`
         INSERT INTO chain_config (chain_id, initial_height, confirmations, extra, chain_symbol)
