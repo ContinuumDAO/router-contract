@@ -15,7 +15,6 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         bytes32 swapID;
         string fromChainID;
         string sourceTx;
-        bytes reason;
     }
 
     C3Context public override context;
@@ -35,7 +34,8 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         uint256 indexed dappID,
         bytes32 indexed uuid,
         string to,
-        bytes data
+        bytes data,
+        bytes reasons
     );
 
     event LogExecCall(
@@ -57,8 +57,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         string fromChainID,
         string sourceTx,
         bytes fallbackReason,
-        bytes data,
-        bytes reasons
+        bytes data
     );
 
     constructor(address _swapIDKeeper) {
@@ -148,18 +147,12 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         context = C3Context({
             swapID: _message.uuid,
             fromChainID: _message.fromChainID,
-            sourceTx: _message.sourceTx,
-            reason: ""
+            sourceTx: _message.sourceTx
         });
 
         (bool success, bytes memory result) = _message.to.call(_message.data);
 
-        context = C3Context({
-            swapID: "",
-            fromChainID: "",
-            sourceTx: "",
-            reason: ""
-        });
+        context = C3Context({swapID: "", fromChainID: "", sourceTx: ""});
 
         emit LogExecCall(
             _dappID,
@@ -182,9 +175,9 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
                 abi.encodeWithSelector(
                     IC3Dapp.c3Fallback.selector,
                     _dappID,
-                    _message.data,
-                    result
-                )
+                    _message.data
+                ),
+                result
             );
         }
     }
@@ -199,21 +192,24 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
             "C3Caller: already completed"
         );
 
+        require(
+            IC3Dapp(_message.to).dappID() == _dappID,
+            "C3Caller: dappID dismatch"
+        );
+
         context = C3Context({
             swapID: _message.uuid,
             fromChainID: _message.fromChainID,
-            sourceTx: _message.sourceTx,
-            reason: _message.reason
+            sourceTx: _message.sourceTx
         });
 
-        (bool _success, bytes memory _result) = _message.to.call(_message.data);
+        bool _success = IC3Dapp(_message.to).c3Fallback(
+            _dappID,
+            _message.data,
+            _message.reason
+        );
 
-        context = C3Context({
-            swapID: "",
-            fromChainID: "",
-            sourceTx: "",
-            reason: ""
-        });
+        context = C3Context({swapID: "", fromChainID: "", sourceTx: ""});
 
         emit LogExecFallback(
             _dappID,
@@ -223,12 +219,10 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
             _message.fromChainID,
             _message.sourceTx,
             _message.reason,
-            _message.data,
-            _result
+            _message.data
         );
 
-        (bool ok, uint rs) = toUint(_result);
-        if (_success && ok && rs == 1) {
+        if (_success) {
             IUUIDKeeper(uuidKeeper).registerUUID(_message.uuid);
         }
     }

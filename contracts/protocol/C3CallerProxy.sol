@@ -43,8 +43,7 @@ contract C3CallerProxy is
         returns (
             bytes32 swapID,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
         )
     {
         return IC3Caller(c3caller).context();

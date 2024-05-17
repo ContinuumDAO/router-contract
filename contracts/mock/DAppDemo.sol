@@ -8,7 +8,6 @@ contract DAppDemo is C3CallerDapp {
     event LogC3Execute(
         bytes32 uuid,
         string fromChainID,
-        bytes reason,
         string sourceTx,
         bytes data
     );
@@ -30,10 +29,9 @@ contract DAppDemo is C3CallerDapp {
         (
             bytes32 uuid,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
         ) = context();
-        emit LogC3Execute(uuid, fromChainID, reason, sourceTx, data);
+        emit LogC3Execute(uuid, fromChainID, sourceTx, data);
         return (true, "");
     }
 

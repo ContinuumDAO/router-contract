@@ -165,7 +165,19 @@ contract TheiaRouter is IRouter, GovernDapp {
     function queryLiquidityFeeRate(
         address _theiaToken,
         uint256 _amount
-    ) public returns (uint256) {
+    ) external returns (uint256) {
+        uint256 feeRate = _queryLiquidityFeeRate(_theiaToken, _amount);
+        uint256 baseFee = IFeeManager(feeManager).getBaseLiquidityFee(
+            _theiaToken
+        );
+        uint256 fee = (baseFee * feeRate) / 1000;
+        return fee;
+    }
+
+    function _queryLiquidityFeeRate(
+        address _theiaToken,
+        uint256 _amount
+    ) internal returns (uint256) {
         (uint256 _liquidity, uint256 _decimals) = _getLiquidity(_theiaToken);
         uint256 _feeRate = 0;
         if (_decimals > 0) {
@@ -202,7 +214,7 @@ contract TheiaRouter is IRouter, GovernDapp {
     function getTokenInfo(
         uint256 _chainID,
         string memory _tokenID
-    ) internal view returns (TokenInfo memory) {
+    ) internal view returns (TheiaStruct.TokenInfo memory) {
         (
             Structs.TokenConfig memory _fromConfig,
             Structs.TokenConfig memory _toConfig
@@ -217,7 +229,7 @@ contract TheiaRouter is IRouter, GovernDapp {
 
         require(_token2 != address(0), "Theia:recToken empty");
         return
-            TokenInfo(
+            TheiaStruct.TokenInfo(
                 _token,
                 _fromConfig.Decimals,
                 _token2,
@@ -225,25 +237,8 @@ contract TheiaRouter is IRouter, GovernDapp {
             );
     }
 
-    struct TheiaCrossAuto {
-        address target;
-        address receiver;
-        uint256 amount;
-        uint256 feeAmount;
-        uint256 toChainID;
-        string tokenID;
-        string feeTokenID;
-    }
-
-    struct TokenInfo {
-        address addr;
-        uint8 decimals;
-        address toChainAddr;
-        uint8 toChainDecimals;
-    }
-
-    function theiaCrossEvm(TheiaCrossAuto memory tc) external payable {
-        TokenInfo memory t = getTokenInfo(tc.toChainID, tc.tokenID);
+    function theiaCrossEvm(TheiaStruct.CrossAuto memory tc) external payable {
+        TheiaStruct.TokenInfo memory t = getTokenInfo(tc.toChainID, tc.tokenID);
         checkParams(t.addr, tc.target, tc.receiver, tc.amount);
 
         uint256 _recvAmount = _getRevAmount(t.addr, tc.amount);
@@ -259,7 +254,10 @@ contract TheiaRouter is IRouter, GovernDapp {
             )
         );
 
-        TokenInfo memory f = getTokenInfo(tc.toChainID, tc.feeTokenID);
+        TheiaStruct.TokenInfo memory f = getTokenInfo(
+            tc.toChainID,
+            tc.feeTokenID
+        );
 
         uint256 _swapFee = _calcAndPay(f.addr, tc.toChainID);
         require(tc.feeAmount >= _swapFee, "Theia:fee not enough");
@@ -289,13 +287,70 @@ contract TheiaRouter is IRouter, GovernDapp {
         );
     }
 
+    // function theiaCrossNonEvm(CrossNonEvm memory tc) external payable {
+    //     (
+    //         Structs.TokenConfig memory _fromConfig,
+    //         Structs.TokenConfig memory _toConfig
+    //     ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(_tokenID, _chainID);
+    //     require(
+    //         _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
+    //         "Theia:token not support"
+    //     );
+    //     require(_fromConfig.addr != "", "Theia:from empty");
+    //     require(tc.target != "", "Theia:to empty");
+    //     require(tc.receiver != "", "Theia:receiver empty");
+    //     require(tc.amount > 0, "Theia:empty");
+
+    //     uint256 _recvAmount = _getRevAmount(t.addr, tc.amount);
+    //     require(_recvAmount > 0, "Theia:nothing to cross");
+
+    //     bytes32 uuid = ITheiaUUIDKeeper(uuidKeeper).genUUIDEvm(
+    //         ITheiaUUIDKeeper.EvmData(
+    //             t.addr,
+    //             msg.sender,
+    //             _recvAmount,
+    //             tc.receiver,
+    //             tc.toChainID
+    //         )
+    //     );
+
+    //     TokenInfo memory f = getTokenInfo(tc.toChainID, tc.feeTokenID);
+
+    //     uint256 _swapFee = _calcAndPay(f.addr, tc.toChainID);
+    //     require(tc.feeAmount >= _swapFee, "Theia:fee not enough");
+
+    //     {
+    //         bytes memory _data = genCallData(
+    //             uuid,
+    //             _recvAmount,
+    //             _swapFee,
+    //             tc,
+    //             t,
+    //             f
+    //         );
+    //         c3call(tc.target.toHexString(), tc.toChainID.toString(), _data);
+    //     }
+
+    //     emit LogSwapOut(
+    //         t.addr,
+    //         msg.sender,
+    //         uuid,
+    //         _recvAmount,
+    //         cID(),
+    //         tc.toChainID,
+    //         _swapFee,
+    //         f.addr,
+    //         tc.receiver
+    //     );
+    // }
+
     function genCallData(
         bytes32 _uuid,
         uint256 _recvAmount,
         uint256 _swapFee,
-        TheiaCrossAuto memory tc,
-        TokenInfo memory t,
-        TokenInfo memory fee
+        TheiaStruct.CrossAuto memory tc,
+        TheiaStruct.TokenInfo memory t,
+        TheiaStruct.TokenInfo memory fee
     ) internal view returns (bytes memory) {
         uint256 _toAmount = _recvAmount;
 
@@ -323,7 +378,7 @@ contract TheiaRouter is IRouter, GovernDapp {
 
         return
             abi.encodeWithSelector(
-                TheiaStruct.FuncSwapInAuto,
+                TheiaStruct.FuncTheiaVaultAuto,
                 _uuid,
                 t.toChainAddr,
                 tc.receiver,
@@ -338,7 +393,7 @@ contract TheiaRouter is IRouter, GovernDapp {
     function theiaVaultAuto(
         bytes32 uuid,
         address token,
-        address to,
+        address receiver,
         uint256 amount,
         uint256 tokenDecimals,
         uint256 feePaid,
@@ -347,12 +402,12 @@ contract TheiaRouter is IRouter, GovernDapp {
     ) external onlyGov returns (bool) {
         require(token != address(0), "Theia:token empty");
         require(uuid.length > 0, "Theia:uuid empty");
-        require(to != address(0), "Theia:to empty");
+        require(receiver != address(0), "Theia:to empty");
         require(amount > 0, "Theia:amount empty");
         require(tokenDecimals > 0, "Theia:tokenDecimals empty");
         require(fromTokenAddr != address(0), "Theia:fromTokenAddr empty");
 
-        (, string memory fromChainID, string memory _sourceTx, ) = context();
+        (, string memory fromChainID, string memory _sourceTx) = context();
 
         (uint256 sourceChainID, bool ok) = strToUint(fromChainID);
         require(ok, "Theia:sourceChain invalid");
@@ -362,7 +417,7 @@ contract TheiaRouter is IRouter, GovernDapp {
             "Theia:tokenDecimals dismatch"
         );
 
-        uint256 feeRate = queryLiquidityFeeRate(token, amount);
+        uint256 feeRate = _queryLiquidityFeeRate(token, amount);
         if (feeRate > 0) {
             uint256 baseFee = IFeeManager(feeManager).getBaseLiquidityFee(
                 feeToken
@@ -375,12 +430,12 @@ contract TheiaRouter is IRouter, GovernDapp {
         uint256 recvAmount = _registerAndMint(
             uuid,
             token,
-            to,
+            receiver,
             amount,
             sourceChainID,
             _sourceTx
         );
-        return _transferVault(token, to, recvAmount);
+        return _transferVault(token, receiver, recvAmount);
     }
 
     function _registerAndMint(
@@ -422,7 +477,15 @@ contract TheiaRouter is IRouter, GovernDapp {
     }
 
     function _payFee(address feeToken, uint256 fee) internal {
-        IERC20(feeToken).safeTransferFrom(msg.sender, address(this), fee);
+        if (ITheiaERC20(feeToken).underlying() == address(0)) {
+            IERC20(feeToken).safeTransferFrom(msg.sender, address(this), fee);
+        } else {
+            IERC20(ITheiaERC20(feeToken).underlying()).safeTransferFrom(
+                msg.sender,
+                address(this),
+                fee
+            );
+        }
     }
 
     function _c3Fallback(
@@ -430,36 +493,48 @@ contract TheiaRouter is IRouter, GovernDapp {
         bytes calldata _data,
         bytes calldata _reason
     ) internal override returns (bool) {
+        // decode theiaVaultAuto calldata
         bytes32 _uuid;
         address _receiver;
         uint256 _amount;
         uint256 _recDecimals;
         address _fromToken;
-        (_uuid, , _receiver, _amount, _recDecimals, _fromToken) = abi.decode(
-            _data,
-            (bytes32, address, address, uint256, uint256, address)
-        );
-
-        require(
-            ITheiaUUIDKeeper(uuidKeeper).isExist(_uuid),
-            "Theia:uuid not exists"
-        );
-        ITheiaUUIDKeeper(uuidKeeper).registerUUID(_uuid);
-
-        uint256 _toAmount = _amount;
-        if (ITheiaERC20(_fromToken).decimals() != _recDecimals) {
-            _toAmount = convertDecimals(
-                _amount,
-                _recDecimals,
-                ITheiaERC20(_fromToken).decimals()
+        (_uuid, , _receiver, _amount, _recDecimals, , , _fromToken) = abi
+            .decode(
+                _data,
+                (
+                    bytes32,
+                    address,
+                    address,
+                    uint256,
+                    uint256,
+                    uint256,
+                    address,
+                    address
+                )
             );
-        }
-        require(_toAmount > 0, "Theia:recAmount convert err");
+        return true;
 
-        ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
+        // require(
+        //     ITheiaUUIDKeeper(uuidKeeper).isExist(_uuid),
+        //     "Theia:uuid not exists"
+        // );
+        // ITheiaUUIDKeeper(uuidKeeper).registerUUID(_uuid);
 
-        emit LogSwapFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
-        return _transferVault(_fromToken, _receiver, _toAmount);
+        // uint256 _toAmount = _amount;
+        // if (ITheiaERC20(_fromToken).decimals() != _recDecimals) {
+        //     _toAmount = convertDecimals(
+        //         _amount,
+        //         _recDecimals,
+        //         ITheiaERC20(_fromToken).decimals()
+        //     );
+        // }
+        // require(_toAmount > 0, "Theia:recAmount convert err");
+
+        // ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
+
+        // emit LogSwapFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
+        // return _transferVault(_fromToken, _receiver, _toAmount);
     }
 
     function depositNative(
