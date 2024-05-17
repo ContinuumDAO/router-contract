@@ -85,7 +85,7 @@ contract C3CallerProxy is
     // called by mpc network
     function c3Fallback(
         uint256 _dappID,
-        C3CallerStructLib.C3EvmFallbackMessage calldata _message
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external override onlyOperator {
         IC3Caller(c3caller).c3Fallback(_dappID, _message);
     }

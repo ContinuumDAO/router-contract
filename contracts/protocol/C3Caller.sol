@@ -46,18 +46,17 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         string sourceTx,
         bytes data,
         bool success,
-        bytes reasons
+        bytes reason
     );
 
     event LogExecFallback(
         uint256 indexed dappID,
         address indexed to,
-        bool indexed success,
-        bytes32 uuid,
+        bytes32 indexed uuid,
         string fromChainID,
         string sourceTx,
-        bytes fallbackReason,
-        bytes data
+        bytes data,
+        bytes reason
     );
 
     constructor(address _swapIDKeeper) {
@@ -175,7 +174,8 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
                 abi.encodeWithSelector(
                     IC3Dapp.c3Fallback.selector,
                     _dappID,
-                    _message.data
+                    _message.data,
+                    result
                 ),
                 result
             );
@@ -184,7 +184,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
 
     function c3Fallback(
         uint256 _dappID,
-        C3CallerStructLib.C3EvmFallbackMessage calldata _message
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external override onlyOperator {
         require(_message.data.length > 0, "C3Caller: empty calldata");
         require(
@@ -203,28 +203,26 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
             sourceTx: _message.sourceTx
         });
 
-        bool _success = IC3Dapp(_message.to).c3Fallback(
-            _dappID,
+        address _target = _message.to;
+
+        bytes memory _result = _target.functionCall(
             _message.data,
-            _message.reason
+            "C3Caller: c3Fallback failed"
         );
 
         context = C3Context({swapID: "", fromChainID: "", sourceTx: ""});
 
+        IUUIDKeeper(uuidKeeper).registerUUID(_message.uuid);
+
         emit LogExecFallback(
             _dappID,
             _message.to,
-            _success,
             _message.uuid,
             _message.fromChainID,
             _message.sourceTx,
-            _message.reason,
-            _message.data
+            _message.data,
+            _result
         );
-
-        if (_success) {
-            IUUIDKeeper(uuidKeeper).registerUUID(_message.uuid);
-        }
     }
 
     function toUint(bytes memory bs) internal pure returns (bool, uint) {

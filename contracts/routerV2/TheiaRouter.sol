@@ -513,28 +513,27 @@ contract TheiaRouter is IRouter, GovernDapp {
                     address
                 )
             );
-        return true;
 
-        // require(
-        //     ITheiaUUIDKeeper(uuidKeeper).isExist(_uuid),
-        //     "Theia:uuid not exists"
-        // );
-        // ITheiaUUIDKeeper(uuidKeeper).registerUUID(_uuid);
+        require(
+            ITheiaUUIDKeeper(uuidKeeper).isExist(_uuid),
+            "Theia:uuid not exists"
+        );
+        ITheiaUUIDKeeper(uuidKeeper).registerUUID(_uuid);
 
-        // uint256 _toAmount = _amount;
-        // if (ITheiaERC20(_fromToken).decimals() != _recDecimals) {
-        //     _toAmount = convertDecimals(
-        //         _amount,
-        //         _recDecimals,
-        //         ITheiaERC20(_fromToken).decimals()
-        //     );
-        // }
-        // require(_toAmount > 0, "Theia:recAmount convert err");
+        uint256 _toAmount = _amount;
+        if (ITheiaERC20(_fromToken).decimals() != _recDecimals) {
+            _toAmount = convertDecimals(
+                _amount,
+                _recDecimals,
+                ITheiaERC20(_fromToken).decimals()
+            );
+        }
+        require(_toAmount > 0, "Theia:recAmount convert err");
 
-        // ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
+        ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
 
-        // emit LogSwapFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
-        // return _transferVault(_fromToken, _receiver, _toAmount);
+        emit LogSwapFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
+        return _transferVault(_fromToken, _receiver, _toAmount);
     }
 
     function depositNative(

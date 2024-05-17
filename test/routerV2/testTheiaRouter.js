@@ -17,7 +17,7 @@ describe("TheiaRouter", function () {
     let result_success = "0x0000000000000000000000000000000000000000000000000000000000000001"
     let address_zero = "0x0000000000000000000000000000000000000000"
 
-    let TheiaUUIDKeeperABI, TheiaRouterConfigABI, FeeManagerABI
+    let TheiaUUIDKeeperABI, TheiaRouterConfigABI, FeeManagerABI, TheiaRouterABI
 
 
     async function deployRouterV2() {
@@ -54,6 +54,9 @@ describe("TheiaRouter", function () {
 
         artifact = await hre.artifacts.readArtifact('FeeManager');
         FeeManagerABI = artifact.abi
+
+        artifact = await hre.artifacts.readArtifact('TheiaRouter');
+        TheiaRouterABI = artifact.abi
     }
 
 
@@ -263,15 +266,19 @@ describe("TheiaRouter", function () {
             calldata = contract.methods.setLiqBaseFee(underlyingToken.target, 10000000).encodeABI()
             await c3CallerProxy.execute(dappID, [web3.utils.randomBytes(32), feeManager.target, "fromChainID", "sourceTx", "fallbackTo", calldata])
 
-            let fallbackdata = "0xb121f51d000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000104ad35e024535d51b1bc7b9f6ec64334b11dfb211e5123cc49b57e573a375741e44f298c5900000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000005f5e1000000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000098968000000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000000000000000000000000000000000000"
+            let fallbackdata = "0xb121f51d0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000001a00000000000000000000000000000000000000000000000000000000000000104ad35e024535d51b1bc7b9f6ec64334b11dfb211e5123cc49b57e573a375741e44f298c5900000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000005f5e1000000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000098968000000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006408c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001d54686569613a6e6f7420636f766572206c69717569646974792066656500000000000000000000000000000000000000000000000000000000000000"
             let reason = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001d54686569613a6e6f7420636f766572206c697175696469747920666565000000"
             await expect(c3CallerProxy.execute(dappID, [c3uuid, routerV2.target, chainID.toString(), "sourceTxHash", routerV2.target, data]))
                 .to.emit(c3Caller, "LogExecCall").withArgs(dappID, routerV2.target, c3uuid, chainID, "sourceTxHash", data, false, reason)
                 .to.emit(c3Caller, "LogFallbackCall").withArgs(dappID, c3uuid, routerV2.target, fallbackdata, reason)
 
-            await expect(c3CallerProxy.c3Fallback(dappID, [c3uuid, routerV2.target, chainID.toString(), "failTxHash", routerV2.target, fallbackdata, reason]))
-                .to.emit(c3Caller, "LogExecFallback").withArgs(dappID, routerV2.target, true, c3uuid, chainID, "failTxHash", reason, fallbackdata)
-                // .to.emit(routerV2, "LogSwapFallback").withArgs(swapID, theiaToken.target, otherAccount.address, amount.toString(), "0x04b97db9", "0x" + calldata.substring(10), "0x")
+
+            // contract = new web3.eth.Contract(TheiaRouterABI);
+            // let cd = contract.methods.c3Fallback(dappID, data, reason).encodeABI()
+
+            await expect(c3CallerProxy.c3Fallback(dappID, [c3uuid, routerV2.target, chainID.toString(), "failTxHash", "", fallbackdata]))
+                .to.emit(c3Caller, "LogExecFallback").withArgs(dappID, routerV2.target, c3uuid, chainID, "failTxHash", fallbackdata, result_success)
+                .to.emit(routerV2, "LogSwapFallback").withArgs(theiaUuid, underlyingToken.target, otherAccount.address, amount.toString(), reason)
 
 
         });

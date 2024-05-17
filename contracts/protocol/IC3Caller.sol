@@ -10,16 +10,6 @@ library C3CallerStructLib {
         string fallbackTo;
         bytes data;
     }
-
-    struct C3EvmFallbackMessage {
-        bytes32 uuid;
-        address to;
-        string fromChainID;
-        string sourceTx;
-        string fallbackTo;
-        bytes data;
-        bytes reason;
-    }
 }
 
 interface IC3CallerProxy {
@@ -57,7 +47,7 @@ interface IC3CallerProxy {
 
     function c3Fallback(
         uint256 dappID,
-        C3CallerStructLib.C3EvmFallbackMessage calldata _message
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external;
 }
 
@@ -104,6 +94,6 @@ interface IC3Caller {
 
     function c3Fallback(
         uint256 dappID,
-        C3CallerStructLib.C3EvmFallbackMessage calldata message
+        C3CallerStructLib.C3EvmMessage calldata message
     ) external;
 }
