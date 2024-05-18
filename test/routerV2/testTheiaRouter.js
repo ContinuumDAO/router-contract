@@ -211,8 +211,8 @@ describe("TheiaRouter", function () {
             let data = "0xad35e024710f6e1e64ae0f3d31a657ec34c48ee84b45ca700a7674e436c3e2223f1b59cf0000000000000000000000009a676e781a523b5d0c0e43731313a708cb60750800000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000005f5e100000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000009896800000000000000000000000009a676e781a523b5d0c0e43731313a708cb6075080000000000000000000000009a676e781a523b5d0c0e43731313a708cb607508"
             await expect(routerV2.theiaCrossEvm([routerV2.target, otherAccount.address, amount.toString(), 10000000, chainID, "USDC", "USDC"]))
                 .to.emit(routerV2, "LogSwapOut").withArgs(underlyingToken.target, owner.address, theiaUuid, amount.toString(), chainID, chainID,
-                    0, underlyingToken.target, otherAccount.address)
-                .to.emit(c3Caller, "LogC3Call").withArgs(dappID, c3uuid, routerV2.target, chainID, routerV2.target.toLowerCase(), data)
+                    0, underlyingToken.target, otherAccount.address.toLowerCase())
+                .to.emit(c3Caller, "LogC3Call").withArgs(dappID, c3uuid, routerV2.target, chainID, routerV2.target.toLowerCase(), data, "0x")
 
             expect(await usdc.balanceOf(underlyingToken.target)).to.equal(amount)
 
@@ -255,8 +255,8 @@ describe("TheiaRouter", function () {
             let data = "0xad35e024535d51b1bc7b9f6ec64334b11dfb211e5123cc49b57e573a375741e44f298c5900000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000070997970c51812dc3a010c7d01b50e0d17dc79c80000000000000000000000000000000000000000000000000000000005f5e1000000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000098968000000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf00000000000000000000000099bba657f2bbc93c02d617f8ba121cb8fc104acf"
             await expect(routerV2.theiaCrossEvm([routerV2.target, otherAccount.address, amount.toString(), 10000000, chainID, "USDC", "USDC"]))
                 .to.emit(routerV2, "LogSwapOut").withArgs(underlyingToken.target, owner.address, theiaUuid, amount.toString(), chainID, chainID,
-                    0, underlyingToken.target, otherAccount.address)
-                .to.emit(c3Caller, "LogC3Call").withArgs(dappID, c3uuid, routerV2.target, chainID, routerV2.target.toLowerCase(), data)
+                    0, underlyingToken.target, otherAccount.address.toLowerCase())
+                .to.emit(c3Caller, "LogC3Call").withArgs(dappID, c3uuid, routerV2.target, chainID, routerV2.target.toLowerCase(), data, "0x")
 
             expect(await usdc.balanceOf(underlyingToken.target)).to.equal(amount)
 

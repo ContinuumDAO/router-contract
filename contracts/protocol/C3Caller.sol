@@ -27,7 +27,8 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         address caller,
         string toChainID,
         string to,
-        bytes data
+        bytes data,
+        bytes extra
     );
 
     event LogFallbackCall(
@@ -77,7 +78,8 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         address _caller,
         string calldata _to,
         string calldata _toChainID,
-        bytes calldata _data
+        bytes calldata _data,
+        bytes memory _extra
     ) external override whenNotPaused {
         require(_dappID > 0, "C3Caller: empty dappID");
         require(bytes(_to).length > 0, "C3Caller: empty _to");
@@ -89,7 +91,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
             _toChainID,
             _data
         );
-        emit LogC3Call(_dappID, _uuid, _caller, _toChainID, _to, _data);
+        emit LogC3Call(_dappID, _uuid, _caller, _toChainID, _to, _data, _extra);
     }
 
     function c3broadcast(
@@ -121,7 +123,8 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
                 _caller,
                 _toChainIDs[i],
                 _to[i],
-                _data
+                _data,
+                ""
             );
         }
     }

@@ -33,6 +33,14 @@ interface IC3CallerProxy {
         bytes calldata _data
     ) external;
 
+    function c3call(
+        uint256 _dappID,
+        string calldata _to,
+        string calldata _toChainID,
+        bytes calldata _data,
+        bytes memory _extra
+    ) external;
+
     function c3broadcast(
         uint256 _dappID,
         string[] calldata _to,
@@ -76,7 +84,8 @@ interface IC3Caller {
         address _caller,
         string calldata _to,
         string calldata _toChainID,
-        bytes calldata _data
+        bytes calldata _data,
+        bytes memory _extra
     ) external;
 
     function c3broadcast(

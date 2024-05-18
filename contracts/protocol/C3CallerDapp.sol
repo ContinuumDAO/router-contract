@@ -56,7 +56,28 @@ abstract contract C3CallerDapp is IC3Dapp {
         string memory _toChainID,
         bytes memory _data
     ) internal {
-        IC3CallerProxy(c3CallerProxy).c3call(dappID, _to, _toChainID, _data);
+        IC3CallerProxy(c3CallerProxy).c3call(
+            dappID,
+            _to,
+            _toChainID,
+            _data,
+            ""
+        );
+    }
+
+    function c3call(
+        string memory _to,
+        string memory _toChainID,
+        bytes memory _data,
+        bytes memory _extra
+    ) internal {
+        IC3CallerProxy(c3CallerProxy).c3call(
+            dappID,
+            _to,
+            _toChainID,
+            _data,
+            _extra
+        );
     }
 
     function c3broadcast(

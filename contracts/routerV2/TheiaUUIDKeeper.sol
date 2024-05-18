@@ -108,7 +108,8 @@ contract TheiaUUIDKeeper is ITheiaUUIDKeeper, GovernDapp {
                 data.receiver,
                 data.amount,
                 currentNonce,
-                data.toChainID
+                data.toChainID,
+                data.callData
             )
         );
         require(!this.isExist(uuid), "TheiaUUIDKeeper: uuid already exist");

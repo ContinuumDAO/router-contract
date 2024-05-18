@@ -44,7 +44,8 @@ contract CToken is ERC20, C3CallerDapp {
                 "crossIn(address,uint256)",
                 msg.sender,
                 amount_
-            )
+            ),
+            ""
         );
     }
 

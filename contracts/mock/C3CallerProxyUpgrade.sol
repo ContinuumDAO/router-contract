@@ -36,7 +36,8 @@ contract C3CallerProxyUpgrade is C3CallerProxy, IC3CallerProxy2 {
             msg.sender,
             _to,
             _toChainID,
-            _data
+            _data,
+            ""
         );
     }
 }

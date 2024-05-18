@@ -28,6 +28,8 @@ library TheiaStruct {
         string receiver;
         string tokenID;
         string feeTokenID;
+        bytes callData;
+        bytes extra;
     }
 
     struct TokenInfo {

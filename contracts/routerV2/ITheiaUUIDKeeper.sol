@@ -14,8 +14,9 @@ interface ITheiaUUIDKeeper {
         address token;
         address from;
         uint256 amount;
+        uint256 toChainID;
         string receiver;
-        string toChainID;
+        bytes callData;
     }
 
     function registerUUID(bytes32 uuid) external;

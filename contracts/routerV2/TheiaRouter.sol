@@ -283,66 +283,60 @@ contract TheiaRouter is IRouter, GovernDapp {
             tc.toChainID,
             _swapFee,
             f.addr,
-            tc.receiver
+            tc.receiver.toHexString()
         );
     }
 
-    // function theiaCrossNonEvm(CrossNonEvm memory tc) external payable {
-    //     (
-    //         Structs.TokenConfig memory _fromConfig,
-    //         Structs.TokenConfig memory _toConfig
-    //     ) = ITheiaConfig(theiaConfig).getTokenConfigIfExist(_tokenID, _chainID);
-    //     require(
-    //         _fromConfig.Decimals > 0 && _toConfig.Decimals > 0,
-    //         "Theia:token not support"
-    //     );
-    //     require(_fromConfig.addr != "", "Theia:from empty");
-    //     require(tc.target != "", "Theia:to empty");
-    //     require(tc.receiver != "", "Theia:receiver empty");
-    //     require(tc.amount > 0, "Theia:empty");
+    function theiaCrossNonEvm(
+        TheiaStruct.CrossNonEvm memory tc
+    ) external payable {
+        require(!tc.target.equal(""), "Theia:to empty");
+        require(!tc.receiver.equal(""), "Theia:receiver empty");
+        require(tc.amount > 0, "Theia:empty");
 
-    //     uint256 _recvAmount = _getRevAmount(t.addr, tc.amount);
-    //     require(_recvAmount > 0, "Theia:nothing to cross");
+        TheiaStruct.TokenInfo memory t = getTokenInfo(tc.toChainID, tc.tokenID);
 
-    //     bytes32 uuid = ITheiaUUIDKeeper(uuidKeeper).genUUIDEvm(
-    //         ITheiaUUIDKeeper.EvmData(
-    //             t.addr,
-    //             msg.sender,
-    //             _recvAmount,
-    //             tc.receiver,
-    //             tc.toChainID
-    //         )
-    //     );
+        require(
+            t.decimals > 0 && t.toChainDecimals > 0,
+            "Theia:token not support"
+        );
 
-    //     TokenInfo memory f = getTokenInfo(tc.toChainID, tc.feeTokenID);
+        uint256 _recvAmount = _getRevAmount(t.addr, tc.amount);
+        require(_recvAmount > 0, "Theia:nothing to cross");
 
-    //     uint256 _swapFee = _calcAndPay(f.addr, tc.toChainID);
-    //     require(tc.feeAmount >= _swapFee, "Theia:fee not enough");
+        bytes32 uuid = ITheiaUUIDKeeper(uuidKeeper).genUUIDNonEvm(
+            ITheiaUUIDKeeper.NonEvmData(
+                t.addr,
+                msg.sender,
+                _recvAmount,
+                tc.toChainID,
+                tc.receiver,
+                tc.callData
+            )
+        );
 
-    //     {
-    //         bytes memory _data = genCallData(
-    //             uuid,
-    //             _recvAmount,
-    //             _swapFee,
-    //             tc,
-    //             t,
-    //             f
-    //         );
-    //         c3call(tc.target.toHexString(), tc.toChainID.toString(), _data);
-    //     }
+        TheiaStruct.TokenInfo memory f = getTokenInfo(
+            tc.toChainID,
+            tc.feeTokenID
+        );
 
-    //     emit LogSwapOut(
-    //         t.addr,
-    //         msg.sender,
-    //         uuid,
-    //         _recvAmount,
-    //         cID(),
-    //         tc.toChainID,
-    //         _swapFee,
-    //         f.addr,
-    //         tc.receiver
-    //     );
-    // }
+        uint256 _swapFee = _calcAndPay(f.addr, tc.toChainID);
+        require(tc.feeAmount >= _swapFee, "Theia:fee not enough");
+
+        c3call(tc.target, tc.toChainID.toString(), tc.callData, tc.extra);
+
+        emit LogSwapOut(
+            t.addr,
+            msg.sender,
+            uuid,
+            _recvAmount,
+            cID(),
+            tc.toChainID,
+            _swapFee,
+            f.addr,
+            tc.receiver
+        );
+    }
 
     function genCallData(
         bytes32 _uuid,
