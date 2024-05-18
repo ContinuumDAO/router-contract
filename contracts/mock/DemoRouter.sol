@@ -316,6 +316,9 @@ contract DemoRouter is C3CallerDapp {
             }
         }
     }
+    function isVaildSender(address /*txSender*/) external pure returns (bool) {
+        return true;
+    }
 
     function changeVault(
         address token,

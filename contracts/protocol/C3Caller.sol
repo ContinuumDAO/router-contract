@@ -131,11 +131,15 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
 
     function execute(
         uint256 _dappID,
+        address _txSender,
         C3CallerStructLib.C3EvmMessage calldata _message
-    ) external override onlyOperator {
+    ) external override onlyOperator whenNotPaused {
         require(_message.data.length > 0, "C3Caller: empty calldata");
+        require(
+            IC3Dapp(_message.to).isVaildSender(_txSender),
+            "C3Caller: txSender invalid"
+        );
         // check dappID
-        // TODO check to address is in whitelist config of C3DappManager
         require(
             IC3Dapp(_message.to).dappID() == _dappID,
             "C3Caller: dappID dismatch"
@@ -187,12 +191,17 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
 
     function c3Fallback(
         uint256 _dappID,
+        address _txSender,
         C3CallerStructLib.C3EvmMessage calldata _message
-    ) external override onlyOperator {
+    ) external override onlyOperator whenNotPaused {
         require(_message.data.length > 0, "C3Caller: empty calldata");
         require(
             !IUUIDKeeper(uuidKeeper).isCompleted(_message.uuid),
             "C3Caller: already completed"
+        );
+        require(
+            IC3Dapp(_message.to).isVaildSender(_txSender),
+            "C3Caller: txSender invalid"
         );
 
         require(

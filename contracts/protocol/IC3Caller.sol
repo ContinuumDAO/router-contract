@@ -67,6 +67,8 @@ interface IC3Dapp {
     ) external returns (bool);
 
     function dappID() external returns (uint256);
+
+    function isVaildSender(address txSender) external returns (bool);
 }
 
 interface IC3Caller {
@@ -98,11 +100,13 @@ interface IC3Caller {
 
     function execute(
         uint256 _dappID,
+        address _txSender,
         C3CallerStructLib.C3EvmMessage calldata message
     ) external;
 
     function c3Fallback(
         uint256 dappID,
+        address _txSender,
         C3CallerStructLib.C3EvmMessage calldata message
     ) external;
 }

@@ -13,6 +13,8 @@ abstract contract GovernDapp is C3CallerDapp {
     address private _newGov;
     uint256 private _newGovEffectiveTime;
 
+    mapping(address => bool) txSenders;
+
     constructor(
         address _gov,
         address _c3callerProxy,
@@ -57,5 +59,9 @@ abstract contract GovernDapp is C3CallerDapp {
 
     function setDelay(uint _delay) external onlyGov {
         delay = _delay;
+    }
+
+    function isVaildSender(address txSender) external view returns (bool) {
+        return txSenders[txSender];
     }
 }

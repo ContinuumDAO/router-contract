@@ -2,11 +2,13 @@
 pragma solidity ^0.8.19;
 
 import "./C3GovClient.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract C3DappManager is C3GovClient, Pausable {
+    using Strings for *;
     using SafeERC20 for IERC20;
     // Dapp config
     struct DappConfig {
@@ -29,6 +31,9 @@ contract C3DappManager is C3GovClient, Pausable {
 
     mapping(address => uint256) private fees;
 
+    mapping(uint256 => mapping(string => string)) private mpcPubkey; // key is mpc address
+    mapping(uint256 => string[]) private mpcAddrs;
+
     event SetDAppConfig(
         uint256 indexed dappID,
         address indexed appAdmin,
@@ -39,6 +44,10 @@ contract C3DappManager is C3GovClient, Pausable {
     event SetBlacklists(uint256 dappID, bool flag);
 
     event SetDAppAddr(uint256 indexed dappID, string[] addresses);
+
+    event AddMpcAddr(uint256 indexed dappID, string addr, string pubkey);
+
+    event DelMpcAddr(uint256 indexed dappID, string addr);
 
     event SetFeeConfig(
         address indexed token,
@@ -193,6 +202,47 @@ contract C3DappManager is C3GovClient, Pausable {
         config.feeToken = _feeToken;
 
         emit SetDAppConfig(dappID, msg.sender, _feeToken, _appID, _email);
+    }
+
+    function addMpcAddr(
+        uint256 _dappID,
+        string[] calldata _addrs,
+        string[] calldata _pubkeys
+    ) external {
+        DappConfig memory config = dappConfig[_dappID];
+        require(config.appAdmin != address(0), "C3M: app not exist");
+        require(_addrs.length == _pubkeys.length, "C3M: length dismatch");
+        require(
+            msg.sender == gov || msg.sender == config.appAdmin,
+            "C3M: forbid"
+        );
+
+        for (uint256 index = 0; index < _addrs.length; index++) {
+            mpcPubkey[_dappID][_addrs[index]] = _pubkeys[index];
+            mpcAddrs[_dappID].push(_addrs[index]);
+            emit AddMpcAddr(dappID, _addrs[index], _pubkeys[index]);
+        }
+    }
+
+    function removeMpcAddr(uint256 _dappID, string[] calldata _addrs) external {
+        DappConfig memory config = dappConfig[_dappID];
+        require(config.appAdmin != address(0), "C3M: app not exist");
+        require(
+            msg.sender == gov || msg.sender == config.appAdmin,
+            "C3M: forbid"
+        );
+
+        for (uint256 index = 0; index < _addrs.length; index++) {
+            delete mpcPubkey[_dappID][_addrs[index]];
+            for (uint256 j = 0; j < mpcAddrs[_dappID].length; j++) {
+                if (mpcAddrs[_dappID][j].equal(_addrs[index])) {
+                    uint256 tmp = mpcAddrs[_dappID].length - 1;
+                    mpcAddrs[_dappID][j] = mpcAddrs[_dappID][tmp];
+                    mpcAddrs[_dappID].pop();
+                    emit DelMpcAddr(dappID, _addrs[index]);
+                }
+            }
+        }
     }
 
     function resetAdmin(uint256 _dappID, address _newAdmin) external {

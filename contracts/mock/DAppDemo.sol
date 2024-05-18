@@ -42,4 +42,8 @@ contract DAppDemo is C3CallerDapp {
     ) internal virtual override returns (bool) {
         return true;
     }
+
+    function isVaildSender(address /*txSender*/) external pure returns (bool) {
+        return true;
+    }
 }

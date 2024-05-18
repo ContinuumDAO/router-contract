@@ -18,7 +18,7 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig", [evn[networkName.toUpperCase()].C3CallerProxy, 1]);
+    const aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig", [,evn[networkName.toUpperCase()].C3CallerProxy, 1]);
     await aRouterConfig.waitForDeployment();
 
     console.log('"TheiaRouterConfig":', `"${aRouterConfig.target}",`);
