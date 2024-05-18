@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 interface IRouter {
-    event LogSwapIn(
+    event LogTheiaVault(
         address indexed token,
         address indexed to,
         bytes32 indexed swapoutID,
@@ -13,15 +13,7 @@ interface IRouter {
         string sourceTx
     );
 
-    event LogSwapInPending(
-        address indexed token,
-        address indexed to,
-        bytes32 indexed swapoutID,
-        uint256 amount,
-        uint256 feeRate
-    );
-
-    event LogSwapOut(
+    event LogTheiaCross(
         address indexed token,
         address indexed from,
         bytes32 indexed swapoutID,
@@ -32,19 +24,8 @@ interface IRouter {
         address feeToken,
         string receiver
     );
-    event LogAnySwapInAndExec(
-        address indexed dapp,
-        address indexed receiver,
-        bytes32 swapID,
-        address token,
-        uint256 amount,
-        uint256 fromChainID,
-        string sourceTx,
-        bool success,
-        bytes result
-    );
 
-    event LogSwapFallback(
+    event LogTheiaFallback(
         bytes32 indexed swapID,
         address indexed token,
         address indexed receiver,

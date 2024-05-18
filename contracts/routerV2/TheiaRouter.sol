@@ -274,7 +274,7 @@ contract TheiaRouter is IRouter, GovernDapp {
             c3call(tc.target.toHexString(), tc.toChainID.toString(), _data);
         }
 
-        emit LogSwapOut(
+        emit LogTheiaCross(
             t.addr,
             msg.sender,
             uuid,
@@ -325,7 +325,7 @@ contract TheiaRouter is IRouter, GovernDapp {
 
         c3call(tc.target, tc.toChainID.toString(), tc.callData, tc.extra);
 
-        emit LogSwapOut(
+        emit LogTheiaCross(
             t.addr,
             msg.sender,
             uuid,
@@ -442,7 +442,15 @@ contract TheiaRouter is IRouter, GovernDapp {
     ) internal returns (uint256) {
         ITheiaUUIDKeeper(uuidKeeper).registerUUID(uuid);
         ITheiaERC20(token).mint(to, amount);
-        emit LogSwapIn(token, to, uuid, amount, fromChainID, cID(), sourceTx);
+        emit LogTheiaVault(
+            token,
+            to,
+            uuid,
+            amount,
+            fromChainID,
+            cID(),
+            sourceTx
+        );
         return amount;
     }
 
@@ -526,7 +534,7 @@ contract TheiaRouter is IRouter, GovernDapp {
 
         ITheiaERC20(_fromToken).mint(_receiver, _toAmount);
 
-        emit LogSwapFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
+        emit LogTheiaFallback(_uuid, _fromToken, _receiver, _toAmount, _reason);
         return _transferVault(_fromToken, _receiver, _toAmount);
     }
 
