@@ -36,7 +36,7 @@ async function main() {
     console.log('"C3Caller":', `"${c3Caller.target}",`);
 
     let c3DappManager
-    if (!evn[networkName.toUpperCase()].C3DappManager) {
+    if (!evn[networkName.toUpperCase()].C3DappManager && chainId == 421614) {
         c3DappManager = await hre.ethers.deployContract("C3DappManager", []);
         await c3DappManager.waitForDeployment();
     } else {
@@ -53,11 +53,11 @@ async function main() {
             { initializer: 'initialize', kind: 'uups' }
         );
         await c3CallerProxy.waitForDeployment();
-        console.log('"C3CallerProxy":', `"${c3CallerProxy.target}",`);
     } else {
         // TODO
         c3CallerProxy = { target: evn[networkName.toUpperCase()].C3CallerProxy }
     }
+    console.log('"C3CallerProxy":', `"${c3CallerProxy.target}",`);
 
     let currentImplAddress = evn[networkName.toUpperCase()].C3CallerProxyImp
     if (!currentImplAddress) {
@@ -83,17 +83,34 @@ async function main() {
         "C3Governor": c3governor.target,
     })
 
-    await c3SwapIDKeeper.addOperator(c3Caller.target)
-    // add c3CallerProxy to Operator
-    await c3Caller.addOperator(currentImplAddress)
-
-    // TODO no need?
-    // await c3Caller.addOperator(c3CallerProxy.target)
+    try {
+        await c3SwapIDKeeper.addOperator(c3Caller.target)
+    } catch (error) {
+        console.log(error)
+    }
+    try {
+        // add c3CallerProxy to Operator
+        await c3Caller.addOperator(currentImplAddress)
+    } catch (error) {
+        console.log(error)
+    }
+    try {
+        // for real call
+        await c3Caller.addOperator(c3CallerProxy.target)
+    } catch (error) {
+        console.log(error)
+    }
 
     for (let index = 0; index < evn.mpcList.length; index++) {
-        const element = evn.mpcList[index];
-        await c3Caller.addOperator(element.addr)
-        await c3CallerProxy.addOperator(element.addr)
+        try {
+            const element = evn.mpcList[index];
+            console.log(`c3Caller addOperator ${element.addr} ...`);
+            await c3Caller.addOperator(element.addr)
+        } catch (error) {
+
+        }
+        // console.log(`c3CallerProxy addOperator ${element.addr} ...`);
+        // await c3CallerProxy.addOperator(element.addr)
     }
 
     console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target}`);

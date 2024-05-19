@@ -33,7 +33,7 @@ contract C3UUIDKeeper is IUUIDKeeper, C3GovClient {
     function isCompleted(bytes32 uuid) external view returns (bool) {
         return completedSwapin[uuid];
     }
-
+    // TODO change name
     function revokeSwapin(bytes32 uuid) external onlyGov {
         completedSwapin[uuid] = false;
     }

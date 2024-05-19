@@ -19,13 +19,19 @@ async function main() {
 
     console.log(c3CallerProxy.target, c3Governor.target);
 
-    // for estimate gas
-    // "0xEef3d3678E1E739C6522EEC209Bede0197791339"
-    // await c3CallerProxy.addOperator(c3Governor.target)
-    // for real call
-    await c3Caller.addOperator(c3CallerProxy.target)
+    // TODO transfer gov to C3Governor for every contract if arb
+    if (chainId == 421614) {
+        await c3SwapIDKeeper.changeGov(c3Governor.target)
+        await c3Caller.changeGov(c3Governor.target)
+        await C3DappManager.changeGov(c3Governor.target)
+        await c3CallerProxy.changeGov(c3Governor.target)
+        
+        await c3SwapIDKeeper.applyGov()
+        await c3Caller.applyGov()
+        await C3DappManager.applyGov()
+        await c3CallerProxy.applyGov()
+    }
 
-    // TODO transfer C3Governor to every contract as gov if arb
 
     // TODO the contract on other chain should be TransferGov to MPC address
 
