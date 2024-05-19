@@ -190,7 +190,7 @@ describe("TheiaRouter", function () {
     });
 
     describe("TheiaRouter", function () {
-        it.only("theiaCrossEvm", async function () {
+        it("theiaCrossEvm", async function () {
             // expect(await theiaToken.isMinter(routerV2.target)).to.equal(true)
             let amount = web3.utils.toNumber("100000000")
 
@@ -234,7 +234,7 @@ describe("TheiaRouter", function () {
 
         });
 
-        it.only("Fallback", async function () {
+        it("Fallback", async function () {
             // expect(await theiaToken.isMinter(routerV2.target)).to.equal(true)
             let amount = web3.utils.toNumber("100000000")
 

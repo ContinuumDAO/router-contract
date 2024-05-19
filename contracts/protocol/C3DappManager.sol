@@ -47,7 +47,7 @@ contract C3DappManager is C3GovClient, Pausable {
 
     event AddMpcAddr(uint256 indexed dappID, string addr, string pubkey);
 
-    event DelMpcAddr(uint256 indexed dappID, string addr);
+    event DelMpcAddr(uint256 indexed dappID, string addr, string pubkey);
 
     event SetFeeConfig(
         address indexed token,
@@ -162,6 +162,12 @@ contract C3DappManager is C3GovClient, Pausable {
         _setDappAddrlist(_dappID, _whitelist);
     }
 
+    function getTxSenders(
+        uint256 _dappID
+    ) external view returns (string[] memory) {
+        return mpcAddrs[_dappID];
+    }
+
     function delWhitelists(
         uint256 _dappID,
         string[] memory _whitelist
@@ -204,7 +210,7 @@ contract C3DappManager is C3GovClient, Pausable {
         emit SetDAppConfig(dappID, msg.sender, _feeToken, _appID, _email);
     }
 
-    function addMpcAddr(
+    function addTxSender(
         uint256 _dappID,
         string[] calldata _addrs,
         string[] calldata _pubkeys
@@ -224,7 +230,10 @@ contract C3DappManager is C3GovClient, Pausable {
         }
     }
 
-    function removeMpcAddr(uint256 _dappID, string[] calldata _addrs) external {
+    function removeTxSender(
+        uint256 _dappID,
+        string[] calldata _addrs
+    ) external {
         DappConfig memory config = dappConfig[_dappID];
         require(config.appAdmin != address(0), "C3M: app not exist");
         require(
@@ -233,13 +242,14 @@ contract C3DappManager is C3GovClient, Pausable {
         );
 
         for (uint256 index = 0; index < _addrs.length; index++) {
+            string memory pk = mpcPubkey[_dappID][_addrs[index]];
             delete mpcPubkey[_dappID][_addrs[index]];
             for (uint256 j = 0; j < mpcAddrs[_dappID].length; j++) {
                 if (mpcAddrs[_dappID][j].equal(_addrs[index])) {
                     uint256 tmp = mpcAddrs[_dappID].length - 1;
                     mpcAddrs[_dappID][j] = mpcAddrs[_dappID][tmp];
                     mpcAddrs[_dappID].pop();
-                    emit DelMpcAddr(dappID, _addrs[index]);
+                    emit DelMpcAddr(dappID, _addrs[index], pk);
                 }
             }
         }
