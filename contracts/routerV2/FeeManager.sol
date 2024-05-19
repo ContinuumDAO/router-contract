@@ -32,8 +32,9 @@ contract FeeManager is GovernDapp, IFeeManager {
         address _feeToken,
         address _gov,
         address _c3callerProxy,
+        address _txSender,
         uint256 _dappID
-    ) GovernDapp(_gov, _c3callerProxy, _dappID) {
+    ) GovernDapp(_gov, _c3callerProxy, _txSender, _dappID) {
         feeTokenList.push(_feeToken);
         feeTokenIndexMap[_feeToken] = 1;
     }

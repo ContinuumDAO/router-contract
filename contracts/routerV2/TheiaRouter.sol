@@ -35,8 +35,9 @@ contract TheiaRouter is IRouter, GovernDapp {
         address _feeManager,
         address _gov,
         address _c3callerProxy,
+        address _txSender,
         uint256 _dappID
-    ) GovernDapp(_gov, _c3callerProxy, _dappID) {
+    ) GovernDapp(_gov, _c3callerProxy, _txSender, _dappID) {
         wNATIVE = _wNATIVE;
         uuidKeeper = _uuidKeeper;
         theiaConfig = _theiaConfig;

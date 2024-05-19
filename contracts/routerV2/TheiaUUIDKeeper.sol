@@ -34,8 +34,9 @@ contract TheiaUUIDKeeper is ITheiaUUIDKeeper, GovernDapp {
     constructor(
         address _gov,
         address _c3callerProxy,
+        address _txSender,
         uint256 _dappID
-    ) GovernDapp(_gov, _c3callerProxy, _dappID) {}
+    ) GovernDapp(_gov, _c3callerProxy, _txSender, _dappID) {}
 
     function getAllSupportedCallers() external view returns (address[] memory) {
         return supportedCallers;

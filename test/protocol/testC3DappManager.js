@@ -139,7 +139,7 @@ describe("C3DappManager", function () {
         });
 
 
-        it.only("addTxSender", async function () {
+        it("addTxSender", async function () {
             await c3DappManager.setFeeCurrencies([weth.target, erc20Token.target], [100000000, 2000000000])
             let dappID = await c3DappManager.dappID();
             let nextID = new BN(dappID).add(new BN(1)).toString()

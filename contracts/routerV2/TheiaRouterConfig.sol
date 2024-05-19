@@ -51,8 +51,9 @@ contract TheiaRouterConfig is
     constructor(
         address _gov,
         address _c3callerProxy,
+        address _txSender,
         uint256 _dappID
-    ) GovernDapp(_gov, _c3callerProxy, _dappID) {
+    ) GovernDapp(_gov, _c3callerProxy, _txSender, _dappID) {
         _grantRole(DEFAULT_ADMIN_ROLE, _gov);
         _grantRole(CONFIG_ROLE, _gov);
     }

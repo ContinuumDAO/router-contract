@@ -18,11 +18,13 @@ abstract contract GovernDapp is C3CallerDapp {
     constructor(
         address _gov,
         address _c3callerProxy,
+        address _txSender,
         uint256 _dappID
     ) C3CallerDapp(_c3callerProxy, _dappID) {
         _oldGov = _gov;
         _newGov = _gov;
         _newGovEffectiveTime = block.timestamp;
+        txSenders[_txSender] = true;
     }
 
     event LogChangeGov(
@@ -59,6 +61,14 @@ abstract contract GovernDapp is C3CallerDapp {
 
     function setDelay(uint _delay) external onlyGov {
         delay = _delay;
+    }
+
+    function addTxSender(address txSender) external onlyGov {
+        txSenders[txSender] = true;
+    }
+
+    function disableTxSender(address txSender) external onlyGov {
+        txSenders[txSender] = false;
     }
 
     function isVaildSender(address txSender) external view returns (bool) {
