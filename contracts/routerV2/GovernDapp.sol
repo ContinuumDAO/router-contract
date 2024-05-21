@@ -3,9 +3,14 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
 import "../protocol/C3CallerDapp.sol";
+import "./TheiaUtils.sol";
 
 abstract contract GovernDapp is C3CallerDapp {
+    using Strings for *;
+    using Address for address;
     // delay for timelock functions
     uint public delay = 2 days;
 
@@ -73,5 +78,18 @@ abstract contract GovernDapp is C3CallerDapp {
 
     function isVaildSender(address txSender) external view returns (bool) {
         return txSenders[txSender];
+    }
+
+    function doGov(
+        string memory _to,
+        string memory _toChainID,
+        bytes memory _data
+    ) external onlyGov {
+        if (block.chainid.toString().equal(_toChainID)) {
+            address to = TheiaUtils.toAddress(_to);
+            to.functionCall(_data, "doGov error");
+        } else {
+            c3call(_to, _toChainID, _data);
+        }
     }
 }
