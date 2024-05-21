@@ -1,4 +1,4 @@
-const evn = require("../../env.json")
+const evn = require("../../output/env.json")
 const fs = require("fs");
 async function deploy(args, hre) {
     const networkName = hre.network.name.toUpperCase()
@@ -6,7 +6,6 @@ async function deploy(args, hre) {
 
     const [signer] = await ethers.getSigners()
     console.log(args, evn[networkName].TheiaRouter, chainId, signer.address);
-
 
     const TheiaERC20 = await hre.ethers.deployContract("TheiaERC20", [args.name, args.symbol, args.decimals, args.underlying, evn[networkName].TheiaRouter]);
     const theiaERC20 = await TheiaERC20.waitForDeployment();
@@ -16,21 +15,9 @@ async function deploy(args, hre) {
         name: args.name, symbol: args.symbol, decimals: args.decimals, underlying: args.underlying,
         address: theiaERC20.target, chain: networkName, chainId: chainId, router: evn[networkName].TheiaRouter
     };
-    fs.appendFileSync("ERC20.txt", JSON.stringify(result) + "\n");
+    fs.appendFileSync("./output/ERC20.txt", JSON.stringify(result) + "\n");
 
-    console.log(`INSERT INTO token_config (chain_id, token_name, token_symbol, decimals, address, underlying_token, contract_version, router_address, is_check) VALUES (
-        '${result.chainId}',
-        '${result.name}',
-        '${result.symbol}',
-        ${result.decimals},
-        '${result.address}',
-        '${result.underlying}',
-        'V1',
-        '${result.router}',
-        0
-    );`);
-
-    console.log(`npx hardhat verify --network ${networkName} ${theiaERC20.target} ${args.name} ${args.symbol} ${args.decimals} ${args.underlying} ${evn[networkName].TheiaRouter}`);
+    console.log(`npx hardhat verify --network ${networkName.toLowerCase()} ${theiaERC20.target} ${args.name} ${args.symbol} ${args.decimals} ${args.underlying} ${evn[networkName].TheiaRouter}`);
 
     try {
         hre.run("verify:verify", {
@@ -39,7 +26,7 @@ async function deploy(args, hre) {
             constructorArguments: [args.name, args.symbol, args.decimals, args.underlying, evn[networkName].TheiaRouter],
         });
     } catch (error) {
-        console.error(error);
+        console.log(error);
     }
 }
 

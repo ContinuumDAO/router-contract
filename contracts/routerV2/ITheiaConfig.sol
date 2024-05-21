@@ -33,6 +33,23 @@ library Structs {
 }
 
 interface ITheiaConfig {
+    event LogSetChainConfig(
+        uint256 indexed chainID,
+        string BlockChain,
+        string RouterContract,
+        string Extra
+    );
+
+    event LogSetChainConfig(
+        uint256 indexed ChainID,
+        uint8 Decimals,
+        uint256 ContractVersion,
+        string tokenID,
+        string ContractAddress,
+        string RouterContract,
+        string Underlying
+    );
+
     function getTokenConfig(
         string memory tokenID,
         uint256 chainID

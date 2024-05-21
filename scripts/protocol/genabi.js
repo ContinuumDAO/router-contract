@@ -14,16 +14,16 @@ async function main() {
 
     let govProposalData = new web3.eth.Contract(GovABI);
 
-    // let c3caller = new web3.eth.Contract(C3CallerABI);
-    // let calldata = c3caller.methods.addOperator(signer.address).encodeABI()
+    let c3caller = new web3.eth.Contract(C3CallerABI);
+    let calldata = c3caller.methods.addOperator(signer.address).encodeABI()
 
-    // console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].C3CallerProxy, calldata).encodeABI().substring(10))
+    console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].C3CallerProxy, calldata).encodeABI().substring(10))
 
 
-    let c3DappManager = new web3.eth.Contract(C3DappManagerABI);
-    calldata = c3DappManager.methods.setFeeCurrencies(["0x2A2a5e1e2475Bf35D8F3f85D8C736f376BDb1C02"], ["10000000000000000"]).encodeABI()
+    // let c3DappManager = new web3.eth.Contract(C3DappManagerABI);
+    // calldata = c3DappManager.methods.setFeeCurrencies(["0x2A2a5e1e2475Bf35D8F3f85D8C736f376BDb1C02"], ["10000000000000000"]).encodeABI()
 
-    console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].C3DappManager, calldata).encodeABI().substring(10))
+    // console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].C3DappManager, calldata).encodeABI().substring(10))
 
     console.log(web3.utils.randomHex(32))
 }

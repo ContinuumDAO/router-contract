@@ -61,8 +61,19 @@ contract TheiaRouter is IRouter, GovernDapp {
         return 1;
     }
 
-    function changeSwapIDKeeper(address _uuidKeeper) external onlyGov {
+    function changeUUIDKeeper(address _uuidKeeper) external onlyGov {
         uuidKeeper = _uuidKeeper;
+        emit LogChangeUUIDKeeper(_uuidKeeper);
+    }
+
+    function changeTheiaConfig(address _theiaConfig) external onlyGov {
+        theiaConfig = _theiaConfig;
+        emit LogChangeTheiaConfig(_theiaConfig);
+    }
+
+    function changeFeeManager(address _feeManager) external onlyGov {
+        feeManager = _feeManager;
+        emit LogChangeFeeManager(_feeManager);
     }
 
     function setMinter(address token, address _auth) external onlyGov {

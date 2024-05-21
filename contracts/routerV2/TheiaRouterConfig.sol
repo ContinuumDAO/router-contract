@@ -353,6 +353,12 @@ contract TheiaRouterConfig is
             _allChainIDs.push(chainID);
             _allChainIDsMap[chainID] = true;
         }
+        emit LogSetChainConfig(
+            chainID,
+            config.BlockChain,
+            config.RouterContract,
+            config.Extra
+        );
         return true;
     }
 
@@ -369,6 +375,16 @@ contract TheiaRouterConfig is
             _allTokenIDsMap[tokenID] = true;
         }
         _setMultichainToken(tokenID, chainID, config.ContractAddress);
+
+        emit LogSetChainConfig(
+            chainID,
+            config.Decimals,
+            config.ContractVersion,
+            tokenID,
+            config.ContractAddress,
+            config.RouterContract,
+            config.Underlying
+        );
         return true;
     }
 

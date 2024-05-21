@@ -3,6 +3,10 @@
 pragma solidity ^0.8.0;
 
 interface IRouter {
+    event LogChangeUUIDKeeper(address indexed newAddr);
+    event LogChangeTheiaConfig(address indexed newAddr);
+    event LogChangeFeeManager(address indexed newAddr);
+
     event LogTheiaVault(
         address indexed token,
         address indexed to,
