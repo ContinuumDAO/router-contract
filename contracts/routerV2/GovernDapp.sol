@@ -39,6 +39,8 @@ abstract contract GovernDapp is C3CallerDapp {
         uint256 chainID
     );
 
+    event LogTxSender(address indexed txSender, bool vaild);
+
     modifier onlyGov() {
         require(msg.sender == gov() || isCaller(msg.sender), "Gov FORBIDDEN");
         _;
@@ -70,10 +72,12 @@ abstract contract GovernDapp is C3CallerDapp {
 
     function addTxSender(address txSender) external onlyGov {
         txSenders[txSender] = true;
+        emit LogTxSender(txSender, true);
     }
 
     function disableTxSender(address txSender) external onlyGov {
         txSenders[txSender] = false;
+        emit LogTxSender(txSender, false);
     }
 
     function isVaildSender(address txSender) external view returns (bool) {
@@ -85,11 +89,15 @@ abstract contract GovernDapp is C3CallerDapp {
         string memory _toChainID,
         bytes memory _data
     ) external onlyGov {
-        if (block.chainid.toString().equal(_toChainID)) {
-            address to = TheiaUtils.toAddress(_to);
-            to.functionCall(_data, "doGov error");
-        } else {
-            c3call(_to, _toChainID, _data);
-        }
+        c3call(_to, _toChainID, _data);
+    }
+
+    function doGovBroadcast(
+        string[] memory _targets,
+        string[] memory _toChainIDs,
+        bytes memory _data
+    ) external onlyGov {
+        require(_targets.length == _toChainIDs.length, "");
+        c3broadcast(_targets, _toChainIDs, _data);
     }
 }
