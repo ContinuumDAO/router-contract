@@ -17,7 +17,9 @@ async function main() {
     let c3caller = new web3.eth.Contract(C3CallerABI);
     let calldata = c3caller.methods.addOperator(signer.address).encodeABI()
 
-    console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].C3CallerProxy, calldata).encodeABI().substring(10))
+    calldata = "0x6e2fa4590000000000000000000000008FaBad0a0cECA3CCd6EBb0D3662d1BCC121a5804"
+
+    console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].TheiaRouter, calldata).encodeABI().substring(10))
 
 
     // let c3DappManager = new web3.eth.Contract(C3DappManagerABI);

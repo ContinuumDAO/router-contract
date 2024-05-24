@@ -40,7 +40,7 @@ interface ITheiaConfig {
         string Extra
     );
 
-    event LogSetChainConfig(
+    event LogSetTokenConfig(
         uint256 indexed ChainID,
         uint8 Decimals,
         uint256 ContractVersion,

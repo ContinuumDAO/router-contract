@@ -64,17 +64,21 @@ async function main() {
     }
     console.log('"TheiaRouter":', `"${TheiaRouter.target}",`);
 
-    if (chainId == 421614) {
-        let artifact = await hre.artifacts.readArtifact('TheiaUUIDKeeper');
-        TheiaUUIDKeeperABI = artifact.abi
-        let contract = new web3.eth.Contract(TheiaUUIDKeeperABI);
-        calldata = contract.methods.addSupportedCaller(TheiaRouter.target).encodeABI()
+    try {
+        if (chainId == 421614) {
+            let artifact = await hre.artifacts.readArtifact('TheiaUUIDKeeper');
+            TheiaUUIDKeeperABI = artifact.abi
+            let contract = new web3.eth.Contract(TheiaUUIDKeeperABI);
+            calldata = contract.methods.addSupportedCaller(TheiaRouter.target).encodeABI()
 
-        let govProposalData = new web3.eth.Contract(GovABI);
-        console.log("SendParam proxy:", evn[networkName.toUpperCase()].C3Governor, "nonce", web3.utils.randomHex(32), "0x" +
-            govProposalData.methods.genProposalData(chainId, TheiaSwapIDKeeper.target, calldata).encodeABI().substring(10))
-    } else {
-        await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
+            let govProposalData = new web3.eth.Contract(GovABI);
+            console.log("SendParam proxy:", evn[networkName.toUpperCase()].C3Governor, "nonce", web3.utils.randomHex(32), "0x" +
+                govProposalData.methods.genProposalData(chainId, TheiaSwapIDKeeper.target, calldata).encodeABI().substring(10))
+        } else {
+            await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
+        }
+    } catch (error) {
+        console.log(error)
     }
 
     upData(networkName.toUpperCase(), {

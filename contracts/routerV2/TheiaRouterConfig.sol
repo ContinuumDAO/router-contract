@@ -376,7 +376,7 @@ contract TheiaRouterConfig is
         }
         _setMultichainToken(tokenID, chainID, config.ContractAddress);
 
-        emit LogSetChainConfig(
+        emit LogSetTokenConfig(
             chainID,
             config.Decimals,
             config.ContractVersion,

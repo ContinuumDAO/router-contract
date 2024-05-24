@@ -3,6 +3,7 @@ const fs = require("fs");
 const evn = require("../../output/env.json")
 const { Web3 } = require('web3');
 
+let ARB = 421614
 async function main() {
     const networkName = hre.network.name
     const chainId = hre.network.config.chainId
@@ -40,20 +41,24 @@ async function main() {
             let artifact = await hre.artifacts.readArtifact('TheiaRouterConfig');
             let contract = new web3.eth.Contract(artifact.abi);
             let calldata = contract.methods.setChainConfig(args.chainId, args.chain, evn[args.chain.toUpperCase()].TheiaRouter + ":v1;", "{}").encodeABI()
-            let govdata = contract.methods.doGov(evn[networkName.toUpperCase()].TheiaRouterConfig, chainId + "", calldata).encodeABI()
+            if (args.chainId == ARB) {
+                
+            } else {
+                calldata = contract.methods.doGov(evn[networkName.toUpperCase()].TheiaRouterConfig, chainId + "", calldata).encodeABI()
+            }
 
-            let sendParamsData = "0x" + govProposalData.methods.genProposalData(421614, evn["ARB_TEST"].TheiaRouterConfig, govdata).encodeABI().substring(10)
+            let sendParamsData = "0x" + govProposalData.methods.genProposalData(ARB, evn["ARB_TEST"].TheiaRouterConfig, calldata).encodeABI().substring(10)
             let nonce = web3.utils.randomHex(32)
             console.log("setChainConfig:" + args.chainId, nonce, sendParamsData)
 
-            let tx = await c3governor.sendParams(sendParamsData, nonce)
-            console.log("setChainConfig:", args.chainId, args.chain, "Tx:", tx.hash);
+            // let tx = await c3governor.sendParams(sendParamsData, nonce)
+            // console.log("setChainConfig:", args.chainId, args.chain, "Tx:", tx.hash);
             chains[args.chainId] = {
                 chainId: args.chainId,
                 networkName: args.chain,
                 routerContract: evn[args.chain.toUpperCase()].TheiaRouter + ":v1;",
                 extra: "{}",
-                txhash: tx.hash,
+                // txhash: tx.hash,
             }
             fs.appendFileSync("./output/CHAIN_CONFIG.txt", JSON.stringify(chains[args.chainId]) + "\n");
         }
