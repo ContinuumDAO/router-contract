@@ -77,7 +77,7 @@ contract FeeManager is GovernDapp, IFeeManager {
         return true;
     }
 
-    function delFeeToken(address _feeToken) external onlyGov {
+    function delFeeToken(address _feeToken) external onlyGov returns (bool) {
         require(feeTokenIndexMap[_feeToken] > 0, "FM: token not exist");
         uint256 index = feeTokenIndexMap[_feeToken];
         uint256 len = feeTokenList.length;
@@ -91,6 +91,7 @@ contract FeeManager is GovernDapp, IFeeManager {
             feeTokenIndexMap[_feeToken] = 0;
         }
         emit DelFeeToken(_feeToken);
+        return true;
     }
 
     function setFeeConfig(
@@ -99,7 +100,7 @@ contract FeeManager is GovernDapp, IFeeManager {
         uint256 payFrom, // 1:from 2:to 0:free
         address[] memory feetokens,
         uint256[] memory fee // human readable * 100
-    ) external onlyGov {
+    ) external onlyGov returns (bool) {
         require(srcChainID > 0 || dstChainID > 0, "FM: ChainID empty");
         require(
             payFrom == FROM_CHAIN_PAY || payFrom == TO_CHAIN_PAY,
@@ -118,6 +119,7 @@ contract FeeManager is GovernDapp, IFeeManager {
                 _toFeeConfigs[dstChainID][feetokens[index]] = fee[index];
             }
         }
+        return true;
     }
 
     function getFee(
@@ -206,13 +208,13 @@ contract FeeManager is GovernDapp, IFeeManager {
     function withdrawFee(
         address feeToken,
         uint256 amount
-    ) external onlyGov returns (uint256) {
+    ) external onlyGov returns (bool) {
         uint256 bal = IERC20(feeToken).balanceOf(address(this));
         if (bal < amount) {
             amount = bal;
         }
         require(IERC20(feeToken).transfer(msg.sender, amount), "transfer fail");
-        return (amount);
+        return true;
     }
 
     function getFromChainFee(
@@ -240,8 +242,9 @@ contract FeeManager is GovernDapp, IFeeManager {
     function setFeeTokenParams(
         address _feeToken,
         FeeParams memory fee
-    ) external onlyGov {
+    ) external onlyGov returns (bool) {
         feeParams[_feeToken] = fee;
+        return true;
     }
 
     function getFeeTokenParams(

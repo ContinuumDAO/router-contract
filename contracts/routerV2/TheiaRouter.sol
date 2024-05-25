@@ -60,31 +60,49 @@ contract TheiaRouter is IRouter, GovernDapp {
         return 1;
     }
 
-    function changeUUIDKeeper(address _uuidKeeper) external onlyGov {
+    function changeUUIDKeeper(
+        address _uuidKeeper
+    ) external onlyGov returns (bool) {
         uuidKeeper = _uuidKeeper;
         emit LogChangeUUIDKeeper(_uuidKeeper);
+        return true;
     }
 
-    function changeTheiaConfig(address _theiaConfig) external onlyGov {
+    function changeTheiaConfig(
+        address _theiaConfig
+    ) external onlyGov returns (bool) {
         theiaConfig = _theiaConfig;
         emit LogChangeTheiaConfig(_theiaConfig);
+        return true;
     }
 
-    function changeFeeManager(address _feeManager) external onlyGov {
+    function changeFeeManager(
+        address _feeManager
+    ) external onlyGov returns (bool) {
         feeManager = _feeManager;
         emit LogChangeFeeManager(_feeManager);
+        return true;
     }
 
-    function setMinter(address token, address _auth) external onlyGov {
-        return ITheiaERC20(token).setMinter(_auth);
+    function setMinter(
+        address token,
+        address _auth
+    ) external onlyGov returns (bool) {
+        ITheiaERC20(token).setMinter(_auth);
+        return true;
     }
 
-    function applyMinter(address token) external onlyGov {
-        return ITheiaERC20(token).applyMinter();
+    function applyMinter(address token) external onlyGov returns (bool) {
+        ITheiaERC20(token).applyMinter();
+        return true;
     }
 
-    function revokeMinter(address token, address _auth) external onlyGov {
-        return ITheiaERC20(token).revokeMinter(_auth);
+    function revokeMinter(
+        address token,
+        address _auth
+    ) external onlyGov returns (bool) {
+        ITheiaERC20(token).revokeMinter(_auth);
+        return true;
     }
 
     function checkParams(
@@ -586,7 +604,9 @@ contract TheiaRouter is IRouter, GovernDapp {
     }
 
     //  extracts gov fee from bridge fees
-    function withdrawFee(address[] calldata tokens) external onlyGov {
+    function withdrawFee(
+        address[] calldata tokens
+    ) external onlyGov returns (bool) {
         address _gov = gov();
         for (uint index = 0; index < tokens.length; index++) {
             address _token = tokens[index];
@@ -595,6 +615,7 @@ contract TheiaRouter is IRouter, GovernDapp {
                 ITheiaERC20(_token).withdrawVault(address(this), amount, _gov);
             }
         }
+        return true;
     }
 
     function strToUint(

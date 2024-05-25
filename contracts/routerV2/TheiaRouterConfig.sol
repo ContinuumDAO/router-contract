@@ -312,17 +312,19 @@ contract TheiaRouterConfig is
     function setSwapConfigs(
         string memory tokenID,
         Structs.SwapConfig[] calldata configs
-    ) external onlyAuth {
+    ) external onlyAuth returns (bool) {
         for (uint256 i = 0; i < configs.length; i++) {
             _setSwapConfig(tokenID, configs[i]);
         }
+        return true;
     }
 
     function setMPCPubkey(
         string memory addr,
         string memory pubkey
-    ) external onlyAuth {
+    ) external onlyAuth returns (bool) {
         _mpcPubkey[addr] = pubkey;
+        return true;
     }
 
     function _c3Fallback(

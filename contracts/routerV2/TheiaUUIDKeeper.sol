@@ -42,13 +42,18 @@ contract TheiaUUIDKeeper is ITheiaUUIDKeeper, GovernDapp {
         return supportedCallers;
     }
 
-    function addSupportedCaller(address caller) external onlyGov {
+    function addSupportedCaller(
+        address caller
+    ) external onlyGov returns (bool) {
         require(!isSupportedCaller[caller]);
         isSupportedCaller[caller] = true;
         supportedCallers.push(caller);
+        return true;
     }
 
-    function removeSupportedCaller(address caller) external onlyGov {
+    function removeSupportedCaller(
+        address caller
+    ) external onlyGov returns (bool) {
         require(isSupportedCaller[caller]);
         isSupportedCaller[caller] = false;
         uint256 length = supportedCallers.length;
@@ -56,9 +61,10 @@ contract TheiaUUIDKeeper is ITheiaUUIDKeeper, GovernDapp {
             if (supportedCallers[i] == caller) {
                 supportedCallers[i] = supportedCallers[length - 1];
                 supportedCallers.pop();
-                return;
+                return true;
             }
         }
+        return true;
     }
 
     function isExist(bytes32 swapoutID) external view returns (bool) {
