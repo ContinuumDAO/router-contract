@@ -26,12 +26,12 @@ async function main() {
             return;
         }
         const args = JSON.parse(line);
-        if (!tokens[args.name]) {
-            tokens[args.name] = {}
+        let key = args.name + "-" + args.chainId
+        if (!tokens[key]) {
+            tokens[key] = {}
         }
         // if (args.execChain == networkName) {
-        tokens[args.name][args.execChain] = args;
-        console.log("already setConfig", args.name, args.chain, args.chainId, "to", args.execChain);
+        tokens[key][args.execChain] = args;
         // }
     });
 
@@ -52,10 +52,10 @@ async function main() {
             break
         }
         const args = JSON.parse(line);
+        let key = args.symbol + "-" + args.chainId
         for (let targetChainId in chainList) {
             let targetChain = chainList[targetChainId];
-            // console.log(targetChainId, targetChain)
-            if (!tokens[args.symbol] || !tokens[args.symbol][targetChain]) {
+            if (!tokens[key] || !tokens[key][targetChain]) {
                 let extra = "{\"underlying\":\"" + args.underlying + "\"}"
 
                 let govProposalData = new web3.eth.Contract(GovABI);
@@ -72,12 +72,12 @@ async function main() {
                     "param:", nonce, sendParamsData)
 
                 let tx = await c3governor.connect(signer).sendParams(sendParamsData, nonce)
-                if (!tokens[args.symbol]) {
-                    tokens[args.symbol] = {}
+                if (!tokens[key]) {
+                    tokens[key] = {}
                 }
-                tokens[args.symbol][args.chainId] = {
+                tokens[key][targetChain] = {
                     name: args.symbol,
-                    execChain: networkName,
+                    execChain: targetChain,
                     chain: args.chain,
                     chainId: args.chainId,
                     address: args.address,
@@ -87,8 +87,10 @@ async function main() {
                     extra: extra,
                     tx: tx.hash
                 }
-                fs.appendFileSync("output/TOKEN_CONFIG.txt", JSON.stringify(tokens[args.symbol][args.chainId]) + "\n");
+                fs.appendFileSync("output/TOKEN_CONFIG.txt", JSON.stringify(tokens[key][targetChain]) + "\n");
                 await sleep(5000)
+            } else {
+                console.log("already setConfig", args.name, args.chain, args.chainId, "to", targetChain);
             }
         }
 

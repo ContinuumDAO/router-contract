@@ -43,7 +43,11 @@ npx hardhat erc20 --network manta_test theiaUSDT tUSDT 18 0x00000000000000000000
 npx hardhat erc20 --network humanode_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 
-npx hardhat run scripts/theiaRouter/setTokenConfig.js --network bsc_test
+npx hardhat run scripts/theiaRouter/setTokenConfig.js --network arb_test
+npx hardhat run scripts/theiaRouter/setTokenConfig.js --network arb_test
+
+
+<!-- npx hardhat run scripts/theiaRouter/setTokenConfig.js --network bsc_test
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network arb_test
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network sonic
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network sepolia
@@ -57,7 +61,7 @@ npx hardhat run scripts/theiaRouter/setTokenConfig.js --network humanode_test
 npx hardhat run scripts/theiaRouter/setFeeConfig.js --network linea_sepolia
 npx hardhat run scripts/theiaRouter/setFeeConfig.js --network vanguard
 npx hardhat run scripts/theiaRouter/setFeeConfig.js --network manta_test
-npx hardhat run scripts/theiaRouter/setFeeConfig.js --network humanode_test
+npx hardhat run scripts/theiaRouter/setFeeConfig.js --network humanode_test -->
 
 npx hardhat run scripts/mock/deployMultiCall.js --network vanguard
 npx hardhat run scripts/mock/deployMultiCall.js --network manta_test
