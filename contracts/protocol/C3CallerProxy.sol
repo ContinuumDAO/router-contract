@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -20,7 +20,7 @@ contract C3CallerProxy is
         initGov(msg.sender);
         c3caller = _c3caller;
         __UUPSUpgradeable_init();
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         transferOwnership(msg.sender);
     }
 

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "./IC3Caller.sol";
 import "./IUUIDKeeper.sol";
 import "./C3GovClient.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 contract C3Caller is IC3Caller, C3GovClient, Pausable {
@@ -218,8 +218,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         address _target = _message.to;
 
         bytes memory _result = _target.functionCall(
-            _message.data,
-            "C3Caller: c3Fallback failed"
+            _message.data
         );
 
         context = C3Context({swapID: "", fromChainID: "", sourceTx: ""});

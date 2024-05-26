@@ -37,9 +37,9 @@ task("balance", "Prints an account's balance")
 module.exports = {
   defaultNetwork: "hardhat",
   solidity: {
-    version: "0.8.19",
+    version: "0.8.20",
     settings: {
-      // viaIR: true,
+      viaIR: true,
       optimizer: {
         enabled: true,
         runs: 200,

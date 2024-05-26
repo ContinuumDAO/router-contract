@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "./TheiaUtils.sol";
 import "./ITheiaUUIDKeeper.sol";
@@ -14,12 +14,12 @@ import "./GovernDapp.sol";
 import "./TheiaStruct.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract TheiaRouter is IRouter, GovernDapp {
     using Strings for *;
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+    using Math for uint256;
 
     address public immutable wNATIVE;
 
