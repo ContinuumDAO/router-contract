@@ -2,9 +2,12 @@ const hre = require("hardhat");
 const fs = require("fs");
 const evn = require("../../output/env.json")
 const { Web3 } = require('web3');
+
 const FeeTokenName = "theiaUSDT"
+
 const fee = 200
 const ARB = 421614
+
 async function main() {
     const networkName = hre.network.name
     const chainId = hre.network.config.chainId
@@ -29,13 +32,9 @@ async function main() {
         if (!tokens[args.name]) {
             tokens[args.name] = {}
         }
-        // if (args.chainId == chainId) {
         tokens[args.name][args.chainId] = args;
         console.log("already setConfig", args.name, args.chain, args.chainId);
-        // }
     });
-
-    console.log(tokens)
 
     const allFileContents = fs.readFileSync('output/ERC20.txt', 'utf-8');
     const lines = allFileContents.split(/\r?\n/)
@@ -49,10 +48,11 @@ async function main() {
             continue
         }
         if (!tokens[args.name] || !tokens[args.name][args.chainId]) {
-            let feeToken = args.underlying
-            if (feeToken == "0x0000000000000000000000000000000000000000") {
-                feeToken = args.address
-            }
+            // let feeToken = args.underlying
+            // if (feeToken == "0x0000000000000000000000000000000000000000") {
+            //     feeToken = args.address
+            // }
+            let feeToken = args.address
 
             let govProposalData = new web3.eth.Contract(GovABI);
             let artifact = await hre.artifacts.readArtifact('FeeManager');
