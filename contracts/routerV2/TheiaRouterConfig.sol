@@ -385,7 +385,7 @@ contract TheiaRouterConfig is
             tokenID,
             config.ContractAddress,
             config.RouterContract,
-            config.Underlying
+            config.Extra
         );
         return true;
     }

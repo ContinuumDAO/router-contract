@@ -43,6 +43,13 @@ contract FeeManager is GovernDapp, IFeeManager {
 
     event AddFeeToken(address indexed _feeToken);
     event DelFeeToken(address indexed _feeToken);
+    event LogSetFeeToken(
+        address indexed _feeToken,
+        uint256 indexed fromChain,
+        uint256 indexed toChain,
+        uint256 fee,
+        uint256 payType
+    );
 
     event SetLiqFee(address indexed _feeToken, uint256 _fee);
 
@@ -118,6 +125,14 @@ contract FeeManager is GovernDapp, IFeeManager {
             } else if (payFrom == TO_CHAIN_PAY) {
                 _toFeeConfigs[dstChainID][feetokens[index]] = fee[index];
             }
+
+            emit LogSetFeeToken(
+                feetokens[index],
+                srcChainID,
+                dstChainID,
+                fee[index],
+                payFrom
+            );
         }
         return true;
     }

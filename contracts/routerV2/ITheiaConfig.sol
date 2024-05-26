@@ -16,7 +16,7 @@ library Structs {
         string ContractAddress;
         uint256 ContractVersion;
         string RouterContract;
-        string Underlying;
+        string Extra;
     }
 
     struct SwapConfig {
@@ -47,7 +47,7 @@ interface ITheiaConfig {
         string tokenID,
         string ContractAddress,
         string RouterContract,
-        string Underlying
+        string Extra
     );
 
     function getTokenConfig(
