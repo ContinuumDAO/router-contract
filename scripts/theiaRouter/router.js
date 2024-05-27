@@ -76,6 +76,13 @@ async function main() {
                 govProposalData.methods.genProposalData(chainId, TheiaSwapIDKeeper.target, calldata).encodeABI().substring(10))
         } else {
             await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
+
+            await TheiaRouter.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            await FeeManager.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            await TheiaSwapIDKeeper.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            await aRouterConfig.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+
+            console.log("addTxSender", "0xEef3d3678E1E739C6522EEC209Bede0197791339")
         }
     } catch (error) {
         console.log(error)

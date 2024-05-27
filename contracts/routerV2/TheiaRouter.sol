@@ -445,7 +445,7 @@ contract TheiaRouter is IRouter, GovernDapp {
             uint256 baseFee = IFeeManager(feeManager).getBaseLiquidityFee(
                 feeToken
             );
-            require(baseFee > 0, "Theia:config error");
+            require(baseFee >= 0, "Theia:config error");
             uint256 fee = (baseFee * feeRate) / 1000;
             require(feePaid >= fee, "Theia:not cover liquidity fee");
         }

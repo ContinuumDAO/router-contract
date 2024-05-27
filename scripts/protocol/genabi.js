@@ -15,11 +15,16 @@ async function main() {
     let govProposalData = new web3.eth.Contract(GovABI);
 
     let c3caller = new web3.eth.Contract(C3CallerABI);
-    let calldata = c3caller.methods.addOperator(signer.address).encodeABI()
+    let calldata = c3caller.methods.addOperator("0xEef3d3678E1E739C6522EEC209Bede0197791339").encodeABI()
 
-    calldata = "0x6e2fa4590000000000000000000000008FaBad0a0cECA3CCd6EBb0D3662d1BCC121a5804"
 
-    console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].TheiaRouter, calldata).encodeABI().substring(10))
+    let artifact_FeeManager = await hre.artifacts.readArtifact('FeeManager');
+    let contract_FeeManager = new web3.eth.Contract(artifact_FeeManager.abi);
+    calldata = contract_FeeManager.methods.setLiqBaseFee("0x92829288C6Aa874c1A0F190dA35A4023C22be637", 1000000).encodeABI()
+
+    // calldata = "0xeebd14af000000000000000000000000eef3d3678e1e739c6522eec209bede0197791339"
+
+    console.log(govProposalData.methods.genProposalData(chainId, evn[networkName.toUpperCase()].FeeManager, calldata).encodeABI().substring(10))
 
 
     // let c3DappManager = new web3.eth.Contract(C3DappManagerABI);

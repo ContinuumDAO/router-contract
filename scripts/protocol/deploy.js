@@ -5,6 +5,8 @@ let { join } = require('path')
 let { readFile, writeFile } = require('fs')
 let filePath = join(__dirname, '../../output/env.json')
 
+let ARB = 421614
+
 async function main() {
     const networkName = hre.network.name
     const chainId = hre.network.config.chainId
@@ -36,13 +38,18 @@ async function main() {
     console.log('"C3Caller":', `"${c3Caller.target}",`);
 
     let c3DappManager
-    if (!evn[networkName.toUpperCase()].C3DappManager && chainId == 421614) {
-        c3DappManager = await hre.ethers.deployContract("C3DappManager", []);
-        await c3DappManager.waitForDeployment();
+    if (chainId == ARB) {
+        if (!evn[networkName.toUpperCase()].C3DappManager) {
+            c3DappManager = await hre.ethers.deployContract("C3DappManager", []);
+            await c3DappManager.waitForDeployment();
+        } else {
+            c3DappManager = await hre.ethers.getContractAt("C3DappManager", evn[networkName.toUpperCase()].C3DappManager);
+        }
     } else {
-        c3DappManager = await hre.ethers.getContractAt("C3DappManager", evn[networkName.toUpperCase()].C3DappManager);
+        c3DappManager = { target: "0x0000000000000000000000000000000000000000" }
     }
     console.log('"C3DappManager":', `"${c3DappManager.target}",`);
+
 
     let c3CallerProxy
     if (!evn[networkName.toUpperCase()].C3CallerProxy) {
@@ -106,11 +113,11 @@ async function main() {
             const element = evn.mpcList[index];
             console.log(`c3Caller addOperator ${element.addr} ...`);
             await c3Caller.addOperator(element.addr)
+
+            await c3CallerProxy.addOperator(element.addr)
         } catch (error) {
 
         }
-        // console.log(`c3CallerProxy addOperator ${element.addr} ...`);
-        // await c3CallerProxy.addOperator(element.addr)
     }
 
     console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target}`);
@@ -131,11 +138,13 @@ async function main() {
         constructorArguments: [c3SwapIDKeeper.target],
     });
 
-    await hre.run("verify:verify", {
-        address: c3DappManager.target,
-        contract: "contracts/protocol/C3DappManager.sol:C3DappManager",
-        constructorArguments: [],
-    });
+    if (ARB == chainId) {
+        await hre.run("verify:verify", {
+            address: c3DappManager.target,
+            contract: "contracts/protocol/C3DappManager.sol:C3DappManager",
+            constructorArguments: [],
+        });
+    }
 
     await hre.run("verify:verify", {
         address: currentImplAddress,
