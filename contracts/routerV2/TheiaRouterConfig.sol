@@ -136,7 +136,7 @@ contract TheiaRouterConfig is
                 c.ContractAddress,
                 c.ContractVersion,
                 c.RouterContract,
-                c.Underlying
+                c.Extra
             );
         }
         return result;

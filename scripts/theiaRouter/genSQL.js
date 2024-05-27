@@ -40,11 +40,22 @@ async function main() {
             (${chainId}, '${evn[networkName.toUpperCase()].URL}', 'evm', '32/40 * * * * ?', 0, 2);
     `)
 
+    if (chainId == 421614) {
+        console.log(`
+        INSERT INTO event_config (target_addr, chain_id, event_key, start_bn, operate, comments)
+        VALUES
+            ('${evn[networkName.toUpperCase()].C3DappManager}', ${chainId}, '0xe16335fd7ccb686d02c1c6f5400a23f29fdafb67372e60497f1f387a9663328e, 0x6e806e4274e1ae2fda14f84ae0177d6248dd126572ee44f546d4645c41ee2f77, 0x5d9994a3de8f7f639b3ab61295e70425c258281ab88e6fc650afe50d0d2bd16c', '0', '2', 'SetDAppConfig,SetDappAddr,AddMpcAddr'),
+            ('${evn[networkName.toUpperCase()].C3DappManager}', ${chainId}, '0xeaa18152488ce5959073c9c79c88ca90b3d96c00de1f118cfaad664c3dab06b9,0x9da6493a92039daf47d1f2d7a782299c5994c6323eb1e972f69c432089ec52bf', '0', '3', 'Deposit,Withdraw');
+    `)
+    }
     console.log(`
         INSERT INTO event_config (target_addr, chain_id, event_key, start_bn, operate, comments)
         VALUES
-            ('${evn[networkName.toUpperCase()].TheiaRouter}', ${chainId}, '0x4ede268e681d4c81cf82d6edce6f182b4eabb18454177230bece9fd6c558bf27,0x426aa7a6606173343756985e002a132b5ec1d8ecbe4d498d1319bce44b288d23,0xa58a98921fbe8956cf5123f851baf0fce3d990f8103c2ad7e25e60222a21fce0', '0', '4', 'LogSwapOut,LogSwapIn,LogSwapFallback'),
-            ('${evn[networkName.toUpperCase()].C3Caller}', ${chainId}, '0x2074205b2acdda95fc2a518526af428cd0531423009ce72c46a8083b1333e466', '0', '1', 'LogC3Call');
+            ('${evn[networkName.toUpperCase()].C3Governor}', ${chainId}, '0x7066190a2751b8d939d2c201f8eb1ea9fa04b8616d0c26b6dcdee152cbdb3608', '0', '1', 'C3GovernorLog'),
+            ('${evn[networkName.toUpperCase()].C3Caller}', ${chainId}, '0x88ca677ce66cb94eb6b03d7e06b1735c23eafde3090030bf7fb84711690a287e', '0', '1', 'LogC3Call'),
+            ('${evn[networkName.toUpperCase()].TheiaRouterConfig}', ${chainId}, '0xb2fcbe1c1d185ca80230c812e8ddc6d1b10a441d37c49efc02142cb876f5a4b3', '0', '5', 'LogSetTokenConfig'),
+            ('${evn[networkName.toUpperCase()].FeeManager}', ${chainId}, '0x1394cfab38f3fc78ed77ea6f9318782a446d96e7dc8e9a6b0149f6be25c08bcf,0xd640783e4a868b881e1c32d48b8037cc33f11c91feb83b38c99772302e28c3c1', '0', '6', 'AddFeeToken,SetLiqFee'),
+            ('${evn[networkName.toUpperCase()].TheiaRouter}', ${chainId}, '0x1ad9ac7982ab5544e2bac3ac73dc72e9f821ce62200105a5e7f77b07bc230669,0x6999c67174aab1508cc0b367933d6ad1ebb316a7c6ca30a1f14ec553c5870efe', '0', '4', 'LogTheiaCross,LogTheiaVault,LogSwapFallback');
     `)
 
     console.log("Router SQL:");
@@ -65,7 +76,7 @@ async function main() {
     `)
 
 
-    const tokensContents = fs.readFileSync('ERC20.txt', 'utf-8');
+    const tokensContents = fs.readFileSync('output/ERC20.txt', 'utf-8');
 
     tokensContents.split(/\r?\n/).forEach(line => {
         if (line.length == 0) {
@@ -96,16 +107,3 @@ main().catch((error) => {
     process.exitCode = 1;
 });
 
-
-function upData(key, obj) {
-    readFile(filePath, 'utf-8', (err, data) => {
-        if (err) throw err
-        let res = JSON.parse(data)
-
-        res[key] = Object.assign(res[key], obj)
-
-        writeFile(filePath, JSON.stringify(res, null, 4), err => {
-            if (err) throw err
-        })
-    })
-}
