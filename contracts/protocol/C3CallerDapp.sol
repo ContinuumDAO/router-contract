@@ -1,19 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
 import "./IC3Caller.sol";
 
 abstract contract C3CallerDapp is IC3Dapp {
     address public c3CallerProxy;
     uint256 public dappID;
-
-    modifier onlyExecutor() {
-        require(
-            IC3CallerProxy(c3CallerProxy).isExecutor(msg.sender),
-            "C3CallerDapp: onlyExecutor"
-        );
-        _;
-    }
 
     modifier onlyCaller() {
         require(
@@ -53,8 +45,7 @@ abstract contract C3CallerDapp is IC3Dapp {
         returns (
             bytes32 uuid,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
         )
     {
         return IC3CallerProxy(c3CallerProxy).context();
@@ -65,7 +56,28 @@ abstract contract C3CallerDapp is IC3Dapp {
         string memory _toChainID,
         bytes memory _data
     ) internal {
-        IC3CallerProxy(c3CallerProxy).c3call(dappID, _to, _toChainID, _data);
+        IC3CallerProxy(c3CallerProxy).c3call(
+            dappID,
+            _to,
+            _toChainID,
+            _data,
+            ""
+        );
+    }
+
+    function c3call(
+        string memory _to,
+        string memory _toChainID,
+        bytes memory _data,
+        bytes memory _extra
+    ) internal {
+        IC3CallerProxy(c3CallerProxy).c3call(
+            dappID,
+            _to,
+            _toChainID,
+            _data,
+            _extra
+        );
     }
 
     function c3broadcast(

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
@@ -44,7 +44,8 @@ contract CToken is ERC20, C3CallerDapp {
                 "crossIn(address,uint256)",
                 msg.sender,
                 amount_
-            )
+            ),
+            ""
         );
     }
 
@@ -59,7 +60,7 @@ contract CToken is ERC20, C3CallerDapp {
     function _c3Fallback(
         bytes4 selector,
         bytes calldata data_,
-        bytes calldata reason_
+        bytes calldata /*reason_*/
     ) internal override returns (bool) {
         (address to, uint256 amount) = abi.decode(data_, (address, uint256));
         require(to != address(0), "empty to");
@@ -70,5 +71,9 @@ contract CToken is ERC20, C3CallerDapp {
         } else {
             return false;
         }
+    }
+
+    function isVaildSender(address /*txSender*/) external pure returns (bool) {
+        return true;
     }
 }

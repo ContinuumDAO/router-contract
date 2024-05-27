@@ -1,5 +1,16 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
+
+library C3CallerStructLib {
+    struct C3EvmMessage {
+        bytes32 uuid;
+        address to;
+        string fromChainID;
+        string sourceTx;
+        string fallbackTo;
+        bytes data;
+    }
+}
 
 interface IC3CallerProxy {
     function isExecutor(address sender) external returns (bool);
@@ -12,8 +23,7 @@ interface IC3CallerProxy {
         returns (
             bytes32 swapID,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
         );
 
     function c3call(
@@ -21,6 +31,14 @@ interface IC3CallerProxy {
         string calldata _to,
         string calldata _toChainID,
         bytes calldata _data
+    ) external;
+
+    function c3call(
+        uint256 _dappID,
+        string calldata _to,
+        string calldata _toChainID,
+        bytes calldata _data,
+        bytes memory _extra
     ) external;
 
     function c3broadcast(
@@ -32,22 +50,12 @@ interface IC3CallerProxy {
 
     function execute(
         uint256 _dappID,
-        bytes32 _swapID,
-        address _to,
-        string calldata _fromChainID,
-        string calldata _sourceTx,
-        string calldata _fallback,
-        bytes calldata _data
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external;
 
     function c3Fallback(
         uint256 dappID,
-        bytes32 swapID,
-        address to,
-        string calldata failChainID,
-        string calldata failTx,
-        bytes calldata data,
-        bytes calldata reason
+        C3CallerStructLib.C3EvmMessage calldata _message
     ) external;
 }
 
@@ -59,6 +67,8 @@ interface IC3Dapp {
     ) external returns (bool);
 
     function dappID() external returns (uint256);
+
+    function isVaildSender(address txSender) external returns (bool);
 }
 
 interface IC3Caller {
@@ -66,10 +76,9 @@ interface IC3Caller {
         external
         view
         returns (
-            bytes32 swapID,
+            bytes32 uuid,
             string memory fromChainID,
-            string memory sourceTx,
-            bytes memory reason
+            string memory sourceTx
         );
 
     function c3call(
@@ -77,7 +86,8 @@ interface IC3Caller {
         address _caller,
         string calldata _to,
         string calldata _toChainID,
-        bytes calldata _data
+        bytes calldata _data,
+        bytes memory _extra
     ) external;
 
     function c3broadcast(
@@ -90,21 +100,13 @@ interface IC3Caller {
 
     function execute(
         uint256 _dappID,
-        bytes32 _swapID,
-        address _to,
-        string calldata _fromChainID,
-        string calldata _sourceTx,
-        string calldata _fallback,
-        bytes calldata _data
+        address _txSender,
+        C3CallerStructLib.C3EvmMessage calldata message
     ) external;
 
     function c3Fallback(
         uint256 dappID,
-        bytes32 swapID,
-        address to,
-        string calldata fromChainID,
-        string calldata sourceTx,
-        bytes calldata data,
-        bytes calldata reason
+        address _txSender,
+        C3CallerStructLib.C3EvmMessage calldata message
     ) external;
 }

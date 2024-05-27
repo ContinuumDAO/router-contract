@@ -1,5 +1,4 @@
 const hre = require("hardhat");
-
 const evn = require("../../env.json")
 
 async function main() {
@@ -8,20 +7,18 @@ async function main() {
     console.log("Deploy Network name=", networkName);
     console.log("Network chain id=", chainId);
 
+    console.log("wNATIVE", evn[networkName.toUpperCase()].wNATIVE);
+
     const [signer] = await ethers.getSigners()
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig");
-    await aRouterConfig.waitForDeployment();
+    const TheiaSwapIDKeeper = await hre.ethers.getContractAt("TheiaSwapIDKeeper", evn[networkName.toUpperCase()].TheiaSwapIDKeeper);
+    const TheiaRouter = await hre.ethers.getContractAt("TheiaRouter", evn[networkName.toUpperCase()].TheiaRouter);
+    const aRouterConfig = await hre.ethers.getContractAt("TheiaRouterConfig", evn[networkName.toUpperCase()].TheiaRouterConfig);
 
-    console.log('"TheiaRouterConfig":', `"${aRouterConfig.target}",`);
 
-    await hre.run("verify:verify", {
-        address: aRouterConfig.target,
-        contract: "contracts/routerV2/TheiaRouterConfig.sol:TheiaRouterConfig",
-        constructorArguments: [],
-    });
+    console.log("TheiaSwapIDKeeper SupportedCaller:", await TheiaSwapIDKeeper.isSupportedCaller(TheiaRouter.target));
 }
 
 main().catch((error) => {

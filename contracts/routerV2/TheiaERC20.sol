@@ -4,9 +4,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./TheiaERC20FeeConfig.sol";
+import "./ITheiaERC20.sol";
 
-contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
+contract TheiaERC20 is IERC20, ITheiaERC20 {
     using SafeERC20 for IERC20;
     string public name;
     string public symbol;
@@ -18,7 +18,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     mapping(address => uint256) public override balanceOf;
     uint256 private _totalSupply;
 
-    // init flag for setting immediate admin, needed for CREATE2 support
+    // init flag for setting immediate router, needed for CREATE2 support
     bool private _init;
 
     // delay for timelock functions
@@ -29,7 +29,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     address[] public minters;
 
     // primary controller of the token contract
-    address public admin;
+    address public router;
 
     address public pendingMinter;
     uint public delayMinter;
@@ -42,36 +42,36 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         _;
     }
 
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "TheiaERC20: not Admin");
+    modifier onlyRouter() {
+        require(msg.sender == router, "TheiaERC20: not Admin");
         _;
     }
 
     function owner() external view returns (address) {
-        return admin;
+        return router;
     }
 
-    function setAdmin(address _admin) external onlyAdmin {
-        require(_admin != address(0), "TheiaERC20: address(0)");
-        pendingAdmin = _admin;
+    function setAdmin(address _router) external onlyRouter {
+        require(_router != address(0), "TheiaERC20: address(0)");
+        pendingAdmin = _router;
         delayAdmin = block.timestamp + DELAY;
     }
 
-    function applyAdmin() external onlyAdmin {
+    function applyAdmin() external onlyRouter {
         require(pendingAdmin != address(0) && block.timestamp >= delayAdmin);
-        admin = pendingAdmin;
+        router = pendingAdmin;
 
         pendingAdmin = address(0);
         delayAdmin = 0;
     }
 
-    function setMinter(address _minter) external onlyAdmin {
+    function setMinter(address _minter) external onlyRouter {
         require(_minter != address(0), "TheiaERC20: address(0)");
         pendingMinter = _minter;
         delayMinter = block.timestamp + DELAY;
     }
 
-    function applyMinter() external onlyAdmin {
+    function applyMinter() external onlyRouter {
         require(pendingMinter != address(0) && block.timestamp >= delayMinter);
         require(pendingMinter != address(0));
         isMinter[pendingMinter] = true;
@@ -82,7 +82,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     }
 
     // No time delay revoke minter emergency function
-    function revokeMinter(address _minter) external onlyAdmin {
+    function revokeMinter(address _minter) external onlyRouter {
         isMinter[_minter] = false;
     }
 
@@ -124,7 +124,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         string memory _symbol,
         uint8 _decimals,
         address _underlying,
-        address _admin
+        address _router
     ) {
         name = _name;
         symbol = _symbol;
@@ -133,9 +133,18 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         // Use init to allow for CREATE2 accross all chains
         _init = true;
 
-        admin = _admin;
-        isMinter[_admin] = true;
-        minters.push(_admin);
+        if (_underlying != address(0)) {
+            uint256 _underlying_decimals = IERC20Extended(underlying)
+                .decimals();
+            require(
+                _decimals == _underlying_decimals,
+                "TheiaToken: decimals dismatch"
+            );
+        }
+
+        router = _router;
+        isMinter[_router] = true;
+        minters.push(_router);
     }
 
     function totalSupply() external view override returns (uint256) {
@@ -161,7 +170,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
     function depositVault(
         uint256 amount,
         address to
-    ) external onlyAdmin returns (uint256) {
+    ) external onlyRouter returns (uint256) {
         return _deposit(amount, to);
     }
 
@@ -188,7 +197,7 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         address from,
         uint256 amount,
         address to
-    ) external onlyAdmin returns (uint256) {
+    ) external onlyRouter returns (uint256) {
         return _withdraw(from, amount, to);
     }
 
@@ -281,36 +290,5 @@ contract TheiaERC20 is IERC20, TheiaERC20FeeConfig {
         emit Transfer(from, to, value);
 
         return true;
-    }
-
-    function setFeeConfig(
-        uint256 srcChainID,
-        uint256 dstChainID,
-        uint256 maxFee,
-        uint256 minFee,
-        uint256 feeRate,
-        uint256 payFrom // 1:from 2:to 0:free
-    ) external onlyAdmin returns (bool) {
-        return
-            _setFeeConfig(
-                srcChainID,
-                dstChainID,
-                maxFee,
-                minFee,
-                feeRate,
-                payFrom
-            );
-    }
-
-    function getFeeConfig(
-        uint256 fromChainID,
-        uint256 toChainID
-    ) public view returns (uint256, uint256, uint256) {
-        require(fromChainID > 0 || toChainID > 0, "FeeConfig: Invalid chainID");
-        if (fromChainID > 0) {
-            return getSwapInFeeConfig(fromChainID);
-        } else {
-            return getSwapOutFeeConfig(toChainID);
-        }
     }
 }

@@ -4,13 +4,16 @@ require("./scripts/theiaRouter/erc20")
 
 const {
   BSC_TEST,
-  GOERLI,
-  MUMBAI,
   ARB_TEST,
-  OP_GOERLI,
   SONIC,
   SEPOLIA,
-  BLAST_SEP
+  BLAST_SEP,
+  AMOY,
+  AERON_TEST,
+  MANTA_TEST,
+  LINEA_SEPOLIA,
+  VANGUARD,
+  HUMANODE_TEST
 } = require("./env.json")
 
 
@@ -36,10 +39,10 @@ module.exports = {
   solidity: {
     version: "0.8.19",
     settings: {
-      viaIR: true,
+      // viaIR: true,
       optimizer: {
         enabled: true,
-        runs: 1000,
+        runs: 200,
       }
     }
   },
@@ -52,26 +55,10 @@ module.exports = {
       gasPrice: BSC_TEST.GASPRICE,
       accounts: [BSC_TEST.DEPLOY_KEY]
     },
-    goerli: {
-      url: GOERLI.URL,
-      chainId: 5,
-      accounts: [GOERLI.DEPLOY_KEY]
-    },
-    mumbai: {
-      url: MUMBAI.URL,
-      chainId: 80001,
-      accounts: [MUMBAI.DEPLOY_KEY]
-    },
     arb_test: {
       url: ARB_TEST.URL,
       chainId: 421614,
       accounts: [ARB_TEST.DEPLOY_KEY]
-    },
-    op_goerli: {
-      url: OP_GOERLI.URL,
-      gasPrice: OP_GOERLI.GASPRICE,
-      chainId: 420,
-      accounts: [OP_GOERLI.DEPLOY_KEY]
     },
     sonic: {
       url: SONIC.URL,
@@ -83,27 +70,50 @@ module.exports = {
       chainId: 11155111,
       accounts: [SEPOLIA.DEPLOY_KEY]
     },
-    blast: {
-      url: "https://rpc.blast.io",
-      chainId: 81457,
-      accounts: [SEPOLIA.DEPLOY_KEY],
-      gasPrice: 1000000000,
-    },
     blast_sep: {
       url: BLAST_SEP.URL,
       chainId: 168587773,
       accounts: [BLAST_SEP.DEPLOY_KEY],
       gasPrice: 1000000000,
     },
+    amoy: {
+      url: AMOY.URL,
+      chainId: 80002,
+      accounts: [AMOY.DEPLOY_KEY]
+    },
+    aeron_test: {
+      url: AERON_TEST.URL,
+      chainId: 462,
+      accounts: [AERON_TEST.DEPLOY_KEY]
+    },
+    manta_test: {
+      url: MANTA_TEST.URL,
+      chainId: 3441006,
+      accounts: [MANTA_TEST.DEPLOY_KEY]
+    },
+    linea_sepolia: {
+      url: LINEA_SEPOLIA.URL,
+      chainId: 59141,
+      accounts: [LINEA_SEPOLIA.DEPLOY_KEY]
+    },
+    vanguard: {
+      url: VANGUARD.URL,
+      chainId: 78600,
+      accounts: [VANGUARD.DEPLOY_KEY]
+    },
+    humanode_test: {
+      url: HUMANODE_TEST.URL,
+      chainId: 14853,
+      accounts: [HUMANODE_TEST.DEPLOY_KEY]
+    }
   },
   etherscan: {
     apiKey: {
       bscTestnet: BSC_TEST.API_KEY,
-      goerli: GOERLI.API_KEY,
       sepolia: SEPOLIA.API_KEY,
-      polygonMumbai: MUMBAI.API_KEY,
       arbitrumSepolia: ARB_TEST.API_KEY,
-      optimisticGoerli: OP_GOERLI.API_KEY,
+      sonic: SONIC.API_KEY,
+      arb_test: ARB_TEST.API_KEY,
     },
     customChains: [
       {
@@ -112,7 +122,14 @@ module.exports = {
         urls: {
           apiURL: SONIC.URL,
           browserURL: "https://public-sonic.fantom.network",
-          apiKey: SONIC.API_KEY
+        }
+      },
+      {
+        network: "arb_test",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io/",
         }
       }
     ]

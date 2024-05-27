@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
 
-import "./TheiaRouterConfig.sol";
+import "../routerV2/TheiaRouterConfig.sol";
 
 contract TheiaRouterGov is
     AccessControl,
@@ -32,23 +32,19 @@ contract TheiaRouterGov is
     constructor(
         address _c3callerProxy,
         uint256 _dappID
-    ) TheiaRouterConfig(_c3callerProxy, _dappID) {}
+    ) TheiaRouterConfig(address(0), _c3callerProxy, msg.sender, _dappID) {}
 
     function setChainConfigGov(
         uint256 chainID,
         string memory blockChain,
         string memory routerContract,
+        string memory extra,
         string[] memory toChains,
         string[] memory to
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-
+    ) external onlyAuth {
         _setChainConfig(
             chainID,
-            Structs.ChainConfig(chainID, blockChain, routerContract)
+            Structs.ChainConfig(chainID, blockChain, routerContract, extra)
         );
         bytes memory _data = abi.encodeWithSelector(
             FuncSetChainConfig,
@@ -69,11 +65,7 @@ contract TheiaRouterGov is
         string memory underlying,
         string[] memory toChains,
         string[] memory to
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
+    ) external onlyAuth {
         _setTokenConfig(
             tokenID,
             chainID,
@@ -107,12 +99,7 @@ contract TheiaRouterGov is
         uint256 minSwap, // human-readable amount
         string[] memory toChains,
         string[] memory to
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-
+    ) external onlyAuth {
         for (uint256 i = 0; i < toChains.length; i++) {
             bytes memory _data = abi.encodeWithSelector(
                 FuncSetSwapConfig,
@@ -123,45 +110,5 @@ contract TheiaRouterGov is
             );
             c3call(to[i], toChains[i], _data);
         }
-    }
-
-    function setFeeConfigGov(
-        string memory tokenID,
-        uint256 srcChainID,
-        uint256 dstChainID,
-        uint256 maxFee,
-        uint256 minFee,
-        uint256 feeRate,
-        uint256 payFrom, // 1:from 2:to 0:free
-        string[] memory toChains,
-        string[] memory to
-    ) external returns (bool) {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
-        return
-            _setFeeConfig(
-                tokenID,
-                Structs.FeeConfig(
-                    srcChainID,
-                    dstChainID,
-                    maxFee,
-                    minFee,
-                    feeRate,
-                    payFrom
-                )
-            );
-    }
-
-    function setMPCPubkeyGov(
-        string memory addr,
-        string memory pubkey,
-        string[] memory toChains
-    ) external {
-        require(
-            hasRole(CONFIG_ROLE, msg.sender),
-            "RouterConfig: no config role"
-        );
     }
 }
