@@ -20,7 +20,9 @@ async function main() {
 
     let artifact_FeeManager = await hre.artifacts.readArtifact('FeeManager');
     let contract_FeeManager = new web3.eth.Contract(artifact_FeeManager.abi);
-    calldata = contract_FeeManager.methods.setLiqBaseFee("0x92829288C6Aa874c1A0F190dA35A4023C22be637", 1000000).encodeABI()
+    // calldata = contract_FeeManager.methods.setLiqBaseFee("0x92829288C6Aa874c1A0F190dA35A4023C22be637", 1000000).encodeABI()
+
+    calldata = contract_FeeManager.methods.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339", 1000000).encodeABI()
 
     // calldata = "0xeebd14af000000000000000000000000eef3d3678e1e739c6522eec209bede0197791339"
 

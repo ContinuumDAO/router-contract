@@ -47,6 +47,8 @@ insert mysql
 
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network arb_test
 
+npx hardhat run scripts/theiaRouter/setFeeConfig.js --network arb_test
+
 npx hardhat run scripts/mock/deployMultiCall.js --network vanguard
 npx hardhat run scripts/mock/deployMultiCall.js --network manta_test
 
