@@ -92,18 +92,22 @@ async function main() {
 
     try {
         await c3SwapIDKeeper.addOperator(c3Caller.target)
+        console.log(`c3SwapIDKeeper addOperator success ${c3Caller.target}`);
     } catch (error) {
         console.log(error)
     }
     try {
         // add c3CallerProxy to Operator
         await c3Caller.addOperator(currentImplAddress)
+        console.log(`c3Caller addOperator success ${currentImplAddress}`);
     } catch (error) {
         console.log(error)
     }
     try {
         // for real call
         await c3Caller.addOperator(c3CallerProxy.target)
+
+        console.log(`c3Caller addOperator success ${c3CallerProxy.target}`);
     } catch (error) {
         console.log(error)
     }
@@ -115,8 +119,10 @@ async function main() {
             await c3Caller.addOperator(element.addr)
 
             await c3CallerProxy.addOperator(element.addr)
-        } catch (error) {
 
+            console.log(`c3Caller addOperator success ${element.addr}`);
+        } catch (error) {
+            console.log(error)
         }
     }
 

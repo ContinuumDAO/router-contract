@@ -14,8 +14,6 @@ npx hardhat run scripts/deploy.js
 ```
 npx hardhat verify --network bsc_test <address>
 
-npx hardhat run scripts/theiaRouter/router.js --network
-
 npx hardhat run scripts/protocol/deploy.js --network
 
 npx hardhat run scripts/protocol/addOperator.js --network
@@ -41,6 +39,8 @@ npx hardhat erc20 --network linea_sepolia theiaUSDT tUSDT 18 0x00000000000000000
 npx hardhat erc20 --network vanguard theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network manta_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network humanode_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network fire_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network avac_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
 insert mysql
@@ -51,7 +51,8 @@ npx hardhat run scripts/theiaRouter/setFeeConfig.js --network arb_test
 
 npx hardhat run scripts/mock/deployMultiCall.js --network vanguard
 npx hardhat run scripts/mock/deployMultiCall.js --network manta_test
-
+npx hardhat run scripts/mock/deployMultiCall.js --network fire_test
+npx hardhat run scripts/mock/deployMultiCall.js --network avac_test
 
 
 

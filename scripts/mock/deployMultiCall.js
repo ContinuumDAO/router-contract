@@ -1,5 +1,5 @@
 const hre = require("hardhat");
-const evn = require("../../env.json")
+const evn = require("../../output/env.json")
 
 async function main() {
     const networkName = hre.network.name

@@ -2,6 +2,7 @@ const hre = require("hardhat");
 const fs = require("fs");
 const evn = require("../../output/env.json")
 const { Web3 } = require('web3');
+const BN = require('bn.js');
 
 const FeeTokenName = "theiaUSDT"
 
@@ -77,6 +78,15 @@ async function main() {
             console.log("setFeeConfig to " + args.chainId, nonce, sendParamsData)
 
             let tx2 = await c3governor.connect(signer).sendParams(sendParamsData, nonce)
+            await sleep(5000)
+
+            calldata = contract.methods.setLiqBaseFee(feeToken, new BN(10).pow(new BN(args.decimals)).toString()).encodeABI()
+            if (args.chainId != ARB) {
+                calldata = contract.methods.doGov(evn[args.chain].FeeManager, args.chainId + "", calldata).encodeABI()
+            }
+            sendParamsData = "0x" + govProposalData.methods.genProposalData(ARB, evn["ARB_TEST"].FeeManager, calldata).encodeABI().substring(10)
+            nonce = web3.utils.randomHex(32)
+            let tx3 = await c3governor.connect(signer).sendParams(sendParamsData, nonce)
             if (!tokens[args.name]) {
                 tokens[args.name] = {}
             }
@@ -86,7 +96,7 @@ async function main() {
                 chainId: args.chainId,
                 feeToken: feeToken,
                 fee: fee,
-                tx: tx1.hash + "," + tx2.hash
+                tx: tx1.hash + "," + tx2.hash + "," + tx3.hash
             }
             fs.appendFileSync("output/FEE_CONFIG.txt", JSON.stringify(tokens[args.name][args.chainId]) + "\n");
             await sleep(5000)

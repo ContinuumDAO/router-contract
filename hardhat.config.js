@@ -13,8 +13,10 @@ const {
   MANTA_TEST,
   LINEA_SEPOLIA,
   VANGUARD,
-  HUMANODE_TEST
-} = require("./env.json")
+  HUMANODE_TEST,
+  FIRE_TEST,
+  AVAC_TEST
+} = require("./output/env.json")
 
 
 task("accounts", "Prints the list of accounts", async () => {
@@ -105,6 +107,16 @@ module.exports = {
       url: HUMANODE_TEST.URL,
       chainId: 14853,
       accounts: [HUMANODE_TEST.DEPLOY_KEY]
+    },
+    fire_test: {
+      url: FIRE_TEST.URL,
+      chainId: 997,
+      accounts: [FIRE_TEST.DEPLOY_KEY]
+    },
+    avac_test:{
+      url: AVAC_TEST.URL,
+      chainId: 43113,
+      accounts: [AVAC_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -114,6 +126,7 @@ module.exports = {
       arbitrumSepolia: ARB_TEST.API_KEY,
       sonic: SONIC.API_KEY,
       arb_test: ARB_TEST.API_KEY,
+      avalancheFujiTestnet: AVAC_TEST.API_KEY,
     },
     customChains: [
       {
