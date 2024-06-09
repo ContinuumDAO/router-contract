@@ -14,4 +14,7 @@ interface IFeeManager {
     ) external returns (uint256);
 
     function getBaseLiquidityFee(address feeToken) external returns (uint256);
+
+    function getFeeTokenList() external returns(address[] memory);
+    function getFeeTokenIndexMap(address) external view returns (uint256);
 }

@@ -68,7 +68,7 @@ interface IC3Dapp {
 
     function dappID() external returns (uint256);
 
-    function isVaildSender(address txSender) external returns (bool);
+    function isValidSender(address txSender) external returns (bool);
 }
 
 interface IC3Caller {

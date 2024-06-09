@@ -15,7 +15,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {THEIA} from "contracts/routerV2/THEIA.sol";
 
 import {TheiaCallData} from "contracts/mock/TheiaCallData.sol";
-import {TheiaSwapIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
+import {TheiaUUIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
+import {FeeManager} from "contracts/routerV2/FeeManager.sol";
+//import {IFeeManager} from "contracts/routerV2/IFeeManager.sol";
+import {TheiaRouterConfig} from "contracts/routerV2/TheiaRouterConfig.sol";
 import {TheiaRouter} from "contracts/routerV2/TheiaRouter.sol";
 import {TheiaERC20} from "contracts/routerV2/TheiaERC20.sol";
 import {ITheiaERC20} from "contracts/routerV2/ITheiaERC20.sol";
@@ -60,13 +63,18 @@ contract SetUp is Test {
     VotingEscrow veImplV1;
     VeTHEIAProxy veTheiaProxy;
     IVotingEscrowUpgradable ve;
+
+    address ADDRESS_ZERO = address(0);
     
     uint256 chainID;
+    uint256 dappID = 1;
 
     string constant BASE_URI_V1 = "veTHEIA V1";
 
     TheiaCallData theiaCallData;
-    TheiaSwapIDKeeper theiaSwapIDKeeper;
+    FeeManager feeManager;
+    TheiaUUIDKeeper theiaUUIDKeeper;
+    TheiaRouterConfig theiaRouterConfig;
     TheiaRouter theiaRouter;
     StagingVault stagingVault;
     TheiaRewards theiaRewards;
@@ -113,24 +121,30 @@ contract SetUp is Test {
         dai = new DAI();
         weth = new WETH();
         theiaCallData = new TheiaCallData();
-        theiaSwapIDKeeper = new TheiaSwapIDKeeper(admin);
 
         deployC3Caller();
+        theiaUUIDKeeper = new TheiaUUIDKeeper(
+            ADDRESS_ZERO,
+            address(c3),
+            admin,
+            dappID
+        );
 
         theiaRouter = new TheiaRouter(
-            address(weth), 
-            admin,
-            gov,
-            address(theiaSwapIDKeeper), 
+            address(weth),
+            address(theiaUUIDKeeper),
+            address(theiaRouterConfig),
+            address(feeManager),
+            ADDRESS_ZERO,
             address(c3),
-            1,
-            address(usdc)
+            admin,
+            dappID
         );
 
         vm.startPrank(gov);
         theiaRouter.setDelay(0);
-        theiaRouter.setFeeToken(address(usdc));
-        //theiaSwapIDKeeper.addSupportedCaller(address(theiaRouter));
+        feeManager.addFeeToken(address(usdc));
+        theiaUUIDKeeper.addSupportedCaller(address(theiaRouter));
         vm.stopPrank();
 
 
@@ -149,7 +163,7 @@ contract SetUp is Test {
         theiaToken.setMinter(address(theiaRouter));
         skip(1 days);
         theiaToken.applyMinter();
-        theiaSwapIDKeeper.addSupportedCaller(address(theiaRouter));
+        theiaUUIDKeeper.addSupportedCaller(address(theiaRouter));
         chainID = theiaRouter.cID();
         vm.stopPrank();
 
@@ -222,8 +236,7 @@ contract SetUp is Test {
 
         stagingVault.setUp(
             address(ve),
-            address(theiaRewards),
-            address(usdc)
+            address(theiaRewards)
         );
 
         vm.stopPrank();
@@ -231,8 +244,8 @@ contract SetUp is Test {
         daiBal = 100000*10**dai.decimals();
 
         vm.startPrank(admin);
-        usdc.print(user1, usdcBal);
-        dai.print(user1, daiBal);
+        usdc.transfer(user1, usdcBal);
+        dai.transfer(user1, daiBal);
 
         theia.transfer(user1, initialBalUser);
         theia.transfer(address(theiaRewards), 100_000 ether);
@@ -299,14 +312,13 @@ contract TestTheiaBasicRewards is SetUp {
     }
 
     function test_vaultParams() public {
-        assertEq(stagingVault.getTheiaGov(), gov);
-        assertEq(stagingVault.mpc(), address(admin));
+        //assertEq(stagingVault.mpc(), address(admin));
 
         address[] memory operators = c3.getAllOperators();
         assertEq(operators[0], address(admin));
         assertEq(operators[1], address(c3));
 
-        assertEq(stagingVault.getFeeToken(), address(usdc));
+        assertEq(feeManager.getFeeTokenList()[0], address(usdc));
         assertEq(stagingVault.getTheiaRewards(), address(theiaRewards));
         assertEq(stagingVault.getVotingEscrow(), address(ve));
         assertEq(stagingVault.getLiquidityDelay(), 7 days);

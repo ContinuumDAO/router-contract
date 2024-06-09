@@ -5,8 +5,6 @@ import "forge-std/Test.sol";
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-//import {Initializable} from "@openzeppelin/contracts/routerV2-upgradeable/proxy/utils/Initializable.sol";
-
 import {USDC} from "contracts/mock/USDC.sol";
 import {DAI} from "contracts/mock/DAI.sol";
 import {WETH} from "contracts/mock/WETH.sol";
@@ -16,7 +14,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {THEIA} from "contracts/routerV2/THEIA.sol";
 
 import {TheiaCallData} from "contracts/mock/TheiaCallData.sol";
-import {TheiaSwapIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
+import {TheiaUUIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
+import {FeeManager} from "contracts/routerV2/FeeManager.sol";
+import {TheiaRouterConfig} from "contracts/routerV2/TheiaRouterConfig.sol";
 import {TheiaRouter} from "contracts/routerV2/TheiaRouter.sol";
 import {TheiaERC20} from "contracts/routerV2/TheiaERC20.sol";
 import {ITheiaERC20} from "contracts/routerV2/ITheiaERC20.sol";
@@ -61,13 +61,18 @@ contract SetUp is Test {
     VotingEscrow veImplV1;
     VeTHEIAProxy veTheiaProxy;
     IVotingEscrowUpgradable ve;
+
+    address ADDRESS_ZERO = address(0);
     
     uint256 chainID;
+    uint256 dappId = 1;
 
     string constant BASE_URI_V1 = "veTHEIA V1";
 
     TheiaCallData theiaCallData;
-    TheiaSwapIDKeeper theiaSwapIDKeeper;
+    FeeManager feeManager;
+    TheiaUUIDKeeper theiaUUIDKeeper;
+    TheiaRouterConfig theiaRouterConfig;
     TheiaRouter theiaRouter;
     StagingVault stagingVault;
     TheiaRewards theiaRewards;
@@ -114,24 +119,44 @@ contract SetUp is Test {
         dai = new DAI();
         weth = new WETH();
         theiaCallData = new TheiaCallData();
-        theiaSwapIDKeeper = new TheiaSwapIDKeeper(admin);
-
         deployC3Caller();
+        theiaUUIDKeeper = new TheiaUUIDKeeper(
+            gov,
+            address(c3),
+            admin,
+            dappId
+        );
+
+        feeManager = new FeeManager(
+            gov,
+            address(c3),
+            admin,
+            dappId
+        );
+
+        theiaRouterConfig = new TheiaRouterConfig(
+            gov,
+            address(c3),
+            admin,
+            dappId
+        );
 
         theiaRouter = new TheiaRouter(
-            address(weth), 
-            admin,
+            address(weth),
+            address(theiaUUIDKeeper),
+            address(theiaRouterConfig),
+            address(feeManager),
             gov,
-            address(theiaSwapIDKeeper), 
             address(c3),
-            1,
-            address(usdc)
+            admin,
+            dappId
         );
+        
 
         vm.startPrank(gov);
         theiaRouter.setDelay(0);
-        theiaRouter.setFeeToken(address(usdc));
-        //theiaSwapIDKeeper.addSupportedCaller(address(theiaRouter));
+        feeManager.addFeeToken(address(usdc));
+        theiaUUIDKeeper.addSupportedCaller(address(theiaRouter));
         vm.stopPrank();
 
 
@@ -150,7 +175,6 @@ contract SetUp is Test {
         theiaToken.setMinter(address(theiaRouter));
         skip(1 days);
         theiaToken.applyMinter();
-        theiaSwapIDKeeper.addSupportedCaller(address(theiaRouter));
         chainID = theiaRouter.cID();
         vm.stopPrank();
 
@@ -181,9 +205,9 @@ contract SetUp is Test {
         stagingVault = new StagingVault(
             admin,
             address(c3),
-            1,
+            dappId,
             gov,
-            address(usdc),
+            address(feeManager),
             address(weth),
             address(ve)
         );
@@ -223,17 +247,17 @@ contract SetUp is Test {
 
         stagingVault.setUp(
             address(ve),
-            address(theiaRewards),
-            address(usdc)
+            address(theiaRewards)
         );
-
         vm.stopPrank();
+
+
         usdcBal = 100000*10**usdc.decimals();
         daiBal = 100000*10**dai.decimals();
 
         vm.startPrank(admin);
-        usdc.print(user1, usdcBal);
-        dai.print(user1, daiBal);
+        usdc.transfer(user1, usdcBal);
+        dai.transfer(user1, daiBal);
 
         theia.transfer(user1, initialBalUser);
         theia.transfer(address(theiaRewards), 100_000 ether);

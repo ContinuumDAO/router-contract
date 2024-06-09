@@ -5,15 +5,15 @@ import "forge-std/Test.sol";
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-
 import {USDC} from "contracts/mock/USDC.sol";
 import {WETH} from "contracts/mock/WETH.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {TheiaCallData} from "contracts/mock/TheiaCallData.sol";
-import {TheiaSwapIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
+import {TheiaUUIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
+import {FeeManager} from "contracts/routerV2/FeeManager.sol";
+import {TheiaRouterConfig} from "contracts/routerV2/TheiaRouterConfig.sol";
 import {TheiaRouter} from "contracts/routerV2/TheiaRouter.sol";
 import {TheiaERC20} from "contracts/routerV2/TheiaERC20.sol";
 
@@ -37,10 +37,15 @@ contract SetUp is Test {
     USDC usdc;
     WETH weth;
 
-    uint256 chainID;
+    address ADDRESS_ZERO = address(0);
 
+    uint256 chainID;
+    uint256 dappId = 1;
+
+    FeeManager feeManager;
     TheiaCallData theiaCallData;
-    TheiaSwapIDKeeper theiaSwapIDKeeper;
+    TheiaUUIDKeeper theiaUUIDKeeper;
+    TheiaRouterConfig theiaRouterConfig;
     TheiaRouter theiaRouter;
 
     C3SwapIDKeeper c3SwapIDKeeper;
@@ -69,24 +74,32 @@ contract SetUp is Test {
         usdc = new USDC();
         weth = new WETH();
         theiaCallData = new TheiaCallData();
-        theiaSwapIDKeeper = new TheiaSwapIDKeeper(admin);
-
         deployC3Caller();
-
-        theiaRouter = new TheiaRouter(
-            address(weth), 
-            admin,
-            gov,
-            address(theiaSwapIDKeeper), 
+        theiaUUIDKeeper = new TheiaUUIDKeeper(
+            ADDRESS_ZERO,
             address(c3),
-            1,
-            address(usdc)
+            admin,
+            dappId
+        );
+
+       feeManager = new FeeManager(
+            ADDRESS_ZERO,
+            address(c3),
+            admin,
+            dappId
+        );
+
+        theiaRouterConfig = new TheiaRouterConfig(
+            ADDRESS_ZERO,
+            address(c3),
+            admin,
+            dappId
         );
 
         vm.startPrank(gov);
         theiaRouter.setDelay(0);
-        theiaRouter.setFeeToken(address(usdc));
-        //theiaSwapIDKeeper.addSupportedCaller(address(theiaRouter));
+        feeManager.addFeeToken(address(usdc));
+        theiaUUIDKeeper.addSupportedCaller(address(theiaRouter));
         vm.stopPrank();
 
 
@@ -97,7 +110,7 @@ contract SetUp is Test {
         theiaToken.setMinter(address(theiaRouter));
         skip(1 days);
         theiaToken.applyMinter();
-        theiaSwapIDKeeper.addSupportedCaller(address(theiaRouter));
+        theiaUUIDKeeper.addSupportedCaller(address(theiaRouter));
         chainID = theiaRouter.cID();
         vm.stopPrank();
 
@@ -113,8 +126,8 @@ contract SetUp is Test {
         usdcBal = 100000*10**usdc.decimals();
 
         vm.prank(admin);
-        usdc.print(user1, usdcBal);
-        usdc.print(user2, usdcBal);
+        usdc.transfer(user1, usdcBal);
+        usdc.transfer(user2, usdcBal);
 
     }
 
@@ -175,12 +188,11 @@ contract TestTheiaERC20 is SetUp {
 
     function test_Deploy() public {
         assertEq(theiaETH.owner(), address(theiaRouter));
-        assertEq(theiaRouter.mpc(), admin);
 
-        address _gov = theiaRouter.getGovTHEIA();
-        assertEq(_gov, gov);
+        // address _gov = theiaRouter.getGovTHEIA();
+        // assertEq(_gov, gov);
 
-        address[] memory supported = theiaSwapIDKeeper.getAllSupportedCallers();
+        address[] memory supported = theiaUUIDKeeper.getAllSupportedCallers();
         //console.log("No supported callers = ", supported.length);
         assertEq(supported[0], admin);
         assertEq(supported[1], address(theiaRouter));
@@ -232,7 +244,7 @@ contract TestTheiaERC20 is SetUp {
 
         assertEq(theiaToken.balanceOf(user1), 1 ether);
 
-        bytes32 swapID = theiaSwapIDKeeper.calcSwapID(address(theiaRouter), address(theiaToken), user1, 1 ether, user1, 250);
+        bytes32 swapID = theiaUUIDKeeper.calcSwapID(address(theiaRouter), address(theiaToken), user1, 1 ether, user1, 250);
         bytes memory callData = theiaCallData.genSwapInAutoCallData(address(theiaToken), 1 ether, user1, swapID, 18, address(theiaToken), fee);
 
         bytes32 uuid = c3SwapIDKeeper.calcCallerUUID(address(c3), 1, address(theiaRouter).toHexString(), 250.toString(), callData);
@@ -241,7 +253,7 @@ contract TestTheiaERC20 is SetUp {
         //         .to.emit(routerV2, "LogSwapOut").withArgs(theiaToken.target, otherAccount.address, otherAccount.address.toString().toLowerCase(), amount.toString(), chainID, 250, 0, swapID, calldata)
         //         .to.emit(c3Caller, "LogC3Call").withArgs("1", uuid, routerV2.target, "250", routerV2.target.toLowerCase(), calldata)
 
-        assertEq(theiaSwapIDKeeper.isSupportedCaller(address(theiaRouter)), true);
+        assertEq(theiaUUIDKeeper.isSupportedCaller(address(theiaRouter)), true);
 
 
         vm.startPrank(user1);
@@ -276,7 +288,7 @@ contract TestTheiaERC20 is SetUp {
 
         uint256 fee = 5*10**6;
 
-        bytes32 swapID = theiaSwapIDKeeper.calcSwapID(address(theiaRouter), address(theiaToken), user1, 1 ether, user1, 250);
+        bytes32 swapID = theiaUUIDKeeper.calcSwapID(address(theiaRouter), address(theiaToken), user1, 1 ether, user1, 250);
         bytes memory callData = theiaCallData.genSwapInAutoCallData(address(theiaToken), 1 ether, user1, swapID, 18, address(theiaToken), fee);
 
         bytes32 uuid = c3SwapIDKeeper.calcCallerUUID(address(c3), 1, address(theiaRouter).toHexString(), 250.toString(), callData);
@@ -296,11 +308,11 @@ contract TestTheiaERC20 is SetUp {
         theiaRouter.setFeeConfig(chainID, chainID, 50*10**usdc.decimals(), 1);
         vm.stopPrank();
 
-        uint256 currentNonce = theiaSwapIDKeeper.getCurrentNonce();
-        assertEq(theiaSwapIDKeeper.isSwapCompleted(swapID), true);
+        uint256 currentNonce = theiaUUIDKeeper.getCurrentNonce();
+        assertEq(theiaUUIDKeeper.isSwapCompleted(swapID), true);
         
         vm.startPrank(admin);
-        bytes32 newSwapID = theiaSwapIDKeeper.registerSwapoutEvm(
+        bytes32 newSwapID = theiaUUIDKeeper.registerSwapoutEvm(
             address(theiaToken),
             address(theiaRouter),
             1 ether,
@@ -308,10 +320,10 @@ contract TestTheiaERC20 is SetUp {
             250
         );
         vm.stopPrank();
-        uint256 newNonce = theiaSwapIDKeeper.getCurrentNonce();
+        uint256 newNonce = theiaUUIDKeeper.getCurrentNonce();
         assertEq(newNonce, currentNonce+1);
         assertNotEq(newSwapID, swapID);
-        assertEq(theiaSwapIDKeeper.isSwapCompleted(newSwapID), false);
+        assertEq(theiaUUIDKeeper.isSwapCompleted(newSwapID), false);
         vm.startPrank(address(c3));
         vm.expectRevert("Insufficient Fee");
         theiaRouter.swapInAuto(
@@ -323,7 +335,7 @@ contract TestTheiaERC20 is SetUp {
             address(theiaToken),
             fee
         );
-        assertEq(theiaSwapIDKeeper.isSwapCompleted(newSwapID), false); // didn't complete
+        assertEq(theiaUUIDKeeper.isSwapCompleted(newSwapID), false); // didn't complete
 
         theiaRouter.swapInAuto(
             newSwapID,
@@ -334,7 +346,7 @@ contract TestTheiaERC20 is SetUp {
             address(theiaToken),
             10*fee
         );
-        assertEq(theiaSwapIDKeeper.isSwapCompleted(newSwapID), true); // did complete this time
+        assertEq(theiaUUIDKeeper.isSwapCompleted(newSwapID), true); // did complete this time
         vm.stopPrank();
     }
 
@@ -352,7 +364,7 @@ contract TestTheiaERC20 is SetUp {
         console.log("underlying liquidity before swapOut = ", liqBeforeSwapout, "USDC");
         assertEq(liqBeforeSwapout, 2000*10**usdc.decimals());
 
-        bytes32 swapID = theiaSwapIDKeeper.calcSwapID(address(theiaRouter), address(theiaUSDC), user1, amount, user1, 250);
+        bytes32 swapID = theiaUUIDKeeper.calcSwapID(address(theiaRouter), address(theiaUSDC), user1, amount, user1, 250);
         bytes memory callData = theiaCallData.genSwapInAutoCallData(address(theiaUSDC), amount, user1, swapID, 18, address(theiaUSDC), fee);
 
         bytes32 uuid = c3SwapIDKeeper.calcCallerUUID(address(c3), 1, address(theiaRouter).toHexString(), 250.toString(), callData);
@@ -389,8 +401,8 @@ contract TestTheiaERC20 is SetUp {
         vm.stopPrank();
 
 
-        uint256 currentNonce = theiaSwapIDKeeper.getCurrentNonce();
-        assertEq(theiaSwapIDKeeper.isSwapCompleted(swapID), true);
+        uint256 currentNonce = theiaUUIDKeeper.getCurrentNonce();
+        assertEq(theiaUUIDKeeper.isSwapCompleted(swapID), true);
         
         // the underlying liquidity is 2000 USDC, so we will use more than 80% of it
         amount = 1800*10**usdc.decimals();
@@ -400,7 +412,7 @@ contract TestTheiaERC20 is SetUp {
         vm.stopPrank();
 
         vm.startPrank(admin);
-        bytes32 newSwapID = theiaSwapIDKeeper.registerSwapoutEvm(
+        bytes32 newSwapID = theiaUUIDKeeper.registerSwapoutEvm(
             address(theiaToken),
             address(theiaRouter),
             amount,
@@ -459,7 +471,7 @@ contract TestTheiaERC20 is SetUp {
         console.log("underlying liquidity before swapOut = ", liqBeforeSwapout, "USDC");
         assertEq(liqBeforeSwapout, 2000*10**usdc.decimals());
 
-        bytes32 swapID = theiaSwapIDKeeper.calcSwapID(address(theiaRouter), address(theiaUSDC), user1, amount, user1, 250);
+        bytes32 swapID = theiaUUIDKeeper.calcSwapID(address(theiaRouter), address(theiaUSDC), user1, amount, user1, 250);
         bytes memory callData = theiaCallData.genSwapInAutoCallData(address(theiaUSDC), amount, user1, swapID, 18, address(theiaUSDC), fee);
 
         bytes32 uuid = c3SwapIDKeeper.calcCallerUUID(address(c3), 1, address(theiaRouter).toHexString(), 250.toString(), callData);
@@ -496,7 +508,7 @@ contract TestTheiaERC20 is SetUp {
         console.log("underlying liquidity before swapOut = ", liqBeforeSwapout/10**usdc.decimals(), "USDC");
         assertEq(liqBeforeSwapout, 2000*10**usdc.decimals());
 
-        bytes32 swapID = theiaSwapIDKeeper.calcSwapID(address(theiaRouter), address(theiaUSDC), user1, amount, user1, 250);
+        bytes32 swapID = theiaUUIDKeeper.calcSwapID(address(theiaRouter), address(theiaUSDC), user1, amount, user1, 250);
         bytes memory callData = theiaCallData.genSwapInAutoCallData(address(theiaUSDC), amount, user1, swapID, 18, address(theiaUSDC), fee);
 
         bytes32 uuid = c3SwapIDKeeper.calcCallerUUID(address(c3), 1, address(theiaRouter).toHexString(), 250.toString(), callData);

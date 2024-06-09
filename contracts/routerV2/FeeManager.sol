@@ -94,6 +94,14 @@ contract FeeManager is GovernDapp, IFeeManager {
         return true;
     }
 
+    function getFeeTokenList() external view returns(address[] memory) {
+        return feeTokenList;
+    }
+
+    function getFeeTokenIndexMap(address feeToken) external view returns (uint256) {
+        return(feeTokenIndexMap[feeToken]);
+    }
+
     function setFeeConfig(
         uint256 srcChainID,
         uint256 dstChainID,
@@ -140,15 +148,12 @@ contract FeeManager is GovernDapp, IFeeManager {
         uint256 fromChainID,
         uint256 toChainID,
         uint256 liquidity,
-        uint256 amount,
-        bool underlying
+        uint256 amount
     ) public view returns (uint256) {
         uint256 baseFee = getFee(fromChainID, toChainID, feeToken);
         if (baseFee == 0) return 0;
         else {
-            uint256 feeFactor = underlying
-                ? _getFeeFactor(liquidity, amount)
-                : 1000;
+            uint256 feeFactor = _getFeeFactor(liquidity, amount);
             return ((baseFee * feeFactor) / 1000);
         }
     }

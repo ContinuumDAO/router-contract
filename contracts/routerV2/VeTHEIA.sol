@@ -469,7 +469,7 @@ contract VotingEscrow is UUPSUpgradeable, IVotingEscrow {
         _entered_state = NOT_ENTERED;
     }
 
-    modifier onlyTHEIA() {
+    modifier onlyGov() {
         require(msg.sender == governor, "veTHEIA: Only Governor can perform this operation.");
         _;
     }
@@ -805,22 +805,22 @@ contract VotingEscrow is UUPSUpgradeable, IVotingEscrow {
         treasury = _treasury == address(0) ? treasury : _treasury;
     }
 
-    function setBaseURI(string memory _baseURI) external onlyTHEIA {
+    function setBaseURI(string memory _baseURI) external onlyGov {
         baseURI = _baseURI;
     }
 
     /// @notice Set the address of the receiver of liquidation penalties.
-    function setTreasury(address _treasury) external onlyTHEIA {
+    function setTreasury(address _treasury) external onlyGov {
         treasury = _treasury;
     }
 
     /// @notice Set the address of Theia router contract.
-    function setTheiaRouter(address _theiaRouter) external onlyTHEIA {
+    function setTheiaRouter(address _theiaRouter) external onlyGov {
         theiaRouter = _theiaRouter;
     }
 
     /// @notice One time use flag to enable liquidations.
-    function enableLiquidations() external onlyTHEIA {
+    function enableLiquidations() external onlyGov {
         require(treasury != address(0));
         liquidationsEnabled = true;
     }
@@ -1683,7 +1683,7 @@ contract VotingEscrow is UUPSUpgradeable, IVotingEscrow {
     }
 
     /// @notice Conditions for upgrading the implementation.
-    function _authorizeUpgrade(address newImplementation) internal view override onlyTHEIA {
+    function _authorizeUpgrade(address newImplementation) internal view override onlyGov {
         require(newImplementation != address(0), "New implementation cannot be zero address");
     }
 

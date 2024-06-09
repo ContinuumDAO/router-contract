@@ -42,7 +42,7 @@ interface ITheiaERC20Extended {
     function underlyingIsMinted() external view returns (bool);
 }
 
-contract StagingVault is FeeManager {
+contract StagingVault is GovernDapp {
     using Strings for *;
     using SafeERC20 for IERC20;
     using Checkpoints for Checkpoints.Trace208;
@@ -50,10 +50,10 @@ contract StagingVault is FeeManager {
     address public immutable wNATIVE;
     address public ve;
     address public theiaRewards;
+    address public feeManager;
     uint256 nonceGlobal;
 
     // delay for timelock functions
-    uint256 public mpcDelay = 2 days;
     uint256 public liquidityDelay = 7 days;
 
     mapping(address => bool) public isOperator;
@@ -62,31 +62,20 @@ contract StagingVault is FeeManager {
     event LogFallback(bytes4 selector, bytes data, bytes reason);
 
     constructor(
-        address _mpc,
+        address _txSender,
         address _c3callerProxy,
         uint256 _dappID,
-        address _govTHEIA,
-        address _feeToken,
+        address _gov,
+        address _feeManager,
         address _wNATIVE,
         address _ve
-    ) FeeManager(_govTHEIA, _c3callerProxy, _mpc, _dappID) {
-        _newMPC = _mpc;
+    ) GovernDapp(_gov, _c3callerProxy, _txSender, _dappID) {
         wNATIVE = _wNATIVE;
+        feeManager = _feeManager;
         ve = _ve;
     }
 
-    address private _oldMPC;
-    address private _newMPC;
-    uint256 private _newMPCEffectiveTime;
-
     string[] stakedTokenSymbols;
-
-    event LogChangeMPC(
-        address indexed oldMPC,
-        address indexed newMPC,
-        uint indexed effectiveTime,
-        uint256 chainID
-    );
 
     event AddLiquidity(
         string tokenStr,
@@ -188,10 +177,6 @@ contract StagingVault is FeeManager {
     mapping(string => uint256) public liquidityTotalAll; // On veTHIEA chain: token symbol => total liquidity (all chains)
     mapping(uint256 => bool) public completed; // On veTHIEA chain: nonce => completed flag
 
-    modifier onlyMPC() {
-        require(msg.sender == mpc(), "Theia StagingVault: MPC FORBIDDEN");
-        _;
-    }
 
     modifier onlyAuth() {
         require(
@@ -201,57 +186,12 @@ contract StagingVault is FeeManager {
         _;
     }
 
-    function mpc() public view returns (address) {
-        if (block.timestamp >= _newMPCEffectiveTime || _oldMPC == address(0)) {
-            return _newMPC;
-        }
-        return _oldMPC;
-    }
-
-    function _addOperator(address op) internal {
-        require(op != address(0), "Theia StagingVault: Operator is address(0)");
-        require(!isOperator[op], "Theia StagingVault: Operator already exists");
-        isOperator[op] = true;
-        operators.push(op);
-    }
-
-    function revokeOperator(address _auth) internal {
-        require(isOperator[_auth], "Theia StagingVault: Operator not found");
-        isOperator[_auth] = false;
-        uint256 length = operators.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (operators[i] == _auth) {
-                operators[i] = operators[length - 1];
-                operators.pop();
-                return;
-            }
-        }
-    }
-
-    function getAllOperators() external view returns (address[] memory) {
-        return operators;
-    }
-
     function cID() public view returns (uint) {
         return block.chainid;
     }
 
     function version() public pure returns (uint) {
         return 1;
-    }
-
-    function changeMPC(address newMPC) external onlyGov returns (bool) {
-        require(newMPC != address(0), "Theia StagingVault: address(0)");
-        _oldMPC = mpc();
-        _newMPC = newMPC;
-        _newMPCEffectiveTime = block.timestamp + mpcDelay;
-        emit LogChangeMPC(_oldMPC, _newMPC, _newMPCEffectiveTime, cID());
-        return true;
-    }
-
-    function setMpcDelay(uint256 _delay) external onlyGov returns (bool) {
-        mpcDelay = _delay;
-        return true;
     }
 
     function setLiquidityDelay(uint _delay) external onlyGov returns (bool) {
@@ -263,26 +203,12 @@ contract StagingVault is FeeManager {
         return (liquidityDelay);
     }
 
-    function getTheiaGov() public view returns (address) {
-        return gov();
-    }
-
-    // function changeTheiaGov(
-    //     address newGovTHEIA
-    // ) external onlyGov returns (bool) {
-    //     changeGov(newGovTHEIA);
-    //     return true;
-    // }
-
     function setUp(
         address _ve,
-        address _theiaRewards,
-        address _feeToken
+        address _theiaRewards
     ) external onlyGov returns (bool) {
-        require(feeTokenList[0] == _feeToken, "fee not found");
         ve = _ve;
         theiaRewards = _theiaRewards;
-        // feeToken = _feeToken;
         return true;
     }
 
@@ -695,6 +621,7 @@ contract StagingVault is FeeManager {
         uint256 tokenId, // veTHEAI ID
         uint256 amount,
         uint256 nonce,
+        string memory feeTokenStr,
         uint256 feePaid
     ) external onlyAuth {
         address liquidityProvider = stringToAddress(lp);
@@ -713,7 +640,9 @@ contract StagingVault is FeeManager {
 
         (, string memory fromChainIdStr, string memory sourceTx) = context();
 
-        uint256 gasFee = this.getGasFee(cID(), feeTokenList[0]); // only charge gas fee for liquidity provision
+        address feeToken = stringToAddress(feeTokenStr);
+
+        uint256 gasFee = FeeManager(feeManager).getGasFee(cID(), feeToken); // only charge gas fee for liquidity provision
 
         if (gasFee > feePaid)
             revert("Theia StagingVault: Insufficient Fee Paid");
@@ -788,6 +717,7 @@ contract StagingVault is FeeManager {
         uint256 tokenId, // veTHEAI ID
         uint256 amount,
         uint256 nonce,
+        string memory feeTokenStr,
         uint256 feePaid // same fee as router usage, to avoid exploit
     ) external onlyAuth {
         address liquidityProvider = stringToAddress(lp);
@@ -803,19 +733,20 @@ contract StagingVault is FeeManager {
 
         (, string memory fromChainIdStr, string memory sourceTx) = context();
 
+        address feeToken = stringToAddress(feeTokenStr);
+
         {
-            (, bool ok) = strToUint(fromChainIdStr);
+            (uint256 fromChainId, bool ok) = strToUint(fromChainIdStr);
             require(ok, "Theia StagingVault:sourceChain invalid");
             // TODO FIXME
-            uint256 liquidityFee = this.getLiquidityFee(
-                feeTokenList[0],
-                block.chainid,
-                block.chainid,
+            uint256 liquidityFee = FeeManager(feeManager).getLiquidityFee(
+                feeToken,
+                fromChainId,
+                cID(),
                 availableLiquidity,
-                amount,
-                false
+                amount
             );
-            uint256 gasFee = this.getGasFee(cID(), feeTokenList[0]);
+            uint256 gasFee = FeeManager(feeManager).getGasFee(cID(), feeToken);
             uint256 fee = liquidityFee + gasFee;
 
             if (fee > feePaid)
@@ -856,6 +787,7 @@ contract StagingVault is FeeManager {
         string memory tokenSymbol,
         string memory toChainIdStr,
         uint256 amount,
+        string memory feeTokenStr,
         uint256 swapFee
     ) external returns (uint256) {
         require(
@@ -867,6 +799,10 @@ contract StagingVault is FeeManager {
         require(
             bytes(tokenStr).length > 0,
             "Theia StagingVault: Liquidity token address does not exist on target chain"
+        );
+        address feeToken = stringToAddress(feeTokenStr);
+        require(FeeManager(feeManager).getFeeTokenIndexMap(feeToken) > 0, 
+            "Theia StagingVault: feeToken not exist"
         );
 
         nonceGlobal++;
@@ -889,10 +825,10 @@ contract StagingVault is FeeManager {
                 nonce
             );
         } else {
-            uint256 feePaid = payFee(swapFee);
+            uint256 feePaid = payFee(swapFee, feeToken);
 
             string
-                memory funcCall = "stagingToLiquidity(string,string,string,uint256,uint256,uint256,uint256)";
+                memory funcCall = "stagingToLiquidity(string,string,string,uint256,uint256,uint256,string,uint256)";
             bytes memory callData = abi.encodeWithSignature(
                 funcCall,
                 fromTargetStr,
@@ -901,6 +837,7 @@ contract StagingVault is FeeManager {
                 tokenId,
                 amount,
                 nonce,
+                feeTokenStr,
                 feePaid
             );
 
@@ -910,9 +847,9 @@ contract StagingVault is FeeManager {
         return (nonce);
     }
 
-    function payFee(uint256 fee) internal returns (uint256) {
+    function payFee(uint256 fee, address feeToken) internal returns (uint256) {
         require(
-            IERC20(feeTokenList[0]).transferFrom(
+            IERC20(feeToken).transferFrom(
                 msg.sender,
                 address(this),
                 fee
@@ -928,6 +865,7 @@ contract StagingVault is FeeManager {
         string memory targetStr,
         string memory toChainIdStr,
         uint256 amount,
+        address feeToken,
         uint256 swapFee
     ) external returns (uint256) {
         require(
@@ -943,6 +881,11 @@ contract StagingVault is FeeManager {
             liquidityByTokenId[tokenId][tokenSymbol][toChainIdStr] >= amount,
             "Theia StagingVault: the amount exceeds the liquidity of this token on this chain for TokenId"
         );
+        require(FeeManager(feeManager).getFeeTokenIndexMap(feeToken) > 0, 
+            "Theia StagingVault: feeToken not exist"
+        );
+
+        string memory feeTokenStr = feeToken.toHexString();
 
         string memory tokenStr = symbolToToken[tokenSymbol][toChainIdStr];
 
@@ -964,10 +907,10 @@ contract StagingVault is FeeManager {
                 nonce
             );
         } else {
-            uint256 feePaid = payFee(swapFee);
+            uint256 feePaid = payFee(swapFee, feeToken);
 
-            string
-                memory funcCall = "liquidityToStaging(string,string,string,uint256,uint256,uint256,uint256)";
+            string memory funcCall = "liquidityToStaging(string,string,string,string,uint256,uint256,uint256,string,uint256)";
+
             bytes memory callData = abi.encodeWithSignature(
                 funcCall,
                 fromTargetStr,
@@ -976,6 +919,7 @@ contract StagingVault is FeeManager {
                 tokenId,
                 amount,
                 nonce,
+                feeTokenStr,
                 feePaid
             );
 
