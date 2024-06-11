@@ -15,7 +15,8 @@ const {
   VANGUARD,
   HUMANODE_TEST,
   FIRE_TEST,
-  AVAC_TEST
+  AVAC_TEST,
+  RARI_TEST
 } = require("./output/env.json")
 
 
@@ -113,10 +114,15 @@ module.exports = {
       chainId: 997,
       accounts: [FIRE_TEST.DEPLOY_KEY]
     },
-    avac_test:{
+    avac_test: {
       url: AVAC_TEST.URL,
       chainId: 43113,
       accounts: [AVAC_TEST.DEPLOY_KEY]
+    },
+    rari_test: {
+      url: RARI_TEST.URL,
+      chainId: 1918988905,
+      accounts: [RARI_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {

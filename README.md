@@ -16,7 +16,7 @@ npx hardhat verify --network bsc_test <address>
 
 npx hardhat run scripts/protocol/deploy.js --network
 
-npx hardhat run scripts/protocol/addOperator.js --network
+// npx hardhat run scripts/protocol/addOperator.js --network
 
 ```
 ## deployment router
