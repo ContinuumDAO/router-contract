@@ -41,6 +41,7 @@ npx hardhat erc20 --network manta_test theiaUSDT tUSDT 18 0x00000000000000000000
 npx hardhat erc20 --network humanode_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network fire_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network avac_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network rari_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
 insert mysql
@@ -53,6 +54,7 @@ npx hardhat run scripts/mock/deployMultiCall.js --network vanguard
 npx hardhat run scripts/mock/deployMultiCall.js --network manta_test
 npx hardhat run scripts/mock/deployMultiCall.js --network fire_test
 npx hardhat run scripts/mock/deployMultiCall.js --network avac_test
+npx hardhat run scripts/mock/deployMultiCall.js --network rari_test
 
 
 
