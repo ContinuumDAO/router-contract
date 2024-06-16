@@ -10,6 +10,7 @@ import "./Checkpoints.sol";
 import "./GovernDapp.sol";
 import {TheiaERC20} from "./TheiaERC20.sol";
 import "./ITheiaERC20.sol";
+import "./PoolDeployer.sol";
 import "./FeeManager.sol";
 import {ITheiaRewards} from "./ITheiaRewards.sol";
 
@@ -48,6 +49,7 @@ contract StagingVault is GovernDapp {
     using Checkpoints for Checkpoints.Trace208;
 
     address public immutable wNATIVE;
+    address public pool;
     address public ve;
     address public theiaRewards;
     address public feeManager;
@@ -75,7 +77,7 @@ contract StagingVault is GovernDapp {
         ve = _ve;
     }
 
-    string[] stakedTokenSymbols;
+    string[] public stakedTokenSymbols;
 
     event AddLiquidity(
         string tokenStr,
@@ -169,8 +171,6 @@ contract StagingVault is GovernDapp {
     mapping(uint256 => mapping(string => mapping(string => uint256)))
         public liquidityRemovalTime; // On veTHIEA chain: tokenId => token symbol => chainId => timestamp
     mapping(string => RewardedToken) public rewardedTokens; // On veTHIEA chain: token symbol => struct
-    mapping(string => mapping(string => string)) public symbolToToken; // On veTHIEA chain: liquidity symbol => toChainId => token address
-    mapping(string => mapping(string => string)) public tokenToSymbol; // On veTHIEA chain: token address => tochainId => liquidity symbol
     mapping(uint256 => mapping(string => uint256)) public liquidityAll; // On veTHIEA chain: tokenId => token symbol => amount
     mapping(string => mapping(string => uint256)) public liquidityByChain; // On veTHEIA chain: token symbol => chainId => amount
     mapping(uint256 => mapping(string => mapping(string => uint256))) liquidityByTokenId; // On veTHEIA chain: tokenId => token symbol => chainId => amount
@@ -205,9 +205,11 @@ contract StagingVault is GovernDapp {
 
     function setUp(
         address _ve,
+        address _pool,
         address _theiaRewards
     ) external onlyGov returns (bool) {
         ve = _ve;
+        pool = _pool;
         theiaRewards = _theiaRewards;
         return true;
     }
@@ -236,12 +238,15 @@ contract StagingVault is GovernDapp {
 
     function addRewardToken(
         string memory tokenSymbol,
-        string memory tokenStr,
+        //string memory tokenStr,
         uint256 standardRewardRate,
         string memory toChainIdStr,
         uint256 rateFactor,
         string memory targetStr
     ) external onlyGov {
+        string memory tokenStr = PoolDeployer(pool).getTokenBySymbol(tokenSymbol, toChainIdStr);
+        require(bytes(tokenStr).length > 0, "Theia StagingVault: Pool Theia token is not a governance approved one");
+
         require(
             !rewarded[tokenSymbol],
             "Theia StagingVault: Token is already listed for rewards"
@@ -276,10 +281,7 @@ contract StagingVault is GovernDapp {
 
         (toChainId, ok) = strToUint(toChainIdStr);
         require(ok, "Theia StagingVault:sourceChain invalid");
-
-        symbolToToken[tokenSymbol][toChainIdStr] = tokenStr;
-        tokenToSymbol[tokenStr][toChainIdStr] = tokenSymbol;
-
+        
         modifiedRate208 = SafeCast.toUint208(
             (standardRewardRate * rateFactor) / 1000
         );
@@ -357,7 +359,7 @@ contract StagingVault is GovernDapp {
                 0
             );
 
-            tokenStr = symbolToToken[tokenSymbol][toChainIdStr];
+            tokenStr = PoolDeployer(pool).getTokenBySymbol(tokenSymbol, toChainIdStr);
 
             if (toChainId == cID()) {
                 rewardedEVM[tokenStr] = false;
@@ -377,10 +379,12 @@ contract StagingVault is GovernDapp {
     function updateChainRewardedToken(
         string memory tokenSymbol,
         uint256 standardRewardRate,
-        string memory tokenStr,
         string memory chainIdStr,
         uint256 rateFactor
     ) external onlyGov {
+        string memory tokenStr = PoolDeployer(pool).getTokenBySymbol(tokenSymbol, chainIdStr);
+        require(bytes(tokenStr).length > 0, "Theia StagingVault: Pool Theia token is not a governance approved one");
+
         require(
             rewarded[tokenSymbol],
             "Theia StagingVault: Token was not listed for rewards"
@@ -392,9 +396,6 @@ contract StagingVault is GovernDapp {
         rewardRate[tokenSymbol].push(IVotingEscrow(ve).clock(), rewardRate208);
 
         uint256 len = rewardedTokens[tokenSymbol].toChainIdsStr.length;
-
-        symbolToToken[tokenSymbol][chainIdStr] = tokenStr;
-        tokenToSymbol[tokenStr][chainIdStr] = tokenSymbol;
 
         uint208 modifiedRate208;
 
@@ -795,7 +796,7 @@ contract StagingVault is GovernDapp {
             "Theia StagingVault: Not owner of this veTHEIA"
         );
 
-        string memory tokenStr = symbolToToken[tokenSymbol][toChainIdStr];
+        string memory tokenStr = PoolDeployer(pool).getTokenBySymbol(tokenSymbol, toChainIdStr);
         require(
             bytes(tokenStr).length > 0,
             "Theia StagingVault: Liquidity token address does not exist on target chain"
@@ -872,6 +873,11 @@ contract StagingVault is GovernDapp {
             IVotingEscrow(ve).ownerOf(tokenId) == msg.sender,
             "Theia StagingVault: Not owner of this veTHEIA"
         );
+        string memory tokenStr = PoolDeployer(pool).getTokenBySymbol(tokenSymbol, toChainIdStr);
+        require(
+            bytes(tokenStr).length > 0,
+            "Theia StagingVault: Liquidity token address does not exist on target chain"
+        );
         require(
             block.timestamp >=
                 liquidityRemovalTime[tokenId][tokenSymbol][toChainIdStr],
@@ -886,8 +892,6 @@ contract StagingVault is GovernDapp {
         );
 
         string memory feeTokenStr = feeToken.toHexString();
-
-        string memory tokenStr = symbolToToken[tokenSymbol][toChainIdStr];
 
         nonceGlobal++;
         uint256 nonce = nonceGlobal; // one nonce per tx
@@ -956,7 +960,8 @@ contract StagingVault is GovernDapp {
         uint256 nonce
     ) internal {
         tokenStr = _toLower(tokenStr);
-        string memory tokenSymbol = tokenToSymbol[tokenStr][fromChainId];
+        //string memory tokenSymbol = tokenToSymbol[tokenStr][fromChainId];
+        string memory tokenSymbol = PoolDeployer(pool).getSymbolByToken(tokenStr, fromChainId); 
         require(
             bytes(tokenSymbol).length > 0,
             "Theia StagingVault: tokenSymbol not found in _reportLiquidityAttachmentLocal"
@@ -1018,7 +1023,7 @@ contract StagingVault is GovernDapp {
         uint256 nonce
     ) internal {
         tokenStr = _toLower(tokenStr);
-        string memory tokenSymbol = tokenToSymbol[tokenStr][fromChainId];
+        string memory tokenSymbol = PoolDeployer(pool).getSymbolByToken(tokenStr, fromChainId);
         require(
             bytes(tokenSymbol).length > 0,
             "Theia StagingVault: tokenSymbol not found in _reportLiquidityDetachmentLocal"

@@ -214,3 +214,9 @@ contract USDC is ERC20 {
         _mint(msg.sender, 10000000000000000000);
     }
 }
+
+contract DAI is ERC20 {
+    constructor() ERC20("DAI", "DAI", 6) {
+        _mint(msg.sender, 10000000000000000000);
+    }
+}

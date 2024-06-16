@@ -200,7 +200,7 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
             "C3Caller: already completed"
         );
         require(
-            IC3Dapp(_message.to).isVaildSender(_txSender),
+            IC3Dapp(_message.to).isValidSender(_txSender),
             "C3Caller: txSender invalid"
         );
 

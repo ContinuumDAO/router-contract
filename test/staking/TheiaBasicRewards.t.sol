@@ -6,8 +6,8 @@ import "forge-std/Test.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 
-import {USDC} from "contracts/mock/USDC.sol";
-import {DAI} from "contracts/mock/DAI.sol";
+import {USDC, DAI} from "contracts/mock/ERC20.sol";
+//import {DAI} from "contracts/mock/DAI.sol";
 import {WETH} from "contracts/mock/WETH.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,11 +17,11 @@ import {THEIA} from "contracts/routerV2/THEIA.sol";
 import {TheiaCallData} from "contracts/mock/TheiaCallData.sol";
 import {TheiaUUIDKeeper} from "contracts/routerV2/TheiaUUIDKeeper.sol";
 import {FeeManager} from "contracts/routerV2/FeeManager.sol";
-//import {IFeeManager} from "contracts/routerV2/IFeeManager.sol";
 import {TheiaRouterConfig} from "contracts/routerV2/TheiaRouterConfig.sol";
 import {TheiaRouter} from "contracts/routerV2/TheiaRouter.sol";
 import {TheiaERC20} from "contracts/routerV2/TheiaERC20.sol";
 import {ITheiaERC20} from "contracts/routerV2/ITheiaERC20.sol";
+import {PoolDeployer} from "contracts/routerV2/PoolDeployer.sol";
 import {StagingVault} from "contracts/routerV2/StagingVault.sol";
 import {IStagingVault} from "contracts/routerV2/IStagingVault.sol";
 import {IVotingEscrow, VotingEscrow} from "contracts/routerV2/VeTHEIA.sol";
@@ -76,6 +76,7 @@ contract SetUp is Test {
     TheiaUUIDKeeper theiaUUIDKeeper;
     TheiaRouterConfig theiaRouterConfig;
     TheiaRouter theiaRouter;
+    PoolDeployer pool;
     StagingVault stagingVault;
     TheiaRewards theiaRewards;
 
@@ -190,13 +191,20 @@ contract SetUp is Test {
 
         ve = IVotingEscrowUpgradable(address(veTheiaProxy));
 
+        pool = new PoolDeployer(
+            admin,
+            address(c3),
+            2,
+            gov,
+            address(weth)
+        );
 
         stagingVault = new StagingVault(
             admin,
             address(c3),
             1,
             gov,
-            address(usdc),
+            address(feeManager),
             address(weth),
             address(ve)
         );
@@ -236,6 +244,7 @@ contract SetUp is Test {
 
         stagingVault.setUp(
             address(ve),
+            address(pool),
             address(theiaRewards)
         );
 

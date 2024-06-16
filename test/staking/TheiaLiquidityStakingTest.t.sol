@@ -5,8 +5,7 @@ import "forge-std/Test.sol";
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 
-import {USDC} from "contracts/mock/USDC.sol";
-import {DAI} from "contracts/mock/DAI.sol";
+import {USDC, DAI} from "contracts/mock/ERC20.sol";
 import {WETH} from "contracts/mock/WETH.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -20,6 +19,7 @@ import {TheiaRouterConfig} from "contracts/routerV2/TheiaRouterConfig.sol";
 import {TheiaRouter} from "contracts/routerV2/TheiaRouter.sol";
 import {TheiaERC20} from "contracts/routerV2/TheiaERC20.sol";
 import {ITheiaERC20} from "contracts/routerV2/ITheiaERC20.sol";
+import {PoolDeployer} from "contracts/routerV2/PoolDeployer.sol";
 import {StagingVault} from "contracts/routerV2/StagingVault.sol";
 import {IStagingVault} from "contracts/routerV2/IStagingVault.sol";
 import {IVotingEscrow, VotingEscrow} from "contracts/routerV2/VeTHEIA.sol";
@@ -74,6 +74,7 @@ contract SetUp is Test {
     TheiaUUIDKeeper theiaUUIDKeeper;
     TheiaRouterConfig theiaRouterConfig;
     TheiaRouter theiaRouter;
+    PoolDeployer pool;
     StagingVault stagingVault;
     TheiaRewards theiaRewards;
 
@@ -115,6 +116,8 @@ contract SetUp is Test {
         user1 = vm.addr(privKey2);
         treasury = vm.addr(privKey3);
 
+        vm.startPrank(admin);
+
         usdc = new USDC();
         dai = new DAI();
         weth = new WETH();
@@ -151,11 +154,21 @@ contract SetUp is Test {
             admin,
             dappId
         );
+
+        vm.stopPrank();
         
 
         vm.startPrank(gov);
         theiaRouter.setDelay(0);
         feeManager.addFeeToken(address(usdc));
+        feeManager.addFeeToken(address(dai));
+        address[] memory feeList = new address[](2);
+        feeList[0] = address(usdc);
+        feeList[1] = address(dai);
+        uint256[] memory baseFees = new uint256[](2);
+        baseFees[0] = 1e8;
+        baseFees[1] = 1e8;
+        feeManager.setFeeConfig(cID(), cID(), 2, feeList, baseFees);
         theiaUUIDKeeper.addSupportedCaller(address(theiaRouter));
         vm.stopPrank();
 
@@ -245,8 +258,10 @@ contract SetUp is Test {
             treasury
         );
 
+
         stagingVault.setUp(
             address(ve),
+            address(pool),
             address(theiaRewards)
         );
         vm.stopPrank();
@@ -256,6 +271,7 @@ contract SetUp is Test {
         daiBal = 100000*10**dai.decimals();
 
         vm.startPrank(admin);
+        //console.log("admin bal USDC = ", usdc.balanceOf(address(admin))/1e6);
         usdc.transfer(user1, usdcBal);
         dai.transfer(user1, daiBal);
 
@@ -324,6 +340,10 @@ contract SetUp is Test {
             return 10 + byteValue - uint8(bytes1('A'));
         }
         revert("Invalid hex character");
+    }
+
+    function cID() view internal returns(uint256) {
+        return block.chainid;
     }
 
 }
@@ -399,7 +419,6 @@ contract TestTheiaStaking is SetUp {
         vm.startPrank(gov);
         stagingVault.addRewardToken(
             tokenSymbol,
-            tokenStr,
             standardRewardRate,
             chainIdStr,
             rateFactor,
@@ -469,7 +488,6 @@ contract TestTheiaStaking is SetUp {
         vm.startPrank(gov);
         stagingVault.addRewardToken(
             tokenSymbol,
-            tokenStr,
             standardRewardRate,
             chainIdStr,
             rateFactor,
