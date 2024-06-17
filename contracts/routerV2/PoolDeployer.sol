@@ -33,6 +33,7 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
     mapping(string => mapping(string => string)) public symbolToToken; // On veTHIEA chain: liquidity symbol => toChainId => token address
     mapping(string => mapping(string => string)) public tokenToSymbol; // On veTHIEA chain: token address => tochainId => liquidity symbol
     mapping(string => mapping(string => string)) public underlyingByChainId; // All chains: underlying asset => chainIdStr => token address
+    mapping(string => mapping(string => string)) public symbolToUnderlying; // On veTHEIA chain: token symbol => chainIdStr => underlying asset string 
 
     event LogFallback(bytes4 selector, bytes data, bytes reason);
     event LogNewTheiaFallBack(
@@ -84,12 +85,19 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         string memory toChainIdStr;
         string memory targetStr;
         uint256 len = _chainIds.length;
+        require(
+            (len == _decimals.length)
+            && (len == _underlying.length)
+            && (len == _targets.length),
+            "Theia PoolDeployer: Input argument lengths are not equal"
+        );
         string memory chainIdStr;
         string memory underlyingStr;
 
         for (uint256 i=0; i< len; i++) {
             chainIdStr = _chainIds[i].toHexString();
             underlyingStr = _underlying[i].toHexString();
+            // ensure that this underlying asset on this chain is not being currently used by a theia token
             require(bytes(underlyingByChainId[underlyingStr][chainIdStr]).length == 0,
                 "Theia PoolDeployer: Underlying asset of this chain is already assigned to a theia pool token"
             );
@@ -198,6 +206,29 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         symbolToToken[_symbol][_fromChainId] = _tokenStr;
         tokenToSymbol[_tokenStr][_fromChainId] = _symbol;
         underlyingByChainId[_underlyingStr][_fromChainId] = _tokenStr;
+        symbolToUnderlying[_symbol][_fromChainId] = _underlyingStr;
+    }
+
+    function removeTheiaTokenChainId(
+        string memory _symbol,
+        string[] memory _chainIdsStr
+    ) external onlyGov {
+        uint256 len = _chainIdsStr.length;
+        string memory chainIdStr;
+        string memory tokenStr;
+        string memory underlyingStr;
+
+        for (uint256 i = 0; i<len; i++) {
+            chainIdStr = _toLower(_chainIdsStr[i]);
+            tokenStr = symbolToToken[_symbol][chainIdStr];
+            if(bytes(tokenStr).length > 0) {
+                underlyingStr = symbolToUnderlying[_symbol][chainIdStr];
+                symbolToToken[_symbol][chainIdStr] = "";
+                tokenToSymbol[tokenStr][chainIdStr] = "";
+                symbolToUnderlying[_symbol][chainIdStr] = "";
+                underlyingByChainId[underlyingStr][chainIdStr] = "";
+            }
+        }
     }
 
     function _c3Fallback(
