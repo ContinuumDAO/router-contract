@@ -32,13 +32,24 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
 
     mapping(string => mapping(string => string)) public symbolToToken; // On veTHIEA chain: liquidity symbol => toChainId => token address
     mapping(string => mapping(string => string)) public tokenToSymbol; // On veTHIEA chain: token address => tochainId => liquidity symbol
+    mapping(string => mapping(string => string)) public underlyingByChainId; // All chains: underlying asset => chainIdStr => token address
 
     event LogFallback(bytes4 selector, bytes data, bytes reason);
     event LogNewTheiaFallBack(
-            string chainIdStr,
+            string fromTargetStr,
             string name,
             string symbol,
-            string underlyingStr
+            string underlyingStr,
+            bytes reason
+    );
+    event DeployTheia(
+        string _name, 
+        string _symbol, 
+        uint8 _decimals, 
+        string underlying, 
+        string router, 
+        string fromChainIdStr, 
+        string sourceTx
     );
 
     bytes4 public FuncDeployTheia =
@@ -62,19 +73,26 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         uint8[] memory _decimals,
         address[] memory _underlying,
         uint256[] memory _chainIds,
+        address[] memory _targets,
         bytes32 _salt,
         address[] memory _router
     ) onlyGov external {
         address theia;
-        string memory fromTargetStr = cID().toHexString();
+        string memory fromTargetStr = address(this).toHexString();
         string memory funcCall = "deployTheia(string,string,string,uint8,string,bytes32,string)";
-        string memory targetStr;
+        
         string memory toChainIdStr;
-
+        string memory targetStr;
         uint256 len = _chainIds.length;
+        string memory chainIdStr;
+        string memory underlyingStr;
 
         for (uint256 i=0; i< len; i++) {
-            
+            chainIdStr = _chainIds[i].toHexString();
+            underlyingStr = _underlying[i].toHexString();
+            require(bytes(underlyingByChainId[underlyingStr][chainIdStr]).length == 0,
+                "Theia PoolDeployer: Underlying asset of this chain is already assigned to a theia pool token"
+            );
             if(_chainIds[i] == cID()) {
                 theia = address(new TheiaERC20{salt: _salt}(
                     _name,
@@ -83,8 +101,17 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
                     _underlying[i],
                     _router[i]
                 ));
+                _registerNewTheiaLocal(
+                    cID().toString(),
+                    _toLower(theia.toHexString()),
+                    _name,
+                    _symbol,
+                    _decimals[i],
+                    underlyingStr
+                );
             } else {
-                toChainIdStr = cID().toHexString();
+                targetStr = _targets[i].toHexString();
+                toChainIdStr = _chainIds[i].toHexString();
                 bytes memory callData = abi.encodeWithSignature(
                     funcCall,
                     fromTargetStr,
@@ -92,6 +119,7 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
                     _symbol,
                     _decimals[i],
                     _underlying[i].toHexString(),
+                    _salt,
                     _router[i].toHexString()
                 );
 
@@ -102,7 +130,7 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
     }
 
     function deployTheia(
-        string memory _fromChainIdStr,
+        string memory _fromTargetStr,
         string memory _name,
         string memory _symbol,
         uint8 _decimals,
@@ -110,6 +138,7 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         bytes32 _salt,
         string memory _routerStr
     ) external onlyAuth {
+        (, string memory fromChainIdStr, string memory sourceTx) = context();
         address underlying = stringToAddress(_underlyingStr);
         address router = stringToAddress(_routerStr);
 
@@ -121,7 +150,40 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
             router
         ));
 
-        theia = _toLower(theia);
+        string memory tokenStr = _toLower(theia.toHexString());
+        string memory funcCall = "registerNewTheia(string,string,string,string,uint8,string)";
+        bytes memory callData = abi.encodeWithSignature(
+                funcCall,
+                cID().toString(),
+                tokenStr,
+                _name,
+                _symbol,
+                _decimals,
+                _underlyingStr
+        );
+
+        c3call(_fromTargetStr, fromChainIdStr, callData);
+
+        emit DeployTheia(_name, _symbol, _decimals, _underlyingStr, _routerStr, fromChainIdStr, sourceTx);
+    }
+
+    function registerNewTheia(
+        string memory _fromChainId,
+        string memory _tokenStr,
+        string memory _name,
+        string memory _symbol,
+        uint8 _decimals,
+        string memory _underlyingStr
+    ) external onlyAuth {
+        (,, string memory sourceTx) = context();
+        _registerNewTheiaLocal(
+            _fromChainId,
+            _tokenStr,
+            _name,
+            _symbol,
+            _decimals,
+            _underlyingStr
+        );
     }
 
     function _registerNewTheiaLocal(
@@ -135,6 +197,7 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         if(!this.tokenSymbolExists(_symbol)) poolTokenSymbols.push(_symbol);
         symbolToToken[_symbol][_fromChainId] = _tokenStr;
         tokenToSymbol[_tokenStr][_fromChainId] = _symbol;
+        underlyingByChainId[_underlyingStr][_fromChainId] = _tokenStr;
     }
 
     function _c3Fallback(
@@ -143,7 +206,7 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         bytes calldata _reason
     ) internal override returns (bool) {
 
-        string memory fromChainIdStr;
+        string memory fromTargetStr;
         string memory name;
         string memory symbol;
         uint8 decimals;
@@ -152,15 +215,16 @@ contract PoolDeployer is IPoolDeployer, GovernDapp {
         string memory routerStr;
 
         if (_selector == FuncDeployTheia) {
-            (fromChainIdStr, name, symbol, decimals, underlyingStr, salt, routerStr) = abi.decode(
+            (fromTargetStr, name, symbol, decimals, underlyingStr, salt, routerStr) = abi.decode(
                 _data,
                 (string, string, string, uint8, string, bytes32, string)
             );
             emit LogNewTheiaFallBack(
-                fromChainIdStr,
+                fromTargetStr,
                 name,
                 symbol,
-                underlyingStr
+                underlyingStr,
+                _reason
             );
             
         } else {
