@@ -150,6 +150,7 @@ contract C3DappManager is C3GovClient, Pausable {
         emit SetDAppAddr(_subscribeID, _whitelist);
     }
 
+    // TODO add chains
     function addDappAddr(uint256 _dappID, string[] memory _whitelist) external {
         DappConfig memory config = dappConfig[_dappID];
 
