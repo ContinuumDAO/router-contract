@@ -12,8 +12,6 @@ npx hardhat run scripts/deploy.js
 
 ## deployment protocol
 ```
-npx hardhat verify --network bsc_test <address>
-
 npx hardhat run scripts/protocol/deploy.js --network
 
 // npx hardhat run scripts/protocol/addOperator.js --network
@@ -21,7 +19,7 @@ npx hardhat run scripts/protocol/deploy.js --network
 ```
 ## deployment router
 ```
-npx hardhat run scripts/theiaRouter/router.js --network
+npx hardhat run scripts/theiaRouter/router.js --network 
 
 npx hardhat erc20 --network bsc_test name symbol decimals underlying 
 
@@ -42,9 +40,16 @@ npx hardhat erc20 --network humanode_test theiaUSDT tUSDT 18 0x00000000000000000
 npx hardhat erc20 --network fire_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network avac_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network rari_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network bArtio theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network lukso_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network core_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
 insert mysql
+
+transfer native token to 0xEef3d3678E1E739C6522EEC209Bede0197791339
+
+config c3caller-relayer network in server
 
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network arb_test
 
@@ -55,6 +60,9 @@ npx hardhat run scripts/mock/deployMultiCall.js --network manta_test
 npx hardhat run scripts/mock/deployMultiCall.js --network fire_test
 npx hardhat run scripts/mock/deployMultiCall.js --network avac_test
 npx hardhat run scripts/mock/deployMultiCall.js --network rari_test
+npx hardhat run scripts/mock/deployMultiCall.js --network bArtio
+npx hardhat run scripts/mock/deployMultiCall.js --network lukso_test
+npx hardhat run scripts/mock/deployMultiCall.js --network core_test
 
 
 

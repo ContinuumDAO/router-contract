@@ -75,12 +75,33 @@ async function main() {
             console.log("SendParam proxy:", evn[networkName.toUpperCase()].C3Governor, "nonce", web3.utils.randomHex(32), "0x" +
                 govProposalData.methods.genProposalData(chainId, TheiaSwapIDKeeper.target, calldata).encodeABI().substring(10))
         } else {
-            await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
+            let isCaller = await TheiaSwapIDKeeper.isSupportedCaller(TheiaRouter.target)
+            console.log("TheiaSwapIDKeeper.isSupportedCaller:", isCaller)
+            if (!isCaller) {
+                await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
+            }
 
-            await TheiaRouter.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
-            await FeeManager.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
-            await TheiaSwapIDKeeper.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
-            await aRouterConfig.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            isCaller = await TheiaRouter.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            console.log("TheiaRouter.isVaildSender:", isCaller)
+            if (!isCaller) {
+                await TheiaRouter.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            }
+            isCaller = await FeeManager.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            console.log("FeeManager.isVaildSender:", isCaller)
+            if (!isCaller) {
+                await FeeManager.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            }
+
+            isCaller = await TheiaSwapIDKeeper.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            console.log("TheiaSwapIDKeeper.isVaildSender:", isCaller)
+            if (!isCaller) {
+                await TheiaSwapIDKeeper.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            }
+            isCaller = await aRouterConfig.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            console.log("RouterConfig.isVaildSender:", isCaller)
+            if (!isCaller) {
+                await aRouterConfig.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            }
 
             console.log("addTxSender", "0xEef3d3678E1E739C6522EEC209Bede0197791339")
         }

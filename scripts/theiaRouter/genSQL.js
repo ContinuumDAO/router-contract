@@ -76,29 +76,29 @@ async function main() {
     `)
 
 
-    const tokensContents = fs.readFileSync('output/ERC20.txt', 'utf-8');
+    // const tokensContents = fs.readFileSync('output/ERC20.txt', 'utf-8');
 
-    tokensContents.split(/\r?\n/).forEach(line => {
-        if (line.length == 0) {
-            return;
-        }
-        const args = JSON.parse(line);
-        if (args.chainId == chainId) {
-            console.log(`
-            INSERT INTO token_config (chain_id, token_name, token_symbol, decimals, address, underlying_token, contract_version, router_address, is_check) VALUES (
-                '${args.chainId}',
-                '${args.name}',
-                '${args.symbol}',
-                 ${args.decimals},
-                '${args.address}',
-                '${args.underlying}',
-                'V1',
-                '${args.router}',
-                0
-            );`);
-        }
+    // tokensContents.split(/\r?\n/).forEach(line => {
+    //     if (line.length == 0) {
+    //         return;
+    //     }
+    //     const args = JSON.parse(line);
+    //     if (args.chainId == chainId) {
+    //         console.log(`
+    //         INSERT INTO token_config (chain_id, token_name, token_symbol, decimals, address, underlying_token, contract_version, router_address, is_check) VALUES (
+    //             '${args.chainId}',
+    //             '${args.name}',
+    //             '${args.symbol}',
+    //              ${args.decimals},
+    //             '${args.address}',
+    //             '${args.underlying}',
+    //             'V1',
+    //             '${args.router}',
+    //             0
+    //         );`);
+    //     }
 
-    });
+    // });
 
 }
 

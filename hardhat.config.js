@@ -16,7 +16,10 @@ const {
   HUMANODE_TEST,
   FIRE_TEST,
   AVAC_TEST,
-  RARI_TEST
+  RARI_TEST,
+  BARTIO,
+  LUKSO_TEST,
+  CORE_TEST,
 } = require("./output/env.json")
 
 
@@ -123,6 +126,21 @@ module.exports = {
       url: RARI_TEST.URL,
       chainId: 1918988905,
       accounts: [RARI_TEST.DEPLOY_KEY]
+    },
+    bArtio: {
+      url: BARTIO.URL,
+      chainId: BARTIO.CHAINID,
+      accounts: [BARTIO.DEPLOY_KEY]
+    },
+    lukso_test: {
+      url: LUKSO_TEST.URL,
+      chainId: LUKSO_TEST.CHAINID,
+      accounts: [LUKSO_TEST.DEPLOY_KEY]
+    },
+    core_test: {
+      url: CORE_TEST.URL,
+      chainId: CORE_TEST.CHAINID,
+      accounts: [CORE_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {
