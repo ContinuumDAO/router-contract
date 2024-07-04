@@ -106,8 +106,8 @@ contract C3Caller is IC3Caller, C3GovClient, Pausable {
         require(_toChainIDs.length > 0, "C3Caller: empty toChainID");
         require(_data.length > 0, "C3Caller: empty calldata");
         require(
-            _data.length == _toChainIDs.length,
-            "C3Caller: calldata length dismatch"
+            _to.length == _toChainIDs.length,
+            "C3Caller: tochains length dismatch"
         );
 
         for (uint256 i = 0; i < _toChainIDs.length; i++) {
