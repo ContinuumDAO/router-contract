@@ -45,9 +45,9 @@ contract C3GovClient is Initializable {
 
     function applyGov() external {
         require(pendingGov != address(0), "C3Gov: empty pendingGov");
+        emit ApplyGov(gov, pendingGov, block.timestamp);
         gov = pendingGov;
         pendingGov = address(0);
-        emit ApplyGov(gov, pendingGov, block.timestamp);
     }
 
     function _addOperator(address op) internal {
