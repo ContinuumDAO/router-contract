@@ -29,8 +29,8 @@ describe("TheiaRouter", function () {
         const TheiaCallData = await ethers.getContractFactory("TheiaCallData");
         theiaCallData = await TheiaCallData.deploy();
 
-        const TheiaSwapIDKeeper = await ethers.getContractFactory("TheiaUUIDKeeper");
-        swapIDKeeper = await TheiaSwapIDKeeper.deploy(address_zero, c3CallerProxy.target, _owner.address, dappID);
+        const TheiaUUIDKeeper = await ethers.getContractFactory("TheiaUUIDKeeper");
+        swapIDKeeper = await TheiaUUIDKeeper.deploy(address_zero, c3CallerProxy.target, _owner.address, dappID);
 
         const TheiaRouterConfig = await ethers.getContractFactory("TheiaRouterConfig");
         theiaRouterConfig = await TheiaRouterConfig.deploy(address_zero, c3CallerProxy.target, _owner.address, dappID);

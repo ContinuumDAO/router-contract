@@ -13,12 +13,12 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    const TheiaSwapIDKeeper = await hre.ethers.getContractAt("TheiaSwapIDKeeper", evn[networkName.toUpperCase()].TheiaSwapIDKeeper);
+    const TheiaUUIDKeeper = await hre.ethers.getContractAt("TheiaUUIDKeeper", evn[networkName.toUpperCase()].TheiaUUIDKeeper);
     const TheiaRouter = await hre.ethers.getContractAt("TheiaRouter", evn[networkName.toUpperCase()].TheiaRouter);
     const aRouterConfig = await hre.ethers.getContractAt("TheiaRouterConfig", evn[networkName.toUpperCase()].TheiaRouterConfig);
 
 
-    console.log("TheiaSwapIDKeeper SupportedCaller:", await TheiaSwapIDKeeper.isSupportedCaller(TheiaRouter.target));
+    console.log("TheiaUUIDKeeper SupportedCaller:", await TheiaUUIDKeeper.isSupportedCaller(TheiaRouter.target));
 }
 
 main().catch((error) => {

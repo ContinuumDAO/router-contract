@@ -36,14 +36,14 @@ async function main() {
     }
     console.log('"TheiaRouterConfig":', `"${aRouterConfig.target}",`);
 
-    let TheiaSwapIDKeeper = evn[networkName.toUpperCase()].TheiaSwapIDKeeper
-    if (!TheiaSwapIDKeeper) {
-        TheiaSwapIDKeeper = await hre.ethers.deployContract("TheiaUUIDKeeper", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
-        await TheiaSwapIDKeeper.waitForDeployment();
+    let TheiaUUIDKeeper = evn[networkName.toUpperCase()].TheiaUUIDKeeper
+    if (!TheiaUUIDKeeper) {
+        TheiaUUIDKeeper = await hre.ethers.deployContract("TheiaUUIDKeeper", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
+        await TheiaUUIDKeeper.waitForDeployment();
     } else {
-        TheiaSwapIDKeeper = await hre.ethers.getContractAt("TheiaUUIDKeeper", evn[networkName.toUpperCase()].TheiaSwapIDKeeper);
+        TheiaUUIDKeeper = await hre.ethers.getContractAt("TheiaUUIDKeeper", evn[networkName.toUpperCase()].TheiaUUIDKeeper);
     }
-    console.log('"TheiaSwapIDKeeper":', `"${TheiaSwapIDKeeper.target}",`);
+    console.log('"TheiaUUIDKeeper":', `"${TheiaUUIDKeeper.target}",`);
 
     let FeeManager = evn[networkName.toUpperCase()].FeeManager
     if (!FeeManager) {
@@ -56,7 +56,7 @@ async function main() {
 
     let TheiaRouter = evn[networkName.toUpperCase()].TheiaRouter
     if (!TheiaRouter) {
-        TheiaRouter = await hre.ethers.deployContract("TheiaRouter", [evn[networkName.toUpperCase()].wNATIVE, TheiaSwapIDKeeper.target, aRouterConfig.target,
+        TheiaRouter = await hre.ethers.deployContract("TheiaRouter", [evn[networkName.toUpperCase()].wNATIVE, TheiaUUIDKeeper.target, aRouterConfig.target,
         FeeManager.target, gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
         await TheiaRouter.waitForDeployment();
     } else {
@@ -73,12 +73,12 @@ async function main() {
 
             let govProposalData = new web3.eth.Contract(GovABI);
             console.log("SendParam proxy:", evn[networkName.toUpperCase()].C3Governor, "nonce", web3.utils.randomHex(32), "0x" +
-                govProposalData.methods.genProposalData(chainId, TheiaSwapIDKeeper.target, calldata).encodeABI().substring(10))
+                govProposalData.methods.genProposalData(chainId, TheiaUUIDKeeper.target, calldata).encodeABI().substring(10))
         } else {
-            let isCaller = await TheiaSwapIDKeeper.isSupportedCaller(TheiaRouter.target)
-            console.log("TheiaSwapIDKeeper.isSupportedCaller:", isCaller)
+            let isCaller = await TheiaUUIDKeeper.isSupportedCaller(TheiaRouter.target)
+            console.log("TheiaUUIDKeeper.isSupportedCaller:", isCaller)
             if (!isCaller) {
-                await TheiaSwapIDKeeper.addSupportedCaller(TheiaRouter.target)
+                await TheiaUUIDKeeper.addSupportedCaller(TheiaRouter.target)
             }
 
             isCaller = await TheiaRouter.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
@@ -92,10 +92,10 @@ async function main() {
                 await FeeManager.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
             }
 
-            isCaller = await TheiaSwapIDKeeper.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
-            console.log("TheiaSwapIDKeeper.isVaildSender:", isCaller)
+            isCaller = await TheiaUUIDKeeper.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+            console.log("TheiaUUIDKeeper.isVaildSender:", isCaller)
             if (!isCaller) {
-                await TheiaSwapIDKeeper.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
+                await TheiaUUIDKeeper.addTxSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
             }
             isCaller = await aRouterConfig.isVaildSender("0xEef3d3678E1E739C6522EEC209Bede0197791339")
             console.log("RouterConfig.isVaildSender:", isCaller)
@@ -111,15 +111,15 @@ async function main() {
 
     upData(networkName.toUpperCase(), {
         "FeeManager": FeeManager.target,
-        "TheiaSwapIDKeeper": TheiaSwapIDKeeper.target,
+        "TheiaUUIDKeeper": TheiaUUIDKeeper.target,
         "TheiaRouter": TheiaRouter.target,
         "TheiaRouterConfig": aRouterConfig.target
     })
 
     console.log(`npx hardhat verify --network ${networkName} ${FeeManager.target} ${gov} ${evn[networkName.toUpperCase()].C3CallerProxy} ${signer.address} 1`);
     console.log(`npx hardhat verify --network ${networkName} ${aRouterConfig.target} ${gov} ${evn[networkName.toUpperCase()].C3CallerProxy} ${signer.address} 1`);
-    console.log(`npx hardhat verify --network ${networkName} ${TheiaSwapIDKeeper.target} ${gov} ${evn[networkName.toUpperCase()].C3CallerProxy} ${signer.address} 1`);
-    console.log(`npx hardhat verify --network ${networkName} ${TheiaRouter.target} ${evn[networkName.toUpperCase()].wNATIVE} ${TheiaSwapIDKeeper.target} ${aRouterConfig.target} ${FeeManager.target} ${gov} ${evn[networkName.toUpperCase()].C3CallerProxy} ${signer.address} 1`);
+    console.log(`npx hardhat verify --network ${networkName} ${TheiaUUIDKeeper.target} ${gov} ${evn[networkName.toUpperCase()].C3CallerProxy} ${signer.address} 1`);
+    console.log(`npx hardhat verify --network ${networkName} ${TheiaRouter.target} ${evn[networkName.toUpperCase()].wNATIVE} ${TheiaUUIDKeeper.target} ${aRouterConfig.target} ${FeeManager.target} ${gov} ${evn[networkName.toUpperCase()].C3CallerProxy} ${signer.address} 1`);
 
     await hre.run("verify:verify", {
         address: FeeManager.target,
@@ -134,7 +134,7 @@ async function main() {
     });
 
     await hre.run("verify:verify", {
-        address: TheiaSwapIDKeeper.target,
+        address: TheiaUUIDKeeper.target,
         contract: "contracts/routerV2/TheiaUUIDKeeper.sol:TheiaUUIDKeeper",
         constructorArguments: [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1],
     });
@@ -142,7 +142,7 @@ async function main() {
     await hre.run("verify:verify", {
         address: TheiaRouter.target,
         contract: "contracts/routerV2/TheiaRouter.sol:TheiaRouter",
-        constructorArguments: [evn[networkName.toUpperCase()].wNATIVE, TheiaSwapIDKeeper.target, aRouterConfig.target,
+        constructorArguments: [evn[networkName.toUpperCase()].wNATIVE, TheiaUUIDKeeper.target, aRouterConfig.target,
         FeeManager.target, gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1],
     });
 

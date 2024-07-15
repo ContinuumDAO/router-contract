@@ -20,6 +20,11 @@ const {
   BARTIO,
   LUKSO_TEST,
   CORE_TEST,
+  HOLESKY,
+  BITLAYER_TEST,
+  CRONOS_TEST,
+  BASE_SEPOLIA,
+  CFX_ESPACE
 } = require("./output/env.json")
 
 
@@ -141,6 +146,31 @@ module.exports = {
       url: CORE_TEST.URL,
       chainId: CORE_TEST.CHAINID,
       accounts: [CORE_TEST.DEPLOY_KEY]
+    },
+    holesky: {
+      url: HOLESKY.URL,
+      chainId: HOLESKY.CHAINID,
+      accounts: [HOLESKY.DEPLOY_KEY]
+    },
+    bitlayer_test: {
+      url: BITLAYER_TEST.URL,
+      chainId: BITLAYER_TEST.CHAINID,
+      accounts: [BITLAYER_TEST.DEPLOY_KEY]
+    },
+    cronos_test: {
+      url: CRONOS_TEST.URL,
+      chainId: CRONOS_TEST.CHAINID,
+      accounts: [CRONOS_TEST.DEPLOY_KEY]
+    },
+    base_sepolia: {
+      url: BASE_SEPOLIA.URL,
+      chainId: BASE_SEPOLIA.CHAINID,
+      accounts: [BASE_SEPOLIA.DEPLOY_KEY]
+    },
+    cfx_espace: {
+      url: CFX_ESPACE.URL,
+      chainId: CFX_ESPACE.CHAINID,
+      accounts: [CFX_ESPACE.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -151,6 +181,7 @@ module.exports = {
       sonic: SONIC.API_KEY,
       arb_test: ARB_TEST.API_KEY,
       avalancheFujiTestnet: AVAC_TEST.API_KEY,
+      cronos_test: CRONOS_TEST.API_KEY
     },
     customChains: [
       {
@@ -167,6 +198,14 @@ module.exports = {
         urls: {
           apiURL: "https://api-sepolia.arbiscan.io/api",
           browserURL: "https://sepolia.arbiscan.io/",
+        }
+      },
+      {
+        network: "cronos_test",
+        chainId: CRONOS_TEST.CHAINID,
+        urls: {
+          apiURL: "https://explorer-api.cronos.org/testnet/api/v1/hardhat/contract?apikey=" + CRONOS_TEST.API_KEY,
+          browserURL: "http://explorer.cronos.org/testnet"
         }
       }
     ]

@@ -49,6 +49,10 @@ async function main() {
             continue
         }
         if (!tokens[args.name] || !tokens[args.name][args.chainId]) {
+            if (!evn[args.chain] || !evn[args.chain].FeeManager) {
+                console.log(args.chain, " unexpected config, skipping")
+                continue
+            }
             // let feeToken = args.underlying
             // if (feeToken == "0x0000000000000000000000000000000000000000") {
             //     feeToken = args.address

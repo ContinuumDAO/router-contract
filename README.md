@@ -43,6 +43,11 @@ npx hardhat erc20 --network rari_test theiaUSDT tUSDT 18 0x000000000000000000000
 npx hardhat erc20 --network bArtio theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network lukso_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network core_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network holesky theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network bitlayer theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network cronos_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network base_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network cfx_espace theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
 insert mysql
@@ -63,8 +68,11 @@ npx hardhat run scripts/mock/deployMultiCall.js --network rari_test
 npx hardhat run scripts/mock/deployMultiCall.js --network bArtio
 npx hardhat run scripts/mock/deployMultiCall.js --network lukso_test
 npx hardhat run scripts/mock/deployMultiCall.js --network core_test
-
-
+npx hardhat run scripts/mock/deployMultiCall.js --network holesky
+npx hardhat run scripts/mock/deployMultiCall.js --network bitlayer
+npx hardhat run scripts/mock/deployMultiCall.js --network cronos_test
+npx hardhat run scripts/mock/deployMultiCall.js --network base_sepolia
+npx hardhat run scripts/mock/deployMultiCall.js --network cfx_espace
 
 ```
 
