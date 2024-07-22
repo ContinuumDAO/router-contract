@@ -15,13 +15,20 @@ async function main() {
 
     console.log("wNATIVE", evn[networkName.toUpperCase()].wNATIVE);
 
+    let feeData = await hre.ethers.provider.getFeeData()
+    console.log("feeData", feeData);
+
     const [signer] = await ethers.getSigners()
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
+    if (chainId == 5611) {//opbnb_test
+        delete feeData["gasPrice"]
+    }
+
     let c3SwapIDKeeper
     if (!evn[networkName.toUpperCase()].C3UUIDKeeper) {
-        c3SwapIDKeeper = await hre.ethers.deployContract("contracts/protocol/C3UUIDKeeper.sol:C3UUIDKeeper", []);
+        c3SwapIDKeeper = await hre.ethers.deployContract("contracts/protocol/C3UUIDKeeper.sol:C3UUIDKeeper", [], feeData);
         await c3SwapIDKeeper.waitForDeployment();
     } else {
         c3SwapIDKeeper = await hre.ethers.getContractAt("contracts/protocol/C3UUIDKeeper.sol:C3UUIDKeeper", evn[networkName.toUpperCase()].C3UUIDKeeper);
@@ -30,7 +37,7 @@ async function main() {
 
     let c3Caller
     if (!evn[networkName.toUpperCase()].C3Caller) {
-        c3Caller = await hre.ethers.deployContract("contracts/protocol/C3Caller.sol:C3Caller", [c3SwapIDKeeper.target]);
+        c3Caller = await hre.ethers.deployContract("contracts/protocol/C3Caller.sol:C3Caller", [c3SwapIDKeeper.target], feeData);
         await c3Caller.waitForDeployment();
     } else {
         c3Caller = await hre.ethers.getContractAt("contracts/protocol/C3Caller.sol:C3Caller", evn[networkName.toUpperCase()].C3Caller);
@@ -40,7 +47,7 @@ async function main() {
     let c3DappManager
     if (chainId == ARB) {
         if (!evn[networkName.toUpperCase()].C3DappManager) {
-            c3DappManager = await hre.ethers.deployContract("C3DappManager", []);
+            c3DappManager = await hre.ethers.deployContract("C3DappManager", [], feeData);
             await c3DappManager.waitForDeployment();
         } else {
             c3DappManager = await hre.ethers.getContractAt("C3DappManager", evn[networkName.toUpperCase()].C3DappManager);
@@ -57,7 +64,7 @@ async function main() {
         c3CallerProxy = await hre.upgrades.deployProxy(
             C3CallerProxy,
             [c3Caller.target],
-            { initializer: 'initialize', kind: 'uups' }
+            { initializer: 'initialize', kind: 'uups', txOverrides: feeData }
         );
         await c3CallerProxy.waitForDeployment();
     } else {
@@ -74,7 +81,7 @@ async function main() {
 
     let c3governor
     if (!evn[networkName.toUpperCase()].C3Governor) {
-        c3governor = await hre.ethers.deployContract("contracts/protocol/C3Governor.sol:C3Governor", []);
+        c3governor = await hre.ethers.deployContract("contracts/protocol/C3Governor.sol:C3Governor", [], feeData);
         await c3governor.waitForDeployment();
     } else {
         c3governor = await hre.ethers.getContractAt("contracts/protocol/C3Governor.sol:C3Governor", evn[networkName.toUpperCase()].C3Governor);
@@ -91,21 +98,21 @@ async function main() {
     })
 
     try {
-        await c3SwapIDKeeper.addOperator(c3Caller.target)
+        await c3SwapIDKeeper.addOperator(c3Caller.target, feeData)
         console.log(`c3SwapIDKeeper addOperator success ${c3Caller.target}`);
     } catch (error) {
         console.log(error)
     }
     try {
         // add c3CallerProxy to Operator
-        await c3Caller.addOperator(currentImplAddress)
+        await c3Caller.addOperator(currentImplAddress, feeData)
         console.log(`c3Caller addOperator success ${currentImplAddress}`);
     } catch (error) {
         console.log(error)
     }
     try {
         // for real call
-        await c3Caller.addOperator(c3CallerProxy.target)
+        await c3Caller.addOperator(c3CallerProxy.target, feeData)
 
         console.log(`c3Caller addOperator success ${c3CallerProxy.target}`);
     } catch (error) {
@@ -116,11 +123,19 @@ async function main() {
         try {
             const element = evn.mpcList[index];
             console.log(`c3Caller addOperator ${element.addr} ...`);
-            await c3Caller.addOperator(element.addr)
-
-            await c3CallerProxy.addOperator(element.addr)
-
+            await c3Caller.addOperator(element.addr, feeData)
             console.log(`c3Caller addOperator success ${element.addr}`);
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    for (let index = 0; index < evn.mpcList.length; index++) {
+        try {
+            const element = evn.mpcList[index];
+            console.log(`c3CallerProxy addOperator ${element.addr} ...`);
+            await c3CallerProxy.addOperator(element.addr, feeData)
+            console.log(`c3CallerProxy addOperator success ${element.addr}`);
         } catch (error) {
             console.log(error)
         }

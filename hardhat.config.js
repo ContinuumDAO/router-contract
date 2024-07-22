@@ -24,7 +24,8 @@ const {
   BITLAYER_TEST,
   CRONOS_TEST,
   BASE_SEPOLIA,
-  CFX_ESPACE
+  CFX_ESPACE,
+  OPBNB_TEST,
 } = require("./output/env.json")
 
 
@@ -171,6 +172,11 @@ module.exports = {
       url: CFX_ESPACE.URL,
       chainId: CFX_ESPACE.CHAINID,
       accounts: [CFX_ESPACE.DEPLOY_KEY]
+    },
+    opbnb_test: {
+      url: OPBNB_TEST.URL,
+      chainId: OPBNB_TEST.CHAINID,
+      accounts: [OPBNB_TEST.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -181,7 +187,8 @@ module.exports = {
       sonic: SONIC.API_KEY,
       arb_test: ARB_TEST.API_KEY,
       avalancheFujiTestnet: AVAC_TEST.API_KEY,
-      cronos_test: CRONOS_TEST.API_KEY
+      cronos_test: CRONOS_TEST.API_KEY,
+      opbnb: OPBNB_TEST.API_KEY,
     },
     customChains: [
       {
@@ -207,7 +214,18 @@ module.exports = {
           apiURL: "https://explorer-api.cronos.org/testnet/api/v1/hardhat/contract?apikey=" + CRONOS_TEST.API_KEY,
           browserURL: "http://explorer.cronos.org/testnet"
         }
-      }
+      },
+      {
+        network: "opbnb",
+        chainId: 5611, // Replace with the correct chainId for the "opbnb" network
+        urls: {
+          // apiURL:
+          //   `https://open-platform.nodereal.io/${OPBNB_TEST.API_KEY}/op-bnb-testnet/contract/`,
+          // browserURL: "https://testnet.opbnbscan.com/",
+          apiURL:"https://api-opbnb-testnet.bscscan.com/api",
+          browserURL:"https://opbnb-testnet.bscscan.com/"
+        },
+      },
     ]
   }
 };
