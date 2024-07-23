@@ -6,6 +6,11 @@ async function deploy(args, hre) {
 
     const [signer] = await ethers.getSigners()
     console.log(args, evn[networkName].TheiaRouter, chainId, signer.address);
+    let feeData = await hre.ethers.provider.getFeeData()
+    console.log("feeData", feeData);
+    if (chainId == 5611) {//opbnb_test
+        delete feeData["gasPrice"]
+    }
 
     const TheiaERC20 = await hre.ethers.deployContract("TheiaERC20", [args.name, args.symbol, args.decimals, args.underlying, evn[networkName].TheiaRouter]);
     const theiaERC20 = await TheiaERC20.waitForDeployment();

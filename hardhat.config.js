@@ -189,6 +189,7 @@ module.exports = {
       avalancheFujiTestnet: AVAC_TEST.API_KEY,
       cronos_test: CRONOS_TEST.API_KEY,
       opbnb: OPBNB_TEST.API_KEY,
+      espaceTestnet: 'espace',
     },
     customChains: [
       {
@@ -216,14 +217,23 @@ module.exports = {
         }
       },
       {
+        //https://doc.confluxnetwork.org/docs/espace/tutorials/VerifyContracts
+        network: 'espaceTestnet',
+        chainId: 71,
+        urls: {
+          apiURL: 'https://evmapi-testnet.confluxscan.io/api/',
+          browserURL: 'https://evmtestnet.confluxscan.io/',
+        },
+      },
+      {
         network: "opbnb",
         chainId: 5611, // Replace with the correct chainId for the "opbnb" network
         urls: {
           // apiURL:
           //   `https://open-platform.nodereal.io/${OPBNB_TEST.API_KEY}/op-bnb-testnet/contract/`,
           // browserURL: "https://testnet.opbnbscan.com/",
-          apiURL:"https://api-opbnb-testnet.bscscan.com/api",
-          browserURL:"https://opbnb-testnet.bscscan.com/"
+          apiURL: "https://api-opbnb-testnet.bscscan.com/api",
+          browserURL: "https://opbnb-testnet.bscscan.com/"
         },
       },
     ]

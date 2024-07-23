@@ -144,6 +144,7 @@ async function main() {
     console.log(`npx hardhat verify --network ${networkName} ${c3SwapIDKeeper.target}`);
     console.log(`npx hardhat verify --network ${networkName} ${c3Caller.target} ${c3SwapIDKeeper.target}`);
     console.log(`npx hardhat verify --network ${networkName} ${c3DappManager.target} `);
+    console.log(`npx hardhat verify --network ${networkName} ${c3CallerProxy.target} ${currentImplAddress}`);
     console.log(`npx hardhat verify --network ${networkName} ${currentImplAddress}`);
     console.log(`npx hardhat verify --network ${networkName} ${c3governor.target}`);
 
