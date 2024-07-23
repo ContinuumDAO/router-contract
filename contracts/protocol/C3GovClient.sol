@@ -20,6 +20,8 @@ contract C3GovClient is Initializable {
         address indexed newGov,
         uint256 timestamp
     );
+
+    event AddOperator(address indexed op);
     modifier onlyGov() {
         require(msg.sender == gov, "C3Gov: only Gov");
         _;
@@ -55,6 +57,7 @@ contract C3GovClient is Initializable {
         require(!isOperator[op], "C3Caller: Operator already exists");
         isOperator[op] = true;
         operators.push(op);
+        emit AddOperator(op);
     }
 
     function addOperator(address _op) external onlyGov {

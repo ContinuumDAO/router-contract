@@ -8,7 +8,7 @@ async function deploy(args, hre) {
     console.log(args, evn[networkName].TheiaRouter, chainId, signer.address);
     let feeData = await hre.ethers.provider.getFeeData()
     console.log("feeData", feeData);
-    if (chainId == 5611) {//opbnb_test
+    if (feeData["maxFeePerGas"] && feeData["maxPriorityFeePerGas"]) {//opbnb_test
         delete feeData["gasPrice"]
     }
 

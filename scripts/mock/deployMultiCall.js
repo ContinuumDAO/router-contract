@@ -11,7 +11,7 @@ async function main() {
 
     let feeData = await hre.ethers.provider.getFeeData()
     console.log("feeData", feeData);
-    if (chainId == 5611) {//opbnb_test
+    if (feeData["maxFeePerGas"] && feeData["maxPriorityFeePerGas"]) {//opbnb_test
         delete feeData["gasPrice"]
     }
 

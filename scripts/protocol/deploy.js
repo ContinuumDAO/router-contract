@@ -22,7 +22,7 @@ async function main() {
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    if (chainId == 5611) {//opbnb_test
+    if (feeData["maxFeePerGas"] && feeData["maxPriorityFeePerGas"]) {//opbnb_test
         delete feeData["gasPrice"]
     }
 
@@ -133,8 +133,13 @@ async function main() {
     for (let index = 0; index < evn.mpcList.length; index++) {
         try {
             const element = evn.mpcList[index];
-            console.log(`c3CallerProxy addOperator ${element.addr} ...`);
-            await c3CallerProxy.addOperator(element.addr, feeData)
+            console.log(`c3CallerProxy addOperator ${element.addr.substring(2)} ...`);
+            // await c3CallerProxy.addOperator(element.addr, feeData)
+            await signer.sendTransaction({
+                to: c3CallerProxy.target,
+                value: 0,
+                data: "0x9870d7fe000000000000000000000000" + element.addr.substring(2)
+            })
             console.log(`c3CallerProxy addOperator success ${element.addr}`);
         } catch (error) {
             console.log(error)
