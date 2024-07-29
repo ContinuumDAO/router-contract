@@ -8,6 +8,7 @@ async function main() {
     const chainId = hre.network.config.chainId
     console.log("Deploy Network name=", networkName);
     console.log("Network chain id=", chainId);
+
     let web3 = new Web3(Web3.givenProvider);
     const [signer] = await ethers.getSigners()
     console.log("Deploying account:", signer.address);
@@ -32,6 +33,7 @@ async function main() {
         }
         // if (args.execChain == networkName) {
         tokens[key][args.execChain] = args;
+        console.log("set key:", key, args.execChain)
         // }
     });
 
@@ -53,11 +55,16 @@ async function main() {
         }
         const args = JSON.parse(line);
         let key = args.symbol + "-" + args.chainId
+
         for (let targetChainId in chainList) {
             let targetChain = chainList[targetChainId];
             if (!tokens[key] || !tokens[key][targetChain]) {
+                if (!evn[targetChain].TheiaRouterConfig) {
+                    console.log("targetChain ", targetChain, "TheiaRouterConfig is missing")
+                    continue
+                }
+                console.log("setTokenConfig:", args.symbol, args.chain, args.chainId, "to", targetChain, targetChainId)
                 let extra = "{\"underlying\":\"" + args.underlying + "\"}"
-
                 let govProposalData = new web3.eth.Contract(GovABI);
                 let artifact = await hre.artifacts.readArtifact('TheiaRouterConfig');
                 let contract = new web3.eth.Contract(artifact.abi);
@@ -68,8 +75,7 @@ async function main() {
                 }
                 let sendParamsData = "0x" + govProposalData.methods.genProposalData(ARB, evn["ARB_TEST"].TheiaRouterConfig, calldata).encodeABI().substring(10)
                 let nonce = web3.utils.randomHex(32)
-                console.log("setTokenConfig:", args.symbol, args.chain, args.chainId, "to", targetChain, targetChainId,
-                    "param:", nonce, sendParamsData)
+                console.log("param:", nonce, sendParamsData)
 
                 let tx = await c3governor.connect(signer).sendParams(sendParamsData, nonce)
                 if (!tokens[key]) {

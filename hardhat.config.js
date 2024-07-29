@@ -26,6 +26,8 @@ const {
   BASE_SEPOLIA,
   CFX_ESPACE,
   OPBNB_TEST,
+  POLYGON_AMOY,
+  ZKSYNC_SEPOLIA,
 } = require("./output/env.json")
 
 
@@ -177,6 +179,16 @@ module.exports = {
       url: OPBNB_TEST.URL,
       chainId: OPBNB_TEST.CHAINID,
       accounts: [OPBNB_TEST.DEPLOY_KEY]
+    },
+    polygon_amoy: {
+      url: POLYGON_AMOY.URL,
+      chainId: POLYGON_AMOY.CHAINID,
+      accounts: [POLYGON_AMOY.DEPLOY_KEY]
+    },
+    zksync_sepolia: {
+      url: ZKSYNC_SEPOLIA.URL,
+      chainId: ZKSYNC_SEPOLIA.CHAINID,
+      accounts: [ZKSYNC_SEPOLIA.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -190,6 +202,7 @@ module.exports = {
       cronos_test: CRONOS_TEST.API_KEY,
       opbnb: OPBNB_TEST.API_KEY,
       espaceTestnet: 'espace',
+      polygon_amoy: POLYGON_AMOY.API_KEY,
     },
     customChains: [
       {
@@ -236,6 +249,14 @@ module.exports = {
           browserURL: "https://opbnb-testnet.bscscan.com/"
         },
       },
+      {
+        network: "polygon_amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://rpc-amoy.polygon.technology/",
+          browserURL: "https://amoy.polygonscan.com/"
+        }
+      }
     ]
   }
 };

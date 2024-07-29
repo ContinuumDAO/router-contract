@@ -15,16 +15,24 @@ async function main() {
 
     console.log("wNATIVE", evn[networkName.toUpperCase()].wNATIVE);
 
-    let feeData = await hre.ethers.provider.getFeeData()
-    console.log("feeData", feeData);
+    let feeData
+    try {
+        feeData = await hre.ethers.provider.getFeeData()
+        console.log("feeData", feeData);
+        if (chainId == 5611) {//opbnb_test
+            delete feeData["gasPrice"]
+        } else {
+            delete feeData["maxFeePerGas"]
+            delete feeData["maxPriorityFeePerGas"]
+        }
+    } catch (error) {
+        console.log("getFeeDataError...")
+    }
 
     const [signer] = await ethers.getSigners()
     console.log("Deploying account:", signer.address);
     console.log("Account balance:", ethers.formatEther(await ethers.provider.getBalance(signer.address), "ETH"));
 
-    if (feeData["maxFeePerGas"] && feeData["maxPriorityFeePerGas"]) {//opbnb_test
-        delete feeData["gasPrice"]
-    }
 
     let c3SwapIDKeeper
     if (!evn[networkName.toUpperCase()].C3UUIDKeeper) {
