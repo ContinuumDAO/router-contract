@@ -20,6 +20,7 @@ async function main() {
 
     let feeData = await hre.ethers.provider.getFeeData()
     console.log("feeData", feeData);
+    delete feeData["gasPrice"]
 
     const [signer] = await ethers.getSigners()
     console.log("Deploying account:", signer.address);
@@ -32,7 +33,7 @@ async function main() {
 
     let aRouterConfig = evn[networkName.toUpperCase()].TheiaRouterConfig
     if (!aRouterConfig) {
-        aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
+        aRouterConfig = await hre.ethers.deployContract("TheiaRouterConfig", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1], feeData);
         await aRouterConfig.waitForDeployment();
     } else {
         aRouterConfig = await hre.ethers.getContractAt("TheiaRouterConfig", evn[networkName.toUpperCase()].TheiaRouterConfig);
@@ -41,7 +42,7 @@ async function main() {
 
     let TheiaUUIDKeeper = evn[networkName.toUpperCase()].TheiaUUIDKeeper
     if (!TheiaUUIDKeeper) {
-        TheiaUUIDKeeper = await hre.ethers.deployContract("TheiaUUIDKeeper", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
+        TheiaUUIDKeeper = await hre.ethers.deployContract("TheiaUUIDKeeper", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1], feeData);
         await TheiaUUIDKeeper.waitForDeployment();
     } else {
         TheiaUUIDKeeper = await hre.ethers.getContractAt("TheiaUUIDKeeper", evn[networkName.toUpperCase()].TheiaUUIDKeeper);
@@ -50,7 +51,7 @@ async function main() {
 
     let FeeManager = evn[networkName.toUpperCase()].FeeManager
     if (!FeeManager) {
-        FeeManager = await hre.ethers.deployContract("FeeManager", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
+        FeeManager = await hre.ethers.deployContract("FeeManager", [gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1], feeData);
         await FeeManager.waitForDeployment();
     } else {
         FeeManager = await hre.ethers.getContractAt("FeeManager", evn[networkName.toUpperCase()].FeeManager);
@@ -60,7 +61,7 @@ async function main() {
     let TheiaRouter = evn[networkName.toUpperCase()].TheiaRouter
     if (!TheiaRouter) {
         TheiaRouter = await hre.ethers.deployContract("TheiaRouter", [evn[networkName.toUpperCase()].wNATIVE, TheiaUUIDKeeper.target, aRouterConfig.target,
-        FeeManager.target, gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1]);
+        FeeManager.target, gov, evn[networkName.toUpperCase()].C3CallerProxy, signer.address, 1], feeData);
         await TheiaRouter.waitForDeployment();
     } else {
         TheiaRouter = await hre.ethers.getContractAt("TheiaRouter", evn[networkName.toUpperCase()].TheiaRouter);
@@ -82,29 +83,29 @@ async function main() {
             let isCaller = await TheiaUUIDKeeper.isSupportedCaller(TheiaRouter.target)
             console.log("TheiaUUIDKeeper.isSupportedCaller:", isCaller)
             if (!isCaller) {
-                await TheiaUUIDKeeper.addSupportedCaller(TheiaRouter.target)
+                await TheiaUUIDKeeper.addSupportedCaller(TheiaRouter.target, feeData)
             }
 
             isCaller = await TheiaRouter.isVaildSender(mpcaddr)
             console.log("TheiaRouter.isVaildSender:", isCaller)
             if (!isCaller) {
-                await TheiaRouter.addTxSender(mpcaddr)
+                await TheiaRouter.addTxSender(mpcaddr, feeData)
             }
             isCaller = await FeeManager.isVaildSender(mpcaddr)
             console.log("FeeManager.isVaildSender:", isCaller)
             if (!isCaller) {
-                await FeeManager.addTxSender(mpcaddr)
+                await FeeManager.addTxSender(mpcaddr, feeData)
             }
 
             isCaller = await TheiaUUIDKeeper.isVaildSender(mpcaddr)
             console.log("TheiaUUIDKeeper.isVaildSender:", isCaller)
             if (!isCaller) {
-                await TheiaUUIDKeeper.addTxSender(mpcaddr)
+                await TheiaUUIDKeeper.addTxSender(mpcaddr, feeData)
             }
             isCaller = await aRouterConfig.isVaildSender(mpcaddr)
             console.log("RouterConfig.isVaildSender:", isCaller)
             if (!isCaller) {
-                await aRouterConfig.addTxSender(mpcaddr)
+                await aRouterConfig.addTxSender(mpcaddr, feeData)
             }
 
             console.log("addTxSender", mpcaddr)

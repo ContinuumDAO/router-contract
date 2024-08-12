@@ -8,7 +8,6 @@ const {
   SONIC,
   SEPOLIA,
   BLAST_SEP,
-  AMOY,
   AERON_TEST,
   MANTA_TEST,
   LINEA_SEPOLIA,
@@ -27,7 +26,9 @@ const {
   CFX_ESPACE,
   OPBNB_TEST,
   POLYGON_AMOY,
-  ZKSYNC_SEPOLIA,
+  MORPH_HOLESKY,
+  SCROLL_SEPOLIA,
+  U2U_NEBULAS
 } = require("./output/env.json")
 
 
@@ -89,11 +90,6 @@ module.exports = {
       chainId: 168587773,
       accounts: [BLAST_SEP.DEPLOY_KEY],
       gasPrice: 1000000000,
-    },
-    amoy: {
-      url: AMOY.URL,
-      chainId: 80002,
-      accounts: [AMOY.DEPLOY_KEY]
     },
     aeron_test: {
       url: AERON_TEST.URL,
@@ -185,10 +181,20 @@ module.exports = {
       chainId: POLYGON_AMOY.CHAINID,
       accounts: [POLYGON_AMOY.DEPLOY_KEY]
     },
-    zksync_sepolia: {
-      url: ZKSYNC_SEPOLIA.URL,
-      chainId: ZKSYNC_SEPOLIA.CHAINID,
-      accounts: [ZKSYNC_SEPOLIA.DEPLOY_KEY]
+    morph_holesky: {
+      url: MORPH_HOLESKY.URL,
+      chainId: MORPH_HOLESKY.CHAINID,
+      accounts: [MORPH_HOLESKY.DEPLOY_KEY]
+    },
+    scroll_sepolia: {
+      url: SCROLL_SEPOLIA.URL,
+      chainId: SCROLL_SEPOLIA.CHAINID,
+      accounts: [SCROLL_SEPOLIA.DEPLOY_KEY]
+    },
+    u2u_nebulas: {
+      url: U2U_NEBULAS.URL,
+      chainId: U2U_NEBULAS.CHAINID,
+      accounts: [U2U_NEBULAS.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -203,6 +209,9 @@ module.exports = {
       opbnb: OPBNB_TEST.API_KEY,
       espaceTestnet: 'espace',
       polygon_amoy: POLYGON_AMOY.API_KEY,
+      morphTestnet: 'anything',
+      solaris: "abc",
+      nebulas: "abc",
     },
     customChains: [
       {
@@ -256,7 +265,31 @@ module.exports = {
           apiURL: "https://rpc-amoy.polygon.technology/",
           browserURL: "https://amoy.polygonscan.com/"
         }
-      }
+      },
+      {
+        network: 'morphTestnet',
+        chainId: 2810,
+        urls: {
+          apiURL: 'https://explorer-api-holesky.morphl2.io/api? ',
+          browserURL: 'https://explorer-holesky.morphl2.io/',
+        },
+      },
+      {
+        network: "solaris",
+        chainId: 39,
+        urls: {
+          apiURL: "https://u2uscan.xyz/api",
+          browserURL: "https://u2uscan.xyz"
+        }
+      },
+      {
+        network: "nebulas",
+        chainId: 2484,
+        urls: {
+          apiURL: "https://testnet.u2uscan.xyz/api",
+          browserURL: "https://testnet.u2uscan.xyz"
+        }
+      },
     ]
   }
 };

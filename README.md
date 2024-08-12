@@ -49,6 +49,12 @@ npx hardhat erc20 --network cronos_test theiaUSDT tUSDT 18 0x0000000000000000000
 npx hardhat erc20 --network base_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network cfx_espace theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network opbnb_test theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network scroll_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network morph_holesky theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network u2u_nebulas theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+
+
+
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
 insert mysql
@@ -60,6 +66,8 @@ config c3caller-relayer network in server
 npx hardhat run scripts/theiaRouter/setTokenConfig.js --network arb_test
 
 npx hardhat run scripts/theiaRouter/setFeeConfig.js --network arb_test
+
+config token icon in db:theia table:token_config
 
 npx hardhat run scripts/mock/deployMultiCall.js --network vanguard
 npx hardhat run scripts/mock/deployMultiCall.js --network manta_test
@@ -75,7 +83,11 @@ npx hardhat run scripts/mock/deployMultiCall.js --network cronos_test
 npx hardhat run scripts/mock/deployMultiCall.js --network base_sepolia
 npx hardhat run scripts/mock/deployMultiCall.js --network cfx_espace
 npx hardhat run scripts/mock/deployMultiCall.js --network opbnb_test
+npx hardhat run scripts/mock/deployMultiCall.js --network scroll_sepolia
+npx hardhat run scripts/mock/deployMultiCall.js --network u2u_nebulas
 
 
 ```
 
+## zksync
+npm hardhat compile  --network zksync_sepolia
