@@ -52,8 +52,10 @@ npx hardhat erc20 --network opbnb_test theiaUSDT tUSDT 18 0x00000000000000000000
 npx hardhat erc20 --network scroll_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network morph_holesky theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network u2u_nebulas theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
-
-
+npx hardhat erc20 --network polygon_amoy theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network mantle_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network sei_atlantic theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network soneium_minato theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
@@ -85,7 +87,10 @@ npx hardhat run scripts/mock/deployMultiCall.js --network cfx_espace
 npx hardhat run scripts/mock/deployMultiCall.js --network opbnb_test
 npx hardhat run scripts/mock/deployMultiCall.js --network scroll_sepolia
 npx hardhat run scripts/mock/deployMultiCall.js --network u2u_nebulas
-
+npx hardhat run scripts/mock/deployMultiCall.js --network polygon_amoy
+npx hardhat run scripts/mock/deployMultiCall.js --network mantle_sepolia
+npx hardhat run scripts/mock/deployMultiCall.js --network sei_atlantic
+npx hardhat run scripts/mock/deployMultiCall.js --network soneium_minato
 
 ```
 

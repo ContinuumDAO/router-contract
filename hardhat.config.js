@@ -28,7 +28,10 @@ const {
   POLYGON_AMOY,
   MORPH_HOLESKY,
   SCROLL_SEPOLIA,
-  U2U_NEBULAS
+  U2U_NEBULAS,
+  MANTLE_SEPOLIA,
+  SEI_ATLANTIC,
+  SONEIUM_MINATO,
 } = require("./output/env.json")
 
 
@@ -195,6 +198,21 @@ module.exports = {
       url: U2U_NEBULAS.URL,
       chainId: U2U_NEBULAS.CHAINID,
       accounts: [U2U_NEBULAS.DEPLOY_KEY]
+    },
+    mantle_sepolia: {
+      url: MANTLE_SEPOLIA.URL,
+      chainId: MANTLE_SEPOLIA.CHAINID,
+      accounts: [MANTLE_SEPOLIA.DEPLOY_KEY]
+    },
+    sei_atlantic: {
+      url: SEI_ATLANTIC.URL,
+      chainId: SEI_ATLANTIC.CHAINID,
+      accounts: [SEI_ATLANTIC.DEPLOY_KEY]
+    },
+    soneium_minato: {
+      url: SONEIUM_MINATO.URL,
+      chainId: SONEIUM_MINATO.CHAINID,
+      accounts: [SONEIUM_MINATO.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -212,6 +230,8 @@ module.exports = {
       morphTestnet: 'anything',
       solaris: "abc",
       nebulas: "abc",
+      mantle_sepolia: MANTLE_SEPOLIA.API_KEY,
+      sei_atlantic: SEI_ATLANTIC.API_KEY,
     },
     customChains: [
       {
@@ -288,6 +308,22 @@ module.exports = {
         urls: {
           apiURL: "https://testnet.u2uscan.xyz/api",
           browserURL: "https://testnet.u2uscan.xyz"
+        }
+      },
+      {
+        network: "mantle_sepolia",
+        chainId: 5003,
+        urls: {
+          apiURL: "https://api-sepolia.mantlescan.xyz/api",
+          browserURL: "https://sepolia.mantlescan.xyz/"
+        }
+      },
+      {
+        network: "sei_atlantic",
+        chainId: 1328,
+        urls: {
+          apiURL: "https://seitrace.com/atlantic-2/api",
+          browserURL: "https://seitrace.com"
         }
       },
     ]

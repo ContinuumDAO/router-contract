@@ -15,6 +15,7 @@ import "./TheiaStruct.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract TheiaRouter is IRouter, GovernDapp {
     using Strings for *;
@@ -316,12 +317,46 @@ contract TheiaRouter is IRouter, GovernDapp {
         );
     }
 
+    function getSigningHash(
+        TheiaStruct.CrossNonEvm memory tc
+    ) public pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    tc.amount,
+                    tc.feeAmount,
+                    tc.toChainID,
+                    tc.target,
+                    tc.receiver,
+                    tc.tokenID,
+                    tc.feeTokenID,
+                    tc.callData,
+                    tc.extra
+                )
+            );
+    }
+
+    function verifyMessage(
+        TheiaStruct.CrossNonEvm memory tc
+    ) public view returns (bool) {
+        bytes32 signingHash = getSigningHash(tc);
+        if (tc.isEthSign) {
+            signingHash = ECDSA.toEthSignedMessageHash(signingHash);
+        }
+        address signer = ECDSA.recover(signingHash, tc.signature);
+        require(txSenders[signer], "Theia:not vaild sender");
+        return true;
+    }
+
     function theiaCrossNonEvm(
         TheiaStruct.CrossNonEvm memory tc
     ) external payable {
         require(!tc.target.equal(""), "Theia:to empty");
         require(!tc.receiver.equal(""), "Theia:receiver empty");
-        require(tc.amount > 0, "Theia:empty");
+        require(tc.amount > 0, "Theia:empty amount");
+        require(tc.signature.length > 0, "Theia:empty signature");
+
+        verifyMessage(tc);
 
         TheiaStruct.TokenInfo memory t = getTokenInfo(tc.toChainID, tc.tokenID);
 

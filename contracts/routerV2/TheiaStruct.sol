@@ -30,6 +30,8 @@ library TheiaStruct {
         string feeTokenID;
         bytes callData;
         bytes extra;
+        bool isEthSign;
+        bytes signature;
     }
 
     struct TokenInfo {
