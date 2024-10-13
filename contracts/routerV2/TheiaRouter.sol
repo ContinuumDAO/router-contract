@@ -456,14 +456,14 @@ contract TheiaRouter is IRouter, GovernDapp {
         uint256 tokenDecimals,
         uint256 feePaid,
         address feeToken,
-        address fromTokenAddr
+        address /* fromTokenAddr */ // no need 
     ) external onlyGov returns (bool) {
         require(token != address(0), "Theia:token empty");
         require(uuid.length > 0, "Theia:uuid empty");
         require(receiver != address(0), "Theia:to empty");
         require(amount > 0, "Theia:amount empty");
         require(tokenDecimals > 0, "Theia:tokenDecimals empty");
-        require(fromTokenAddr != address(0), "Theia:fromTokenAddr empty");
+        // require(fromTokenAddr != address(0), "Theia:fromTokenAddr empty");
 
         (, string memory fromChainID, string memory _sourceTx) = context();
 
