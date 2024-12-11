@@ -56,6 +56,9 @@ npx hardhat erc20 --network polygon_amoy theiaUSDT tUSDT 18 0x000000000000000000
 npx hardhat erc20 --network mantle_sepolia theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network sei_atlantic theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 npx hardhat erc20 --network soneium_minato theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network lumia_testnet theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network plume_testnet theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
+npx hardhat erc20 --network redbelly_testnet theiaUSDT tUSDT 18 0x0000000000000000000000000000000000000000
 
 
 npx hardhat run scripts/theiaRouter/genSQL.js --network
@@ -91,6 +94,8 @@ npx hardhat run scripts/mock/deployMultiCall.js --network polygon_amoy
 npx hardhat run scripts/mock/deployMultiCall.js --network mantle_sepolia
 npx hardhat run scripts/mock/deployMultiCall.js --network sei_atlantic
 npx hardhat run scripts/mock/deployMultiCall.js --network soneium_minato
+npx hardhat run scripts/mock/deployMultiCall.js --network lumia_testnet
+npx hardhat run scripts/mock/deployMultiCall.js --network plume_testnet
 
 ```
 

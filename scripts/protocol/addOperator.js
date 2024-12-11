@@ -32,10 +32,8 @@ async function main() {
         // await c3CallerProxy.applyGov()
     }
 
-    // for estimate gas
-    // await c3CallerProxy.addOperator("0xEef3d3678E1E739C6522EEC209Bede0197791339")
-    // for real call
-    // await c3Caller.addOperator(op)
+    // await c3CallerProxy.addOperator("0xe62ab4d111f968660c6b2188046f9b9ba53c4bae")
+    // await c3Caller.addOperator("0xe62ab4d111f968660c6b2188046f9b9ba53c4bae")
 
 
     // TODO the contract on other chain should be TransferGov to MPC address

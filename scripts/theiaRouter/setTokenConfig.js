@@ -59,7 +59,7 @@ async function main() {
         for (let targetChainId in chainList) {
             let targetChain = chainList[targetChainId];
             if (!tokens[key] || !tokens[key][targetChain]) {
-                if (!evn[targetChain].TheiaRouterConfig) {
+                if (!evn[targetChain] || !evn[targetChain].TheiaRouterConfig) {
                     console.log("targetChain ", targetChain, "TheiaRouterConfig is missing")
                     continue
                 }

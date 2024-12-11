@@ -14,6 +14,7 @@
     "hardhat": "^2.17.2"
   },
   "dependencies": {
+    "@bnb-chain/greenfield-contracts-sdk": "^1.1.0",
     "@openzeppelin/contracts": "^4.9.3",
     "@openzeppelin/contracts-upgradeable": "^4.9.3",
     "@openzeppelin/hardhat-upgrades": "^2.4.1",

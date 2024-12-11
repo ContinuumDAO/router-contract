@@ -32,6 +32,9 @@ const {
   MANTLE_SEPOLIA,
   SEI_ATLANTIC,
   SONEIUM_MINATO,
+  LUMIA_TESTNET,
+  REDBELLY_TESTNET,
+  PLUME_TESTNET,
 } = require("./output/env.json")
 
 
@@ -213,6 +216,21 @@ module.exports = {
       url: SONEIUM_MINATO.URL,
       chainId: SONEIUM_MINATO.CHAINID,
       accounts: [SONEIUM_MINATO.DEPLOY_KEY]
+    },
+    lumia_testnet:{
+      url: LUMIA_TESTNET.URL,
+      chainId: LUMIA_TESTNET.CHAINID,
+      accounts: [LUMIA_TESTNET.DEPLOY_KEY]
+    },
+    redbelly_testnet:{
+      url: REDBELLY_TESTNET.URL,
+      chainId: REDBELLY_TESTNET.CHAINID,
+      accounts: [REDBELLY_TESTNET.DEPLOY_KEY]
+    },
+    plume_testnet:{
+      url: PLUME_TESTNET.URL,
+      chainId: PLUME_TESTNET.CHAINID,
+      accounts: [PLUME_TESTNET.DEPLOY_KEY]
     }
   },
   etherscan: {
@@ -232,6 +250,7 @@ module.exports = {
       nebulas: "abc",
       mantle_sepolia: MANTLE_SEPOLIA.API_KEY,
       sei_atlantic: SEI_ATLANTIC.API_KEY,
+      plume_testnet: PLUME_TESTNET.API_KEY,
     },
     customChains: [
       {
@@ -326,6 +345,14 @@ module.exports = {
           browserURL: "https://seitrace.com"
         }
       },
+      {
+        network: "plume_testnet",
+        chainId: 161221135,
+        urls: {
+          apiURL: "https://testnet-explorer.plumenetwork.xyz/api\?",
+          browserURL: "https://testnet-explorer.plumenetwork.xyz"
+        }
+      }
     ]
   }
 };
