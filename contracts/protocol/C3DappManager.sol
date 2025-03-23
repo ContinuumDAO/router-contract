@@ -20,8 +20,8 @@ contract C3DappManager is C3GovClient, Pausable {
     uint256 public dappID;
 
     mapping(uint256 => DappConfig) private dappConfig;
-    mapping(string => uint256) private c3DappAddr;
-    mapping(uint256 => bool) private appBlacklist;
+    mapping(string => uint256) public c3DappAddr;
+    mapping(uint256 => bool) public appBlacklist;
 
     // key is asset address, value is callPerByteFee
     mapping(address => uint256) public feeCurrencies;
@@ -31,8 +31,8 @@ contract C3DappManager is C3GovClient, Pausable {
 
     mapping(address => uint256) private fees;
 
-    mapping(uint256 => mapping(string => string)) private mpcPubkey; // key is mpc address
-    mapping(uint256 => string[]) private mpcAddrs;
+    mapping(uint256 => mapping(string => string)) public mpcPubkey; // key is mpc address
+    mapping(uint256 => string[]) public mpcAddrs;
 
     event SetDAppConfig(
         uint256 indexed dappID,
@@ -250,7 +250,7 @@ contract C3DappManager is C3GovClient, Pausable {
                     uint256 tmp = mpcAddrs[_dappID].length - 1;
                     mpcAddrs[_dappID][j] = mpcAddrs[_dappID][tmp];
                     mpcAddrs[_dappID].pop();
-                    emit DelMpcAddr(dappID, _addrs[index], pk);
+                    emit DelMpcAddr(_dappID, _addrs[index], pk);
                 }
             }
         }
@@ -282,7 +282,7 @@ contract C3DappManager is C3GovClient, Pausable {
         config.feeToken = _feeToken;
         config.discount = _discount;
 
-        emit SetDAppConfig(dappID, config.appAdmin, _feeToken, "", "");
+        emit SetDAppConfig(_dappID, config.appAdmin, _feeToken, "", "");
     }
 
     function deposit(
